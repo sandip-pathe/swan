@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-18T04:29:44.987544+00:00",
+  "coverage_from": "2026-11-18",
+  "coverage_until": "2026-11-30",
+  "timings": {
+    "NFO": "https://www.nseindia.com/static/market-data/market-timings",
+    "BFO": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+  },
+  "holidays": {
+    "NFO": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf",
+    "BFO": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+  },
+  "bse_holiday_retrieval": "https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf",
+  "limitations": "BSE-authored holiday notice read through broker mirror; original holiday page inaccessible. Timings PDF retrieved directly from BSE. Dates beyond coverage are unknown, never inferred. Recheck circulars for unscheduled changes before arming."
+}

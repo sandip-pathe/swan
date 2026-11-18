@@ -1,0 +1,89 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "account_revision": {
+      "minimum": 0,
+      "title": "Account Revision",
+      "type": "integer"
+    },
+    "cash_budget": {
+      "title": "Cash Budget",
+      "type": "string"
+    },
+    "entry_limit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entry Limit"
+    },
+    "evidence_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "execution_config_version": {
+      "minLength": 1,
+      "title": "Execution Config Version",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "net_liquidation_equity": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Net Liquidation Equity"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "integer"
+    },
+    "risk_budget": {
+      "title": "Risk Budget",
+      "type": "string"
+    },
+    "risk_config_version": {
+      "minLength": 1,
+      "title": "Risk Config Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "quantity",
+    "cash_budget",
+    "risk_budget",
+    "account_revision",
+    "risk_config_version",
+    "execution_config_version",
+    "expires_at",
+    "evidence_ids"
+  ],
+  "title": "OrderRiskApproval",
+  "type": "object"
+}

@@ -1,0 +1,548 @@
+{
+  "schema_version": 1,
+  "version": "paper-configuration-review-20261118-v1",
+  "execution": {
+    "schema_version": 1,
+    "version": "conservative-paper-draft-20261118-v1",
+    "reviewed": true,
+    "assumed_latency_ms": 250,
+    "displayed_participation": "0.10",
+    "extra_adverse_slippage_bps": "5",
+    "market_protection_bps": "100",
+    "quote_max_age_ms": 2000,
+    "pending_entry_lifetime_ms": 5000,
+    "quantity_unit": "unknown",
+    "quantity_unit_sources": [],
+    "partial_fill_granularity": "lots",
+    "sale_proceeds_reuse": "block_until_verified",
+    "sale_proceeds_sources": [],
+    "notes": "PROPOSED paper assumptions, not measured provider guarantees: 250ms latency, 10% displayed depth, 5bps additional adverse slippage, 100bps market protection, quotes <=2s old, entry expiry 5s, whole-lot partial fills. Review required. Depth quantity units remain unknown until verified; sale proceeds stay restricted. No engine activation. Owner explicitly approved these paper assumptions on 2026-11-18; quantity-unit verification and fee qualification remain independent blockers."
+  },
+  "fee_schedules": [
+    {
+      "schema_version": 1,
+      "version": "angel-standard-nfo-draft-20261118-v1",
+      "exchange": "NFO",
+      "product": "LONG_OPTION_INTRADAY",
+      "effective_from": "2026-11-18",
+      "effective_until": "2026-11-30",
+      "reviewed": false,
+      "account_pricing_verified": true,
+      "rules": [
+        {
+          "schema_version": 1,
+          "code": "BROKERAGE",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "flat_per_order",
+          "amount": "20.00",
+          "rate": null,
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published BROKERAGE component for NFO; current tariff checked on 2026-11-18. Owner confirmed standard published account pricing in this conversation.",
+              "status": "account_verified"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "EXCHANGE",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.000355299",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published EXCHANGE component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "STT",
+          "sides": [
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.0015",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "1.00",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "session_contract_note",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published STT component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "SEBI",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.000001",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published SEBI component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "STAMP",
+          "sides": [
+            "BUY"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.00003",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published STAMP component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "IPFT",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "1E-9",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published IPFT component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "CLEARING",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "flat_per_order",
+          "amount": "0.00",
+          "rate": null,
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published CLEARING component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "GST",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "charge_rate",
+          "amount": null,
+          "rate": "0.18",
+          "charge_basis": [
+            "BROKERAGE",
+            "EXCHANGE",
+            "SEBI",
+            "IPFT"
+          ],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published GST component for NFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/knowledge-center/online-share-trading/what-is-a-contract-note-and-how-to-read-it",
+              "checked_at": "2026-11-18T04:36:36.887248+00:00",
+              "finding": "Broker contract-note guide includes brokerage, exchange transaction charges, SEBI fees and IPFT in taxable value, excluding STT and stamp duty. BFO IPFT amount remains unresolved.",
+              "status": "documented"
+            }
+          ]
+        }
+      ],
+      "notes": "Current published standard pricing; owner confirmed standard plan. Proposed observation window only, not a claim about original rate effective dates. Rounding remains unverified. GST inclusion of IPFT is documented in the broker contract-note guide. BFO IPFT omitted pending explicit source; missing never means zero. Not executable until reviewed."
+    },
+    {
+      "schema_version": 1,
+      "version": "angel-standard-bfo-draft-20261118-v1",
+      "exchange": "BFO",
+      "product": "LONG_OPTION_INTRADAY",
+      "effective_from": "2026-11-18",
+      "effective_until": "2026-11-30",
+      "reviewed": false,
+      "account_pricing_verified": true,
+      "rules": [
+        {
+          "schema_version": 1,
+          "code": "BROKERAGE",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "flat_per_order",
+          "amount": "20.00",
+          "rate": null,
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published BROKERAGE component for BFO; current tariff checked on 2026-11-18. Owner confirmed standard published account pricing in this conversation.",
+              "status": "account_verified"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "EXCHANGE",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.000325",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published EXCHANGE component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "STT",
+          "sides": [
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.0015",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "1.00",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "session_contract_note",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published STT component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "SEBI",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.000001",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published SEBI component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "STAMP",
+          "sides": [
+            "BUY"
+          ],
+          "calculation": "premium_rate",
+          "amount": null,
+          "rate": "0.00003",
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published STAMP component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "CLEARING",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "flat_per_order",
+          "amount": "0.00",
+          "rate": null,
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published CLEARING component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "GST",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "charge_rate",
+          "amount": null,
+          "rate": "0.18",
+          "charge_basis": [
+            "BROKERAGE",
+            "EXCHANGE",
+            "SEBI"
+          ],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "Published GST component for BFO; current tariff checked on 2026-11-18.",
+              "status": "documented"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-18T04:29:44.987544Z",
+              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "unverified"
+            },
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/knowledge-center/online-share-trading/what-is-a-contract-note-and-how-to-read-it",
+              "checked_at": "2026-11-18T04:36:36.887267+00:00",
+              "finding": "Broker contract-note guide includes brokerage, exchange transaction charges, SEBI fees and IPFT in taxable value, excluding STT and stamp duty. BFO IPFT amount remains unresolved.",
+              "status": "documented"
+            }
+          ]
+        }
+      ],
+      "notes": "Current published standard pricing; owner confirmed standard plan. Proposed observation window only, not a claim about original rate effective dates. Rounding remains unverified. GST inclusion of IPFT is documented in the broker contract-note guide. BFO IPFT omitted pending explicit source; missing never means zero. Not executable until reviewed."
+    }
+  ]
+}

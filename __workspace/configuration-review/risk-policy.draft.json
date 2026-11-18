@@ -1,0 +1,35 @@
+{
+  "expected_revision": 11,
+  "policy": {
+    "schema_version": 1,
+    "version": "76723f92-dcbb-41e4-962b-657cd761622a",
+    "capital": "100000",
+    "max_trade_risk_pct": "0.005",
+    "max_daily_loss_pct": "0.02",
+    "max_positions": 1,
+    "quote_max_age_seconds": 2,
+    "entry_cutoff_minutes": 20,
+    "flatten_minutes": 10,
+    "max_holding_seconds": 300,
+    "max_spread_bps": "100",
+    "min_volume": 1000,
+    "min_oi": 1000,
+    "max_fill_quantity": 65,
+    "costs": null
+  },
+  "review_notes": {
+    "status": "owner_approved_and_applied",
+    "capital_preserved": true,
+    "metadata_checked_at": "2026-11-18T04:29:44.987544+00:00",
+    "eligible_lot_sizes": {
+      "NFO": [
+        65
+      ],
+      "BFO": [
+        20
+      ]
+    },
+    "quantity_cap_units": 65,
+    "note": "Unit cap permits venue-dependent lot counts; not a one-lot guarantee. Risk engine may reject even one lot. Volume/OI thresholds are proposed assumptions, not measured liquidity guarantees."
+  }
+}

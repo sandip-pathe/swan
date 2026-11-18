@@ -1,0 +1,6 @@
+{
+  "model": "gpt-6.1-sol",
+  "daily_token_budget": 250000,
+  "max_output_tokens": 2000,
+  "timeout_seconds": 25
+}

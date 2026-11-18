@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "flat_per_fill": {
+      "title": "Flat Per Fill",
+      "type": "string"
+    },
+    "label": {
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "slippage_bps": {
+      "title": "Slippage Bps",
+      "type": "string"
+    },
+    "turnover_rate": {
+      "title": "Turnover Rate",
+      "type": "string"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "label",
+    "flat_per_fill",
+    "turnover_rate",
+    "slippage_bps"
+  ],
+  "title": "CostModel",
+  "type": "object"
+}

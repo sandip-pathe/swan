@@ -1,0 +1,270 @@
+{
+  "$defs": {
+    "FeeRule": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "calculation": {
+          "enum": [
+            "flat_per_order",
+            "premium_rate",
+            "charge_rate"
+          ],
+          "title": "Calculation",
+          "type": "string"
+        },
+        "cap_per_order": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cap Per Order"
+        },
+        "charge_basis": {
+          "default": [],
+          "items": {
+            "enum": [
+              "BROKERAGE",
+              "EXCHANGE",
+              "STT",
+              "SEBI",
+              "STAMP",
+              "GST",
+              "IPFT",
+              "CLEARING",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "title": "Charge Basis",
+          "type": "array"
+        },
+        "code": {
+          "enum": [
+            "BROKERAGE",
+            "EXCHANGE",
+            "STT",
+            "SEBI",
+            "STAMP",
+            "GST",
+            "IPFT",
+            "CLEARING",
+            "OTHER"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "rate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate"
+        },
+        "rounding_increment": {
+          "title": "Rounding Increment",
+          "type": "string"
+        },
+        "rounding_mode": {
+          "enum": [
+            "HALF_UP",
+            "CEILING",
+            "FLOOR"
+          ],
+          "title": "Rounding Mode",
+          "type": "string"
+        },
+        "rounding_scope": {
+          "enum": [
+            "cumulative_order",
+            "session_contract_note"
+          ],
+          "title": "Rounding Scope",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sides": {
+          "items": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Sides",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceEvidence"
+          },
+          "minItems": 1,
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "sides",
+        "calculation",
+        "rounding_increment",
+        "rounding_mode",
+        "rounding_scope",
+        "sources"
+      ],
+      "title": "FeeRule",
+      "type": "object"
+    },
+    "SourceEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_at": {
+          "format": "date-time",
+          "title": "Checked At",
+          "type": "string"
+        },
+        "finding": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Finding",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "documented",
+            "account_verified",
+            "unverified"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "checked_at",
+        "finding",
+        "status"
+      ],
+      "title": "SourceEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "account_pricing_verified": {
+      "default": false,
+      "title": "Account Pricing Verified",
+      "type": "boolean"
+    },
+    "effective_from": {
+      "format": "date",
+      "title": "Effective From",
+      "type": "string"
+    },
+    "effective_until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Effective Until"
+    },
+    "exchange": {
+      "enum": [
+        "NFO",
+        "BFO"
+      ],
+      "title": "Exchange",
+      "type": "string"
+    },
+    "notes": {
+      "minLength": 1,
+      "title": "Notes",
+      "type": "string"
+    },
+    "product": {
+      "const": "LONG_OPTION_INTRADAY",
+      "default": "LONG_OPTION_INTRADAY",
+      "title": "Product",
+      "type": "string"
+    },
+    "reviewed": {
+      "default": false,
+      "title": "Reviewed",
+      "type": "boolean"
+    },
+    "rules": {
+      "items": {
+        "$ref": "#/$defs/FeeRule"
+      },
+      "minItems": 1,
+      "title": "Rules",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "exchange",
+    "effective_from",
+    "rules",
+    "notes"
+  ],
+  "title": "FeeSchedule",
+  "type": "object"
+}

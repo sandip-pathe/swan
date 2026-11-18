@@ -1,0 +1,33 @@
+# Local credentials and supplied configuration
+.env
+.env.*
+!.env.example
+firebase.config
+**/*service-account*.json
+**/*serviceAccount*.json
+
+# Generated files
+.tools/
+.local/
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+__pycache__/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.gstack/
+# Downloaded third-party skill verification copies are not application source.
+skill-verification/
+# Generated hosting bundles; keep their source directories instead.
+hosting/*.zip
+*.log
+*.dump
+*.backup
+*.pem
+*.key
+*.p12
+*.pfx

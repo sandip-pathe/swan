@@ -1,0 +1,209 @@
+{
+  "$defs": {
+    "SourceEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_at": {
+          "format": "date-time",
+          "title": "Checked At",
+          "type": "string"
+        },
+        "finding": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Finding",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "documented",
+            "account_verified",
+            "unverified"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "checked_at",
+        "finding",
+        "status"
+      ],
+      "title": "SourceEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assumed_latency_ms": {
+      "anyOf": [
+        {
+          "maximum": 60000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assumed Latency Ms"
+    },
+    "displayed_participation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Displayed Participation"
+    },
+    "extra_adverse_slippage_bps": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Extra Adverse Slippage Bps"
+    },
+    "market_protection_bps": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Market Protection Bps"
+    },
+    "notes": {
+      "minLength": 1,
+      "title": "Notes",
+      "type": "string"
+    },
+    "partial_fill_granularity": {
+      "anyOf": [
+        {
+          "enum": [
+            "units",
+            "lots"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Partial Fill Granularity"
+    },
+    "pending_entry_lifetime_ms": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 180000,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pending Entry Lifetime Ms"
+    },
+    "quantity_unit": {
+      "default": "unknown",
+      "enum": [
+        "units",
+        "lots",
+        "unknown"
+      ],
+      "title": "Quantity Unit",
+      "type": "string"
+    },
+    "quantity_unit_sources": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SourceEvidence"
+      },
+      "title": "Quantity Unit Sources",
+      "type": "array"
+    },
+    "quote_max_age_ms": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quote Max Age Ms"
+    },
+    "reviewed": {
+      "default": false,
+      "title": "Reviewed",
+      "type": "boolean"
+    },
+    "sale_proceeds_reuse": {
+      "default": "block_until_verified",
+      "enum": [
+        "block_until_verified",
+        "same_session_verified"
+      ],
+      "title": "Sale Proceeds Reuse",
+      "type": "string"
+    },
+    "sale_proceeds_sources": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SourceEvidence"
+      },
+      "title": "Sale Proceeds Sources",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "notes"
+  ],
+  "title": "ExecutionPolicy",
+  "type": "object"
+}

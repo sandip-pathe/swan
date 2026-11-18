@@ -1,0 +1,142 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "cash_budget": {
+      "title": "Cash Budget",
+      "type": "string"
+    },
+    "decision_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Id"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "instrument_id": {
+      "minLength": 1,
+      "title": "Instrument Id",
+      "type": "string"
+    },
+    "limit_price": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Limit Price"
+    },
+    "order_type": {
+      "default": "MARKET",
+      "enum": [
+        "MARKET",
+        "LIMIT",
+        "STOP_MARKET",
+        "STOP_LIMIT"
+      ],
+      "title": "Order Type",
+      "type": "string"
+    },
+    "position_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Position Id"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "integer"
+    },
+    "reason": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "risk_budget": {
+      "title": "Risk Budget",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "side": {
+      "enum": [
+        "BUY",
+        "SELL"
+      ],
+      "title": "Side",
+      "type": "string"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    },
+    "time_in_force": {
+      "default": "DAY",
+      "enum": [
+        "DAY",
+        "IOC"
+      ],
+      "title": "Time In Force",
+      "type": "string"
+    },
+    "trigger_price": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger Price"
+    }
+  },
+  "required": [
+    "idempotency_key",
+    "instrument_id",
+    "side",
+    "quantity",
+    "submitted_at",
+    "expires_at",
+    "cash_budget",
+    "risk_budget",
+    "reason"
+  ],
+  "title": "OrderRequest",
+  "type": "object"
+}

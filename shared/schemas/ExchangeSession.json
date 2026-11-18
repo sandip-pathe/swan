@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "calendar_source": {
+      "minLength": 1,
+      "title": "Calendar Source",
+      "type": "string"
+    },
+    "closes_at": {
+      "format": "date-time",
+      "title": "Closes At",
+      "type": "string"
+    },
+    "key": {
+      "format": "date",
+      "title": "Key",
+      "type": "string"
+    },
+    "opens_at": {
+      "format": "date-time",
+      "title": "Opens At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "verified": {
+      "title": "Verified",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "key",
+    "opens_at",
+    "closes_at",
+    "calendar_source",
+    "verified"
+  ],
+  "title": "ExchangeSession",
+  "type": "object"
+}

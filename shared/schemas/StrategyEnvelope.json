@@ -1,0 +1,114 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "BUY_CALL",
+        "BUY_PUT"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "evidence_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "instrument_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Instrument Ids",
+      "type": "array"
+    },
+    "invalidated": {
+      "default": false,
+      "title": "Invalidated",
+      "type": "boolean"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "title": "Issued At",
+      "type": "string"
+    },
+    "max_entry": {
+      "title": "Max Entry",
+      "type": "string"
+    },
+    "max_holding_seconds": {
+      "default": 300,
+      "exclusiveMinimum": 0,
+      "title": "Max Holding Seconds",
+      "type": "integer"
+    },
+    "min_entry": {
+      "title": "Min Entry",
+      "type": "string"
+    },
+    "required_metrics": {
+      "default": [
+        "oi",
+        "volume"
+      ],
+      "items": {
+        "enum": [
+          "oi",
+          "volume",
+          "iv",
+          "greeks"
+        ],
+        "type": "string"
+      },
+      "title": "Required Metrics",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "stop_loss": {
+      "title": "Stop Loss",
+      "type": "string"
+    },
+    "target": {
+      "title": "Target",
+      "type": "string"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "instrument_ids",
+    "action",
+    "issued_at",
+    "expires_at",
+    "evidence_ids",
+    "min_entry",
+    "max_entry",
+    "stop_loss",
+    "target"
+  ],
+  "title": "StrategyEnvelope",
+  "type": "object"
+}

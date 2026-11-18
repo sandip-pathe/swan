@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "cost_version": {
+      "minLength": 1,
+      "title": "Cost Version",
+      "type": "string"
+    },
+    "event_key": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Event Key",
+      "type": "string"
+    },
+    "fee_breakdown": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Fee Breakdown",
+      "type": "object"
+    },
+    "fees": {
+      "title": "Fees",
+      "type": "string"
+    },
+    "market_event_id": {
+      "minLength": 1,
+      "title": "Market Event Id",
+      "type": "string"
+    },
+    "price": {
+      "title": "Price",
+      "type": "string"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "integer"
+    },
+    "raw_price": {
+      "title": "Raw Price",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "snapshot_id": {
+      "format": "uuid",
+      "title": "Snapshot Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_key",
+    "snapshot_id",
+    "market_event_id",
+    "quantity",
+    "price",
+    "raw_price",
+    "fees",
+    "fee_breakdown",
+    "cost_version"
+  ],
+  "title": "FillBooking",
+  "type": "object"
+}

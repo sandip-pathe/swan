@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "orders": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Orders"
+    },
+    "price": {
+      "title": "Price",
+      "type": "string"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "price",
+    "quantity"
+  ],
+  "title": "DepthLevel",
+  "type": "object"
+}

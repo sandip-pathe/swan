@@ -1,0 +1,86 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "exchange": {
+      "minLength": 1,
+      "title": "Exchange",
+      "type": "string"
+    },
+    "expiry": {
+      "format": "date",
+      "title": "Expiry",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "lot_size": {
+      "exclusiveMinimum": 0,
+      "title": "Lot Size",
+      "type": "integer"
+    },
+    "metadata_source": {
+      "minLength": 1,
+      "title": "Metadata Source",
+      "type": "string"
+    },
+    "option_type": {
+      "enum": [
+        "CALL",
+        "PUT"
+      ],
+      "title": "Option Type",
+      "type": "string"
+    },
+    "provider_token": {
+      "minLength": 1,
+      "title": "Provider Token",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "strike": {
+      "title": "Strike",
+      "type": "string"
+    },
+    "tick_size": {
+      "title": "Tick Size",
+      "type": "string"
+    },
+    "underlying": {
+      "enum": [
+        "NIFTY",
+        "SENSEX"
+      ],
+      "title": "Underlying",
+      "type": "string"
+    },
+    "verified_at": {
+      "format": "date-time",
+      "title": "Verified At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "provider_token",
+    "exchange",
+    "underlying",
+    "expiry",
+    "strike",
+    "option_type",
+    "lot_size",
+    "tick_size",
+    "metadata_source",
+    "verified_at"
+  ],
+  "title": "Instrument",
+  "type": "object"
+}
