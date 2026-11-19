@@ -19,6 +19,12 @@ evidence or expired permission disarms entries; protective exits remain independ
 The local account is still unqualified and observation-only. See [M2 controls and
 evidence boundaries](./__workspace/40-m2-qualification-worker-controls.md).
 
+Use **Markets → Refresh prices** to retrieve last available NIFTY or SENSEX
+option quotes, including after market hours. This deliberate action selects the
+nearest listed expiry and up to five strikes; ordinary polling does not call the
+broker. Quotes retain their exchange timestamps and are not relabeled as live.
+See [after-hours data delivery](./__workspace/42-after-hours-market-data.md).
+
 ## Run locally on Windows
 
 From `C:\x`:

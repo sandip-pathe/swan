@@ -2,6 +2,11 @@
 
 Implemented 18 November 2026. M3 remains in progress; this delivers quote retention and the historical-data backend before chart implementation.
 
+19 November follow-up: renewed authentication retrieved actual NFO and BFO
+candles. Explicit after-hours quote refresh is implemented. See
+[connected observations and remaining work](./42-after-hours-market-data.md).
+The original authentication failure below remains a historical record.
+
 ## Delivered
 
 - The REST FULL and WebSocket SnapQuote adapters retain optional LTP, session open/high/low, previous close, average price and last-trade quantity. REST additionally retains its explicit trade timestamp. Unestablished WebSocket trade-timestamp units remain unparsed. Missing/zero optional price fields remain unavailable.

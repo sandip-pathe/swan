@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity, settings
 from services.api.history import router as history_router
+from services.api.market import router as market_router
 from services.api.paper_control import router as paper_control_router
 from services.api.setup import router as setup_router
 from services.api.validation import router as validation_router
@@ -56,6 +57,7 @@ app.include_router(setup_router)
 app.include_router(paper_control_router)
 app.include_router(validation_router)
 app.include_router(history_router)
+app.include_router(market_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings().swan_web_origins,

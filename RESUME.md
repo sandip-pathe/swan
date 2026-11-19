@@ -8,9 +8,14 @@ Read `__workspace/37-complete-system-and-broker-workspace-plan.md`, then
 
 M1 audit/checklist and M2 qualification/explicit paper arming are implemented.
 M3 quote price retention and bounded historical candle refresh/cache APIs are
-implemented. Remaining M3 work: resolve `BROKER_AUTH_REJECTED`, obtain actual
-contract history, implement live candle aggregation and reconnect/backfill
-reconciliation. M4 design and M5 charts follow. Do not treat M3 as complete.
+implemented. On 19 November, renewed login verified NFO/BFO last-quote reads and
+one NFO request returned 376 actual one-minute candles, and one BFO request
+returned 16. See
+`__workspace/42-after-hours-market-data.md` for the explicit after-hours refresh
+API and connected evidence. Remaining M3 work: broader candle verification,
+live aggregation, reconnect/backfill reconciliation, and chart delivery.
+The mobile-first UI/PWA foundation is implemented; full chart workflows still
+follow. Do not treat M3 as complete.
 
 The last full backend suite passed 134 tests, followed by six passing focused
 market-history tests. Ruff, mypy, frontend type checking and production build
