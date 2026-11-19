@@ -1,5 +1,9 @@
 # SWAN Trade
 
+Use **Markets → Search** to find listed NIFTY/SENSEX contracts by strike, expiry
+and call/put, then open a chart. **Refresh contracts** updates the listing cache;
+prices and candle history load separately.
+
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
 candle or line charts, with optional EMA 20. Use **Get candles** to retrieve broker history for the selected
 session. Chart polling reads saved data; missing minutes remain gaps and old

@@ -20,8 +20,12 @@ coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
 EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
 order-ticket integration still follow. Do not treat M3 as complete.
 
-The last full backend suite passed 153 tests; five frontend chart-calculation
-tests and ten focused backend candle tests also pass. Ruff, mypy, frontend type checking and production build
+Contract search is implemented at **Markets → Search**, using a separately cached
+supported instrument catalog and direct chart selection. See
+`__workspace/45-contract-search.md`; saved watchlists remain next.
+
+The last full backend suite passed 157 tests; five frontend chart-calculation
+tests also pass. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.

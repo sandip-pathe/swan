@@ -42,6 +42,15 @@ class InstrumentRecord(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class ListedInstrument(Base):
+    """Discovery metadata; separate from identities retained by the execution ledger."""
+
+    __tablename__ = "listed_instruments"
+    id: Mapped[str] = mapped_column(primary_key=True)
+    catalog_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class SnapshotRecord(Base):
     __tablename__ = "market_snapshots"
     id: Mapped[UUID] = mapped_column(primary_key=True)
