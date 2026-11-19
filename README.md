@@ -1,5 +1,10 @@
 # SWAN Trade
 
+Open **Markets → Chart** on an option contract to view a mobile-first one-minute
+candlestick chart. Use **Get candles** to retrieve broker history for the selected
+session. Chart polling reads saved data; missing minutes remain gaps and old
+prices keep their timestamps. See [chart behavior and verification](./__workspace/43-live-candles-and-mobile-chart.md).
+
 Resuming on another laptop: start with [RESUME.md](./RESUME.md), which records
 the current milestone, setup requirements and private data that GitHub excludes.
 

@@ -63,6 +63,19 @@ class MarketHistoryBatch(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class LiveCandleSegment(Base):
+    __tablename__ = "live_candle_segments"
+    __table_args__ = (
+        Index("live_candles_account_range", "account_id", "instrument_id", "opens_at"),
+    )
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), primary_key=True)
+    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), primary_key=True)
+    stream_id: Mapped[UUID] = mapped_column(primary_key=True)
+    opens_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class StrategyRecord(Base):
     __tablename__ = "strategy_envelopes"
     id: Mapped[UUID] = mapped_column(primary_key=True)

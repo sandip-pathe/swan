@@ -12,13 +12,14 @@ implemented. On 19 November, renewed login verified NFO/BFO last-quote reads and
 one NFO request returned 376 actual one-minute candles, and one BFO request
 returned 16. See
 `__workspace/42-after-hours-market-data.md` for the explicit after-hours refresh
-API and connected evidence. Remaining M3 work: broader candle verification,
-live aggregation, reconnect/backfill reconciliation, and chart delivery.
-The mobile-first UI/PWA foundation is implemented; full chart workflows still
+API and connected evidence. Observed one-minute aggregation, persisted segments,
+bounded reconnect/restart history recovery and a mobile-first contract chart are
+implemented; read `__workspace/43-live-candles-and-mobile-chart.md` next. Remaining
+M3 work includes real open-market/reconnect verification and broader candle
+coverage. Additional chart intervals, studies and order-ticket integration still
 follow. Do not treat M3 as complete.
 
-The last full backend suite passed 134 tests, followed by six passing focused
-market-history tests. Ruff, mypy, frontend type checking and production build
+The last full backend suite passed 153 tests. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.

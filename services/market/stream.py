@@ -166,9 +166,15 @@ def decode_quote(
 
 
 class AngelOneStream:
-    def __init__(self, client: AngelOneClient, cache: QuoteCache):
+    def __init__(
+        self,
+        client: AngelOneClient,
+        cache: QuoteCache,
+        on_observation: Callable[[Quote], None] | None = None,
+    ):
         self.client = client
         self.cache = cache
+        self.on_observation = on_observation
 
     async def run(
         self, instruments: list[Instrument], on_problem: Callable[[str], Awaitable[None]]
@@ -233,6 +239,8 @@ class AngelOneStream:
                                 raise ProviderError("STREAM_SUBSCRIPTION_REJECTED")
                             quote = decode_quote(packet, lookup, datetime.now(UTC), stream_id)
                             if quote:
+                                if self.on_observation:
+                                    self.on_observation(quote)
                                 self.cache.update(quote)
                                 failures = 0
                     finally:

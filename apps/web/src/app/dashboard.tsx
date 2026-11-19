@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { User } from "firebase/auth";
 import type { Readiness } from "@/lib/readiness";
 import Icon, { type IconName } from "./icons";
+import ContractChart from "./candles";
 import SystemSetup from "./system-setup";
 import ValidationPanel from "./validation";
 import PaperControls from "./paper-controls";
@@ -26,6 +27,12 @@ type Chain = { rows: ChainRow[]; next_offset: number | null; as_of: string };
 const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
 const errors: Record<string, string> = {
+  HISTORY_REFRESH_BUSY: "A candle refresh is already running. Try again shortly.",
+  HISTORY_REFRESH_RATE_LIMIT: "Please wait a few seconds before requesting candles again.",
+  HISTORY_CURRENT_METADATA_REQUIRED: "Refresh market prices first to update this contract?s details.",
+  HISTORY_UNSUPPORTED_INSTRUMENT_OR_RANGE: "Refresh market prices or choose another session. This contract?s history could not be requested.",
+  HISTORY_PROVIDER_UNAVAILABLE: "The broker could not return candles. Check your broker login and try again.",
+  HISTORY_RANGE_AFTER_EXPIRY: "Choose a session on or before this contract?s expiry.",
   MARKET_PRICES_UNAVAILABLE: "Prices could not be retrieved. Check your broker login and try again.",
   QUOTE_REFRESH_BUSY: "A market refresh is already running. Try again shortly.",
   QUOTE_REFRESH_RATE_LIMIT: "Please wait 30 seconds between market refreshes.",
@@ -74,6 +81,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   const [chain, setChain] = useState<Chain | null>(null);
   const [underlying, setUnderlying] = useState("NIFTY");
   const [offset, setOffset] = useState(0);
+  const [chartId, setChartId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [chainError, setChainError] = useState<string | null>(null);
@@ -84,7 +92,12 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
 
   useEffect(() => {
     const restorePage = () => {
-      const page = pages[window.location.hash.slice(1)] ?? "Overview";
+      const [section, query] = window.location.hash.slice(1).split("?");
+      const params = new URLSearchParams(query);
+      const page = pages[section] ?? "Overview";
+      setChartId(section === "markets" ? params.get("instrument") : null);
+      const market = params.get("underlying");
+      if (market === "NIFTY" || market === "SENSEX") setUnderlying(market);
       setTab(page); setFeedback(null);
       if (["System setup", "Risk settings", "Paper controls", "Paper validation", "Activity"].includes(page)) setSettingsTab(page);
     };
@@ -98,7 +111,8 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     const response = await fetch(base + path, { method, signal, cache: "no-store", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const result = await response.json();
     if (!response.ok) {
-      const message = typeof result.detail === "string" ? errors[result.detail] : null;
+      const code = typeof result.detail === "string" ? result.detail : result.detail?.code;
+      const message = typeof code === "string" ? errors[code] : null;
       throw new Error(message ?? (response.status === 422 ? "Some configuration fields are invalid or missing. Review the required fields and permitted ranges." : "Unable to complete the request. Check the connection and settings."));
     }
     return result;
@@ -197,6 +211,12 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     if (window.location.hash !== `#${hash}`) window.location.hash = hash;
     window.scrollTo({ top: 0, behavior: "instant" });
   };
+  const selectedContract = chain?.rows.find(row => row.instrument.id === chartId);
+  const openChart = (item: ChainRow["instrument"]) => {
+    setChartId(item.id);
+    window.location.hash = `markets?${new URLSearchParams({ instrument: item.id, underlying: item.underlying })}`;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
   const nextStep = !workerOnline ? "Connect your trading service" : !ready?.configuration_complete ? "Finish setting up your paper account" : !ready.connections_verified ? "Check your market connections" : "Explore the market";
   const nextDetail = !workerOnline ? "Your account is available, but automatic position monitoring is offline." : !ready?.configuration_complete ? "A few trading and risk settings still need review before you can place paper trades." : !ready.connections_verified ? "Verify your broker and market data before starting a paper session." : "View option prices and available contracts. Paper trading stays paused until you choose to start.";
 
@@ -226,7 +246,9 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
-      {tab === "Option chain" && <section className="panel"><div className="panelhead"><div><h2>Option chain</h2><p>Index options &middot; prices in INR</p></div><label className="inline-label">Underlying<select value={underlying} onChange={event => { setUnderlying(event.target.value); setOffset(0); setChain(null); }}><option>NIFTY</option><option>SENSEX</option></select></label><button className="secondary" disabled={busy || stale} onClick={refreshPrices}><Icon name="refresh" />{busy ? "Refreshing..." : "Refresh prices"}</button></div><p className="muted">Last available quotes for the nearest expiry and up to five strikes. Refresh works after market hours; it does not make old prices live.</p>{chainError ? <p className="error" role="alert">{chainError}</p> : chain == null ? <p>Loading observations…</p> : !chain.rows.length ? <p>No prices are saved for {underlying} yet. Use Refresh prices to retrieve the last available quotes, including after market hours.</p> : <><div className="mobile-chain">{chain.rows.map(({instrument: item, quote}) => <article className="quote-card" key={item.id}><div className="quote-heading"><div><strong>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}</strong><span>{item.expiry} &middot; Lot {item.lot_size}</span></div><span className="quote-age">{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Last quote"}</span></div><dl><div><dt>Bid</dt><dd>{quote.bid == null ? "Unavailable" : money(quote.bid)}</dd></div><div><dt>Ask</dt><dd>{quote.ask == null ? "Unavailable" : money(quote.ask)}</dd></div><div><dt>Volume</dt><dd>{quote.volume?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div><div><dt>Open interest</dt><dd>{quote.oi?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div></dl><small>{time(quote.timestamp)} IST &middot; IV {quote.iv ?? "Unavailable"}{quote.iv != null ? "%" : ""}</small></article>)}</div><div className="tablewrap desktop-chain"><table><thead><tr>{["Contract", "Expiry", "Strike", "Type", "Lot", "Bid", "Ask", "OI", "Volume", "IV %", "Observed (IST)", "Freshness"].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{chain.rows.map(({ instrument: item, quote }) => <tr key={item.id}><td><strong>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}</strong></td><td>{item.expiry}</td><td>{item.strike}</td><td>{item.option_type}</td><td>{item.lot_size}</td><td>{quote.bid ?? "—"}</td><td>{quote.ask ?? "—"}</td><td>{quote.oi ?? "—"}</td><td>{quote.volume ?? "—"}</td><td>{quote.iv ?? "—"}</td><td>{time(quote.timestamp)}</td><td>{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Stale"}</td></tr>)}</tbody></table></div></>}<div className="actions"><button className="secondary" disabled={offset === 0} onClick={() => { setOffset(Math.max(0, offset - 100)); setChain(null); }}>Previous</button><button className="secondary" disabled={chain?.next_offset == null} onClick={() => { setOffset(chain?.next_offset ?? 0); setChain(null); }}>Next</button></div></section>}
+      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} quoteDate={selectedContract.quote.timestamp} request={request} marketLabel={marketLabel} onBack={() => { setChartId(null); navigate("Option chain"); }} />}
+      {tab === "Option chain" && chartId && !selectedContract && <section className="panel"><p>{chain == null ? "Loading contract?" : "This contract is not in the current option chain."}</p><button className="secondary" onClick={() => { setChartId(null); navigate("Option chain"); }}>Back to option chain</button></section>}
+      {tab === "Option chain" && !chartId && <section className="panel"><div className="panelhead"><div><h2>Option chain</h2><p>Index options &middot; prices in INR</p></div><label className="inline-label">Underlying<select value={underlying} onChange={event => { setUnderlying(event.target.value); setOffset(0); setChain(null); }}><option>NIFTY</option><option>SENSEX</option></select></label><button className="secondary" disabled={busy || stale} onClick={refreshPrices}><Icon name="refresh" />{busy ? "Refreshing..." : "Refresh prices"}</button></div><p className="muted">Last available quotes for the nearest expiry and up to five strikes. Refresh works after market hours; it does not make old prices live.</p>{chainError ? <p className="error" role="alert">{chainError}</p> : chain == null ? <p>Loading observations…</p> : !chain.rows.length ? <p>No prices are saved for {underlying} yet. Use Refresh prices to retrieve the last available quotes, including after market hours.</p> : <><div className="mobile-chain">{chain.rows.map(({instrument: item, quote}) => <article className="quote-card" key={item.id}><div className="quote-heading"><div><strong>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}</strong><span>{item.expiry} &middot; Lot {item.lot_size}</span></div><span className="quote-age">{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Last quote"}</span></div><dl><div><dt>Bid</dt><dd>{quote.bid == null ? "Unavailable" : money(quote.bid)}</dd></div><div><dt>Ask</dt><dd>{quote.ask == null ? "Unavailable" : money(quote.ask)}</dd></div><div><dt>Volume</dt><dd>{quote.volume?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div><div><dt>Open interest</dt><dd>{quote.oi?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div></dl><div className="quote-card-footer"><small>{time(quote.timestamp)} IST &middot; IV {quote.iv ?? "Unavailable"}{quote.iv != null ? "%" : ""}</small><button className="secondary" onClick={() => openChart(item)} aria-label={`Open chart for ${item.underlying} ${item.strike} ${item.option_type === "CALL" ? "CE" : "PE"}`}><Icon name="markets" />Chart</button></div></article>)}</div><div className="tablewrap desktop-chain"><table><thead><tr>{["Contract", "Expiry", "Strike", "Type", "Lot", "Bid", "Ask", "OI", "Volume", "IV %", "Observed (IST)", "Freshness"].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{chain.rows.map(({ instrument: item, quote }) => <tr key={item.id}><td><button className="text-button" onClick={() => openChart(item)}>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}<Icon name="markets" /></button></td><td>{item.expiry}</td><td>{item.strike}</td><td>{item.option_type}</td><td>{item.lot_size}</td><td>{quote.bid ?? "—"}</td><td>{quote.ask ?? "—"}</td><td>{quote.oi ?? "—"}</td><td>{quote.volume ?? "—"}</td><td>{quote.iv ?? "—"}</td><td>{time(quote.timestamp)}</td><td>{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Stale"}</td></tr>)}</tbody></table></div></>}<div className="actions"><button className="secondary" disabled={offset === 0} onClick={() => { setOffset(Math.max(0, offset - 100)); setChain(null); }}>Previous</button><button className="secondary" disabled={chain?.next_offset == null} onClick={() => { setOffset(chain?.next_offset ?? 0); setChain(null); }}>Next</button></div></section>}
       {tab === "Journal" && <><section className="panel"><div className="panelhead"><h2>Closed positions</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>Most recent 50 records. Realized P&amp;L includes recorded execution costs. CSV exports up to 10,000 closed positions.</p><Positions rows={data.journal} data={data} empty="No closed paper positions." /></section><section className="panel"><h2>Cash ledger</h2>{!data.ledger.length ? <p>No ledger entries recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Category</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</section></>}
       {tab === "Activity" && <section className="panel"><h2>Account activity</h2><p>Recent changes to your account and trading activity.</p>{!data.events.length ? <p>No activity recorded.</p> : data.events.map(event => <details key={event.id}><summary>{time(event.timestamp)} · {event.kind.replaceAll("_", " ")}</summary><p className="muted">Recorded in your account history.</p></details>)}</section>}
       {tab === "Risk settings" && <section className="panel"><h2>Review your complete risk policy</h2><p>Pause entries and resolve pending orders and positions before saving. Capital is preserved in the ledger; changing it requires a separate funding operation.</p><form onSubmit={saveRisk} key={data.account.revision}><fieldset disabled={busy || stale || data.account.enabled || data.positions.length > 0 || (data.order_summary?.active_count ?? 1) > 0 || data.runtime?.resume_requested}><p>Configured paper capital: <strong>{money(String(data.account.config.capital))}</strong></p><div className="riskform">

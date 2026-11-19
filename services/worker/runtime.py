@@ -19,7 +19,11 @@ from services.market.analysis import (
 )
 from services.market.angelone import AngelOneClient
 from services.market.calendar import SessionCalendar
+from services.market.candle_store import CandleStore
 from services.market.catalog import InstrumentCatalog
+from services.market.history import HistoryQuery
+from services.market.history_refresh import HistoryError, refresh_history
+from services.market.live_candles import LiveCandles
 from services.market.settings import MarketSettings, ProviderError
 from services.market.stream import AngelOneStream, QuoteCache
 from services.paper.coordinator import PaperCoordinator
@@ -56,6 +60,12 @@ class TradingRuntime:
         self.client = AngelOneClient(settings)
         self.calendar = SessionCalendar(settings.calendar_file, strict=False)
         self.cache = QuoteCache()
+        self.candles = LiveCandles()
+        self.candle_store = CandleStore(engine, account_id)
+        self.backfill_task: asyncio.Task | None = None
+        self.candle_task: asyncio.Task | None = None
+        self.last_candle_publication = 0.0
+        self.last_backfill = 0.0
         self.analysis = ChainAnalysis(self.cache, settings.greek_max_age_seconds)
         self.instruments: dict[str, Instrument] = {}
         self.catalog: InstrumentCatalog | None = None
@@ -143,6 +153,7 @@ class TradingRuntime:
                 )
                 changed = set(self.instruments) != {item.id for item in selected}
                 self.instruments = {item.id: item for item in selected}
+                self.candles.retain(set(self.instruments))
                 if changed or self.stream_task is None or self.stream_task.done():
                     if self.stream_task:
                         self.stream_task.cancel()
@@ -150,7 +161,9 @@ class TradingRuntime:
                     self.cache.invalidate("SUBSCRIPTIONS_CHANGED")
                     await self.problem("SUBSCRIPTIONS_CHANGED")
                     self.stream_task = asyncio.create_task(
-                        AngelOneStream(self.client, self.cache).run(selected, self.problem)
+                        AngelOneStream(self.client, self.cache, self.observe_candle).run(
+                            selected, self.problem
+                        )
                     )
             except (ProviderError, ValueError, OSError):
                 await self.problem("UNIVERSE_OR_CALENDAR_UNAVAILABLE")
@@ -257,6 +270,57 @@ class TradingRuntime:
         await asyncio.to_thread(self.store.publish_quotes, instruments, latest)
         self.published_ids.update({quote.instrument_id: quote.id for quote in latest})
 
+    async def publish_candles(self) -> None:
+        rows = self.candles.drain()
+        try:
+            await asyncio.to_thread(self.candle_store.save, rows)
+        except Exception:
+            self.candles.restore(rows)
+            logger.warning("Observed candle persistence unavailable; retrying separately.")
+
+    def observe_candle(self, quote) -> None:
+        try:
+            instrument = self.instruments.get(quote.instrument_id)
+            if instrument is None:
+                return
+            session = self.calendar.get(instrument.exchange, quote.timestamp.astimezone(IST).date())
+            if session is not None:
+                self.candles.observe(quote, instrument, session)
+        except Exception:
+            logger.warning("Candle observation unavailable; execution quote delivery continues.")
+
+    async def recover_candles(self) -> None:
+        """One bounded background backfill; never blocks the independent exit watchdog."""
+        now = datetime.now(UTC)
+        for identifier, job in list(self.candles.recoveries.items()):
+            stream_id, session, target = job
+            if target + timedelta(minutes=1) > now:
+                continue
+            # Detach this job before awaiting: new gaps during the fetch queue
+            # independently, even when they belong to the same connection.
+            self.candles.recoveries.pop(identifier)
+            try:
+                start = await asyncio.to_thread(
+                    self.candle_store.recovery_start, identifier, stream_id, session, target
+                )
+                end = min(now.replace(second=0, microsecond=0), session.closes_at)
+                if start >= end:
+                    continue
+                query = HistoryQuery(
+                    instrument_id=identifier, interval="ONE_MINUTE", start=start, end=end
+                )
+                await asyncio.to_thread(refresh_history, query, self.engine, self.account_id)
+            except HistoryError as error:
+                if error.status_code == 429:
+                    self.candles.recoveries.setdefault(identifier, job)
+                    return  # Shared budget is busy. Keep the request queued.
+                logger.warning("Candle history recovery unavailable; retained as a gap.")
+            except Exception:
+                self.candles.recoveries.setdefault(identifier, job)
+                logger.warning("Candle recovery persistence unavailable; retrying separately.")
+                return
+            return
+
     async def execution_watchdog(self) -> None:
         """A single coalesced consumer; agents, news and entry admission cannot await it."""
         while not self.stopping.is_set():
@@ -282,6 +346,20 @@ class TradingRuntime:
     async def cycle(self) -> None:
         now = datetime.now(UTC)
         clock = asyncio.get_running_loop().time()
+        if clock - self.last_candle_publication >= 1 and (
+            self.candle_task is None or self.candle_task.done()
+        ):
+            self.last_candle_publication = clock
+            self.candle_task = asyncio.create_task(self.publish_candles())
+        if self.backfill_task and self.backfill_task.done():
+            self.backfill_task.result()
+        if (
+            self.candles.recoveries
+            and clock - self.last_backfill >= 5
+            and (self.backfill_task is None or self.backfill_task.done())
+        ):
+            self.last_backfill = clock
+            self.backfill_task = asyncio.create_task(self.recover_candles())
         if self.execution_task and self.execution_task.done():
             self.execution_task.result()
             raise RuntimeError("EXECUTION_WATCHDOG_STOPPED")
@@ -524,6 +602,8 @@ class TradingRuntime:
                     self.fallback_task,
                     self.publication_task,
                     self.execution_task,
+                    self.backfill_task,
+                    self.candle_task,
                 )
                 if task
             ]
