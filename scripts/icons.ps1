@@ -6,8 +6,8 @@ foreach ($size in @(192, 512)) {
     $bitmap = New-Object System.Drawing.Bitmap($size, $size)
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-    $graphics.Clear([System.Drawing.ColorTranslator]::FromHtml('#0b1218'))
-    $pen = New-Object System.Drawing.Pen([System.Drawing.ColorTranslator]::FromHtml('#82e5c1'), ($size * 0.065))
+    $graphics.Clear([System.Drawing.ColorTranslator]::FromHtml('#2455e6'))
+    $pen = New-Object System.Drawing.Pen([System.Drawing.ColorTranslator]::FromHtml('#ffffff'), ($size * 0.065))
     $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $points = [System.Drawing.PointF[]]@(

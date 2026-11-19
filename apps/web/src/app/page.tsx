@@ -95,12 +95,12 @@ export default function Home() {
     <main>
       <section aria-labelledby="title">
         <p className="eyebrow">SWAN TRADE</p>
-        <h1 id="title">Your trading workspace.</h1>
-        <p>Autonomous intraday options. Paper capital. Clear risk limits.</p>
+        <h1 id="title">Sign in to SWAN</h1>
+        <p>Follow NIFTY and SENSEX options. Practice with virtual funds.</p>
         {loading ? <p role="status">Checking your session…</p> : user ? (
           <div>
             <p role="status">Signed in as {user.email ?? user.displayName ?? "your account"}.</p>
-            <p className="note">Account authorization and the trading services are still being built. Trading is disabled.</p>
+            <p className="note">Your paper account is connected.</p>
           </div>
         ) : (
           <>
