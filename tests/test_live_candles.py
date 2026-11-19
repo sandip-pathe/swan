@@ -222,6 +222,7 @@ def test_restart_persistence_cached_read_gaps_ownership_and_execution_isolation(
                 assert response.status_code == 200, response.text
                 body = response.json()
                 assert len(body["bars"]) == 1 and len(body["gaps"]) == 2
+                assert body["sessions"] == [scenario.session.model_dump(mode="json")]
                 assert body["bars"][0]["high"] == "105" and body["provider_called"] is False
                 with Session(db_engine) as db, db.begin():
                     db.add(

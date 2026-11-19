@@ -16,10 +16,12 @@ API and connected evidence. Observed one-minute aggregation, persisted segments,
 bounded reconnect/restart history recovery and a mobile-first contract chart are
 implemented; read `__workspace/43-live-candles-and-mobile-chart.md` next. Remaining
 M3 work includes real open-market/reconnect verification and broader candle
-coverage. Additional chart intervals, studies and order-ticket integration still
-follow. Do not treat M3 as complete.
+coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
+EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
+order-ticket integration still follow. Do not treat M3 as complete.
 
-The last full backend suite passed 153 tests. Ruff, mypy, frontend type checking and production build
+The last full backend suite passed 153 tests; five frontend chart-calculation
+tests and ten focused backend candle tests also pass. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.

@@ -1,7 +1,7 @@
 # SWAN Trade
 
-Open **Markets → Chart** on an option contract to view a mobile-first one-minute
-candlestick chart. Use **Get candles** to retrieve broker history for the selected
+Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
+candle or line charts, with optional EMA 20. Use **Get candles** to retrieve broker history for the selected
 session. Chart polling reads saved data; missing minutes remain gaps and old
 prices keep their timestamps. See [chart behavior and verification](./__workspace/43-live-candles-and-mobile-chart.md).
 

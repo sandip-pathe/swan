@@ -78,15 +78,17 @@ def candles(
         )
     calendar = SessionCalendar(MarketSettings().calendar_file, strict=False)
     available = {datetime.fromisoformat(bar["opens_at"]) for bar in bars}
-    gaps, unknown = [], set()
+    gaps, unknown, sessions = [], set(), {}
     stamp = start
     while stamp <= end:
         day = stamp.astimezone(IST).date()
         session = calendar.get(instrument.exchange, day)
         if session is None:
             unknown.add(day.isoformat())
-        elif session.opens_at <= stamp < session.closes_at and stamp not in available:
-            gaps.append(stamp.isoformat())
+        else:
+            sessions[day] = session.model_dump(mode="json")
+            if session.opens_at <= stamp < session.closes_at and stamp not in available:
+                gaps.append(stamp.isoformat())
         stamp += timedelta(minutes=1)
     return {
         "instrument_id": instrument_id,
@@ -97,6 +99,7 @@ def candles(
         "bars": bars,
         "gaps": gaps,
         "unknown_session_dates": sorted(unknown),
+        "sessions": [sessions[day] for day in sorted(sessions)],
         "truncated": len(segments) > 5000 or len(batches) > 20,
         "provider_called": False,
         "finality": "elapsed_interval_not_exchange_confirmation",
