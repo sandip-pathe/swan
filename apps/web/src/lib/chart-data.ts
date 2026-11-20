@@ -81,3 +81,32 @@ export function movingAverage(data: Candles, minutes: Timeframe, kind: AverageKi
 export function ema20(data: Candles, minutes: Timeframe): Point[] {
   return movingAverage(data, minutes, "EMA", 20);
 }
+
+/** Wilder RSI(14): 14 changes need 15 completed closes; reset across sessions/gaps. */
+export function rsi14(data: Candles, minutes: Timeframe): Point[] {
+  const output: Point[] = [];
+  for (const session of data.sessions ?? []) {
+    if (!session.verified) continue;
+    const open = Date.parse(session.opens_at), close = Date.parse(session.closes_at);
+    const points = data.bars.filter(bar => bar.state !== "provisional" && Date.parse(bar.opens_at) >= open && Date.parse(bar.opens_at) < close)
+      .map(bar => ({ time: Date.parse(bar.opens_at) / 1000, value: Number(bar.close) }));
+    for (const run of contiguous(points, minutes)) {
+      if (run.length < 15) continue;
+      let gain = 0, loss = 0;
+      for (let i = 1; i <= 14; i++) {
+        const change = run[i].value - run[i - 1].value;
+        gain += Math.max(change, 0) / 14;
+        loss += Math.max(-change, 0) / 14;
+      }
+      const value = () => gain === 0 && loss === 0 ? 50 : loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+      output.push({ time: run[14].time, value: value() });
+      for (let i = 15; i < run.length; i++) {
+        const change = run[i].value - run[i - 1].value;
+        gain = (gain * 13 + Math.max(change, 0)) / 14;
+        loss = (loss * 13 + Math.max(-change, 0)) / 14;
+        output.push({ time: run[i].time, value: value() });
+      }
+    }
+  }
+  return output;
+}

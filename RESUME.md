@@ -34,7 +34,8 @@ actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
 and device-local chart preferences. The last full backend suite passed 177 tests;
-eight frontend calculation/preference tests pass. Ruff, mypy, frontend type checking and production build
+ten frontend calculation/preference tests pass. RSI 14 is implemented in a
+separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.

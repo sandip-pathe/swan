@@ -97,6 +97,32 @@ test('device preferences validate every field and ignore unrelated stored data',
   const { parseChartPreferences, DEFAULT_CHART_PREFERENCES } = require('./chart-preferences.ts');
   for (const raw of [null, '{', 'null', '[]', '1']) assert.deepEqual(parseChartPreferences(raw), DEFAULT_CHART_PREFERENCES);
   assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, token: 'ignored-fixture' })),
-    { minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50 });
+    { minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, showRsi: false });
+  assert.equal(parseChartPreferences(JSON.stringify({ showRsi: true })).showRsi, true);
+  assert.equal(parseChartPreferences(JSON.stringify({ showRsi: 'true' })).showRsi, false);
   assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 60, mode: 'bad', showAverage: 'true', averageKind: 'bad', averagePeriod: '20' })), DEFAULT_CHART_PREFERENCES);
+});
+
+
+test('Wilder RSI matches a known seed and subsequent smoothed gain/loss calculation', () => {
+  const { rsi14 } = require('./chart-data.ts');
+  const input = data(17);
+  const closes = [44.34,44.09,44.15,43.61,44.33,44.83,45.10,45.42,45.84,46.08,45.89,46.03,45.61,46.28,46.28,46,46.03];
+  input.bars.forEach((bar, i) => { bar.close = String(closes[i]); });
+  const result = rsi14(input, 1);
+  [70.46413502109705,66.24961855355505,66.48094183471265].forEach((value,i) => assert.ok(Math.abs(result[i].value-value)<1e-9));
+  assert.equal(result[0].time, Date.parse(iso(14))/1000);
+});
+
+test('RSI handles rising/falling/flat closes and excludes forming, gaps and session boundaries', () => {
+  const { rsi14 } = require('./chart-data.ts');
+  for (const [slope, expected] of [[1,100],[-1,0],[0,50]]) {
+    const input = data(16); input.bars.forEach((bar,i) => { bar.close=String(100+i*slope); });
+    assert.ok(rsi14(input,1).every(point=>point.value===expected));
+    input.bars[15].state='provisional'; assert.equal(rsi14(input,1).length,1);
+    input.bars.splice(5,1); assert.deepEqual(rsi14(input,1),[]);
+  }
+  const input=data(30); input.sessions=[session(0,14),session(14,30)];
+  assert.deepEqual(rsi14(input,1).map(p=>p.time),[28,29].map(i=>Date.parse(iso(i))/1000));
+  input.sessions[1].verified=false; assert.deepEqual(rsi14(input,1),[]);
 });

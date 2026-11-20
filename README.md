@@ -18,7 +18,8 @@ and choose **Details** for quote statistics, session OHLC and lot/tick informati
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
 candle or line charts. Expand **Moving average** to choose EMA or SMA with a
 9, 20, 50, 100 or 200-candle period. Timeframe, chart style and moving-average
-choices are remembered on this device. Use **Get candles** to retrieve broker history for the selected
+choices are remembered on this device. Toggle **RSI 14** for a separate,
+synchronized pane with 30/70 reference levels; its visibility is also remembered. Use **Get candles** to retrieve broker history for the selected
 session. Chart polling reads saved data; missing minutes remain gaps and old
 prices keep their timestamps. See [chart behavior and verification](./__workspace/43-live-candles-and-mobile-chart.md).
 
