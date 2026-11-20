@@ -4,6 +4,10 @@ History now includes a date-selectable IST daily report of recorded fills, net
 realized P&L, fees, cash movement and decision stages. Today is provisional; cash
 movement is separate from profit and no historical marked equity is inferred.
 
+Account activity includes today's analysis allowance: conservative reservations,
+remaining allowance, recorded token-usage coverage and historical reservation model
+names. Missing usage stays unknown. This view does not estimate monetary billing.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

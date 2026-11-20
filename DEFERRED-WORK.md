@@ -7,6 +7,7 @@ must add newly skipped/blocked work here and update resolved rows.
 
 Statuses: **User-deferred** = explicitly skipped for now; **Evidence-blocked** =
 required facts/acceptance missing; **Planned** = accepted scope not yet delivered;
+**Partially delivered** = a verified subset exists, with remaining scope named;
 **Review needed** = the remaining scope needs a concrete acceptance decision.
 Do not interpret these statuses as permission to log in, arm trading or weaken gates.
 
@@ -28,12 +29,23 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Planned: stages/explanations exist, older records lack durable correlation | Add future IDs and evidence-age/source/news drill-down; leave older WAIT-or-reject outcomes unspecified; never time-join unrelated outputs | [activity](./__workspace/64-recorded-agent-activity.md) |
-| D17 | Model/strategy version and spending/budget visibility (M7) | Planned: server budget reservations exist; user-facing usage/remaining allowance/cost boundaries incomplete | Expose recorded/estimated usage distinctly, model/version binding and budget limits without secrets or fabricated billing cost | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
+| D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. Immutable model/strategy binding, monetary cost and historical usage views remain planned | Record future exact model/strategy versions and failed/incomplete-call usage; add historical views and defensible pricing/billing attribution. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D20 | M8 integrated recovery/security/load and bounded actual-market acceptance | Planned/evidence-blocked: slice suites pass; milestone-wide acceptance is not complete | Execute the integrated matrix and retain findings/closures, including concurrency, restart, stale data, ownership, load and private PWA behavior | [master plan](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D21 | M9 supervised paper observation and handover | Planned: requires completed qualification and a real observation period | Run the declared one-to-two-week supervised period with reconciliation, incidents/stop conditions, operator handover and recovery guide | [finish path](./__workspace/51-quote-order-and-finish-path.md) |
 | D22 | Extended tools and exports beyond the critical finish path | Review needed: drawings, additional studies, scanners, layouts, alerts, strategy builders, baskets/payoffs, tags, scheduled reports and export formats remain backlog | Explicit scope/dependency decision for each; unsupported controls must not appear usable | [backlog](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
+
+## Usage visibility limits carried forward
+
+D17 remains open. The allowance display reads current settings, which may differ
+from a running worker, and groups calls by the IST date of reservation. Reported
+usage is counted only for a unique owner-linked saved output with a valid token
+total; duplicate, missing, invalid, failed and in-flight usage stays unknown.
+Provider failures can consume tokens without a saved valid output. No monetary
+cost, provider billing reconciliation, immutable historical model/strategy version,
+or historical day selector is implemented. This slice does not change the budget
+guard or return reserved allowance after failures. See [checkpoint 66](./__workspace/66-analysis-allowance-and-recorded-usage.md).
 
 ## Daily-report limits carried forward
 
