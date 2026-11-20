@@ -58,6 +58,15 @@ class WatchlistItem(Base):
     saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class DisplaySelection(Base):
+    """One expiring display interest per owner, never execution authorization."""
+
+    __tablename__ = "display_selections"
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), primary_key=True)
+    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class SnapshotRecord(Base):
     __tablename__ = "market_snapshots"
     id: Mapped[UUID] = mapped_column(primary_key=True)

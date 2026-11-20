@@ -143,7 +143,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     let active = true;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
-    setChartRecord(null); setChartError(null);
+    setChartRecord(current => current?.instrument.id === chartId ? current : null); setChartError(null);
     async function load() {
       try {
         if (!document.hidden) {
@@ -155,6 +155,18 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     }
     void load();
     return () => { active = false; controller.abort(); clearTimeout(timer); };
+  }, [chartId, request, tab, refresh]);
+
+  useEffect(() => {
+    if (!chartId || tab !== "Option chain") return;
+    const controller = new AbortController();
+    const retain = () => {
+      if (!document.hidden) void request("/api/market/subscriptions/selected", "POST", controller.signal, { instrument_id: chartId }).catch(() => {});
+    };
+    retain();
+    const timer = setInterval(retain, 30000);
+    document.addEventListener("visibilitychange", retain);
+    return () => { controller.abort(); clearInterval(timer); document.removeEventListener("visibilitychange", retain); };
   }, [chartId, request, tab]);
 
   useEffect(() => {
@@ -198,6 +210,18 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       const result = await request("/api/market/quotes/refresh", "POST", undefined, { underlying }) as { quotes: number };
       setFeedback(result.quotes ? `Retrieved ${result.quotes} last available quotes for ${underlying}. Check their exchange timestamps below.` : "No quotes were returned for the selected contracts.");
       setRefresh(value => value + 1);
+    } catch (cause) { setActionError(cause instanceof Error ? cause.message : "Prices are unavailable."); }
+    finally { setBusy(false); }
+  }
+
+  async function refreshSelectedPrices(ids: string[]) {
+    if (busy || !ids.length) return;
+    setBusy(true); setActionError(null); setFeedback(null);
+    try {
+      const result = await request("/api/market/quotes/selected/refresh", "POST", undefined, { instrument_ids: ids }) as { quotes: number; fresh_quotes: number };
+      setFeedback(result.quotes ? `Retrieved ${result.quotes} quotes.${result.fresh_quotes < result.quotes ? " Some prices are older; check their timestamps." : ""}` : "The broker returned no quotes for these contracts. Saved prices remain visible.");
+      setRefresh(value => value + 1);
+      await watchlist.retry();
     } catch (cause) { setActionError(cause instanceof Error ? cause.message : "Prices are unavailable."); }
     finally { setBusy(false); }
   }
@@ -286,12 +310,12 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
-      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} quoteDate={selectedContract.quote?.timestamp} quote={selectedContract.quote} statistics={"statistics" in selectedContract ? selectedContract.statistics : undefined} quoteError={chartError} quoteMaxAge={Number(data.account.config.quote_max_age_seconds)} request={request} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
+      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} quoteDate={selectedContract.quote?.timestamp} quote={selectedContract.quote} statistics={"statistics" in selectedContract ? selectedContract.statistics : undefined} quoteError={chartError} quoteMaxAge={Number(data.account.config.quote_max_age_seconds)} request={request} quoteBusy={busy} onRefreshQuote={() => void refreshSelectedPrices([chartId])} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
       {tab === "Option chain" && chartId && !selectedContract && <section className="panel"><p>{chartError ?? "Loading contract..."}</p><button className="secondary" onClick={returnToMarket}>Back to markets</button></section>}
       {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Option chain"], ["watchlist", "Watchlist"], ["search", "Search"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = value === "chain" ? "markets" : `markets?view=${value}`; }}>{label}</button>)}</div>}
       {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
       {tab === "Option chain" && !chartId && watchlist.feedback && <p className="chart-feedback" role="status">{watchlist.feedback}</p>}
-      {tab === "Option chain" && !chartId && marketView === "watchlist" && <Watchlist state={watchlist} now={now} quoteAge={Number(data.account.config.quote_max_age_seconds)} onOpen={row => { setChartRecord(row); openChart(row.instrument); }} onSearch={() => { setMarketView("search"); window.location.hash = "markets?view=search"; }} />}
+      {tab === "Option chain" && !chartId && marketView === "watchlist" && <Watchlist refreshing={busy} onRefresh={() => void refreshSelectedPrices(watchlist.data?.rows.filter(row => row.status === "listed").map(row => row.instrument.id) ?? [])} state={watchlist} now={now} quoteAge={Number(data.account.config.quote_max_age_seconds)} onOpen={row => { setChartRecord(row); openChart(row.instrument); }} onSearch={() => { setMarketView("search"); window.location.hash = "markets?view=search"; }} />}
       {tab === "Option chain" && !chartId && marketView === "chain" && <OptionChain chain={chain} error={chainError} underlying={underlying} expiry={chainExpiry} busy={busy} stale={stale} offset={offset} now={now} maxAge={Number(data.account.config.quote_max_age_seconds)} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onExpiry={value => { setChainExpiry(value); setOffset(0); setChain(null); }} onRefresh={() => { setChainExpiry(""); setOffset(0); void refreshPrices(); }} onPage={value => { setOffset(value); setChain(null); }} onOpen={openChart} />}
       {tab === "Journal" && <><section className="panel"><div className="panelhead"><h2>Closed positions</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>Most recent 50 records. Realized P&amp;L includes recorded execution costs. CSV exports up to 10,000 closed positions.</p><Positions rows={data.journal} data={data} empty="No closed paper positions." /></section><section className="panel"><h2>Cash ledger</h2>{!data.ledger.length ? <p>No ledger entries recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Category</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</section></>}
       {tab === "Activity" && <section className="panel"><h2>Account activity</h2><p>Recent changes to your account and trading activity.</p>{!data.events.length ? <p>No activity recorded.</p> : data.events.map(event => <details key={event.id}><summary>{time(event.timestamp)} · {event.kind.replaceAll("_", " ")}</summary><p className="muted">Recorded in your account history.</p></details>)}</section>}

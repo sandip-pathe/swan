@@ -26,6 +26,7 @@ from services.market.history_refresh import HistoryError, refresh_history
 from services.market.live_candles import LiveCandles
 from services.market.settings import MarketSettings, ProviderError
 from services.market.stream import AngelOneStream, QuoteCache
+from services.market.subscriptions import add_display_contracts
 from services.paper.coordinator import PaperCoordinator
 from services.paper.engine import PaperEngine
 from services.paper.qualification import QualificationService
@@ -68,6 +69,7 @@ class TradingRuntime:
         self.last_backfill = 0.0
         self.analysis = ChainAnalysis(self.cache, settings.greek_max_age_seconds)
         self.instruments: dict[str, Instrument] = {}
+        self.base_instruments: list[Instrument] = []
         self.catalog: InstrumentCatalog | None = None
         self.stream_task: asyncio.Task | None = None
         self.fallback_task: asyncio.Task | None = None
@@ -151,22 +153,43 @@ class TradingRuntime:
                     self.settings.max_subscriptions,
                     pinned,
                 )
-                changed = set(self.instruments) != {item.id for item in selected}
-                self.instruments = {item.id: item for item in selected}
-                self.candles.retain(set(self.instruments))
-                if changed or self.stream_task is None or self.stream_task.done():
-                    if self.stream_task:
-                        self.stream_task.cancel()
-                        await asyncio.gather(self.stream_task, return_exceptions=True)
-                    self.cache.invalidate("SUBSCRIPTIONS_CHANGED")
-                    await self.problem("SUBSCRIPTIONS_CHANGED")
-                    self.stream_task = asyncio.create_task(
-                        AngelOneStream(self.client, self.cache, self.observe_candle).run(
-                            selected, self.problem
-                        )
-                    )
+                self.base_instruments = selected
+                await self.apply_display_subscriptions(now)
             except (ProviderError, ValueError, OSError):
                 await self.problem("UNIVERSE_OR_CALENDAR_UNAVAILABLE")
+
+    async def refresh_display_subscriptions(self) -> None:
+        if self.refresh_lock.locked() or self.current_session(datetime.now(UTC)) is None:
+            return
+        async with self.refresh_lock:
+            await self.apply_display_subscriptions(datetime.now(UTC))
+
+    async def apply_display_subscriptions(self, now: datetime) -> None:
+        if self.catalog is None or not self.base_instruments:
+            return
+        requested = await asyncio.to_thread(self.store.display_instruments, now)
+        pinned = await asyncio.to_thread(self.store.open_instruments)
+        protected = {item.id: item for item in [*self.base_instruments, *pinned]}
+        selected = add_display_contracts(
+            list(protected.values()), requested, self.catalog, now, self.settings.max_subscriptions
+        )
+        await self.replace_subscriptions(selected)
+
+    async def replace_subscriptions(self, selected: list[Instrument]) -> None:
+        changed = set(self.instruments) != {item.id for item in selected}
+        self.instruments = {item.id: item for item in selected}
+        self.candles.retain(set(self.instruments))
+        if changed or self.stream_task is None or self.stream_task.done():
+            if self.stream_task:
+                self.stream_task.cancel()
+                await asyncio.gather(self.stream_task, return_exceptions=True)
+            self.cache.invalidate("SUBSCRIPTIONS_CHANGED")
+            await self.problem("SUBSCRIPTIONS_CHANGED")
+            self.stream_task = asyncio.create_task(
+                AngelOneStream(self.client, self.cache, self.observe_candle).run(
+                    selected, self.problem
+                )
+            )
 
     async def refresh_metrics(self) -> None:
         if self.current_session(datetime.now(UTC)):
@@ -561,6 +584,7 @@ class TradingRuntime:
             await self.refresh_universe()
             for name, function, interval in (
                 ("universe", self.refresh_universe, 180),
+                ("display", self.refresh_display_subscriptions, 15),
                 ("metrics", self.refresh_metrics, 60),
                 ("evaluation", self.evaluation_slot, 180),
             ):

@@ -13,7 +13,13 @@ from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
 from services.core.contracts import IST, Instrument, Quote
-from services.core.models import Account, AuditEvent, InstrumentRecord, ListedInstrument
+from services.core.models import (
+    Account,
+    AuditEvent,
+    DisplaySelection,
+    InstrumentRecord,
+    ListedInstrument,
+)
 from services.market.catalog import InstrumentCatalog
 from services.market.display import quote_statistics
 from services.market.settings import ProviderError
@@ -226,3 +232,32 @@ def persist_listing(db: Session, instrument_id: str) -> Instrument:
         raise HTTPException(409, "INSTRUMENT_IDENTITY_CHANGED") from None
     db.flush()
     return instrument
+
+
+@router.post("/api/market/subscriptions/selected")
+def display_selection(
+    body: Selection, request: Request, identifier: UUID = Depends(account_identity)
+):
+    now = datetime.now(UTC)
+    with Session(request.app.state.engine) as db, db.begin():
+        owner(db, identifier)
+        instrument = persist_listing(db, body.instrument_id)
+        statement = insert(DisplaySelection).values(
+            account_id=identifier,
+            instrument_id=instrument.id,
+            expires_at=now + timedelta(seconds=90),
+        )
+        db.execute(
+            statement.on_conflict_do_update(
+                index_elements=[DisplaySelection.account_id],
+                set_={
+                    "instrument_id": statement.excluded.instrument_id,
+                    "expires_at": statement.excluded.expires_at,
+                },
+            )
+        )
+    return {
+        "status": "requested",
+        "expires_at": now + timedelta(seconds=90),
+        "provider_called": False,
+    }

@@ -26,9 +26,13 @@ supported instrument catalog and direct chart selection. See
 implemented with Search stars, cached quotes and chart links; read
 `__workspace/46-saved-watchlist.md`. Paired calls/puts, expiry/strike pagination
 and a chart-adjacent Details view are implemented; read
-`__workspace/47-instrument-details-and-paired-chain.md` next.
+`__workspace/47-instrument-details-and-paired-chain.md`, then
+`__workspace/48-selected-prices-and-display-subscriptions.md`. Exact selected
+quote refresh and expiring chart/watchlist feed interest are implemented. Broker
+login expired at midnight on 20 November; login was skipped at user request, so
+actual open-market stream/reconnect verification remains pending.
 
-The last full backend suite passed 168 tests; five frontend chart-calculation
+The last full backend suite passed 177 tests; five frontend chart-calculation
 tests also pass. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.

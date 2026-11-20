@@ -15,10 +15,12 @@ from services.core.contracts import (
 from services.core.models import (
     Account,
     AuditEvent,
+    DisplaySelection,
     InstrumentRecord,
     PaperOrder,
     PaperPosition,
     SnapshotRecord,
+    WatchlistItem,
 )
 from services.paper.accounting import ACTIVE
 from services.paper.engine import PaperEngine
@@ -28,6 +30,32 @@ from services.worker.models import EvaluationSlot, LatestMarketQuote, RuntimeCon
 class RuntimeStore:
     def __init__(self, engine: Engine, account_id: UUID):
         self.engine, self.account_id = engine, account_id
+
+    def display_instruments(self, now: datetime) -> list[Instrument]:
+        with Session(self.engine) as db:
+            selected = db.scalar(
+                select(DisplaySelection).where(
+                    DisplaySelection.account_id == self.account_id,
+                    DisplaySelection.expires_at > now,
+                )
+            )
+            ids = ([selected.instrument_id] if selected else []) + list(
+                db.scalars(
+                    select(WatchlistItem.instrument_id)
+                    .where(WatchlistItem.account_id == self.account_id)
+                    .order_by(WatchlistItem.saved_at.desc(), WatchlistItem.instrument_id)
+                    .limit(50)
+                )
+            )
+            records = {
+                row.id: row
+                for row in db.scalars(select(InstrumentRecord).where(InstrumentRecord.id.in_(ids)))
+            }
+            return [
+                Instrument.model_validate(records[key].payload)
+                for key in dict.fromkeys(ids)
+                if key in records
+            ]
 
     def initialize(self, now: datetime, mode: str = "OBSERVATION") -> None:
         from services.paper.qualification import disarm

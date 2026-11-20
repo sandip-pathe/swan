@@ -4,7 +4,14 @@ Use **Markets → Search** to find listed NIFTY/SENSEX contracts by strike, expi
 and call/put, then open a chart. **Refresh contracts** updates the listing cache;
 prices and candle history load separately.
 Star a search result to save it under **Markets → Watchlist**. Saved contracts
-belong to your account; saving does not request a price or enable trading.
+belong to your account and join the worker feed when capacity is available.
+Saving a contract does not enable trading. Open-contract and Watchlist **Refresh
+price(s)** request those exact contracts, up to 50 per request; the shared refresh
+cooldown is 30 seconds. Viewed contracts receive a 90-second display lease,
+renewed only while the chart is visible. Open exposure and the worker universe
+retain subscription priority. Old prices keep their exchange timestamps.
+If refresh reports a broker login is required, run `market.cmd login` privately
+and retry; a web sign-in does not renew the daily broker session.
 The option chain pairs calls and puts by strike and saved expiry. Open a contract
 and choose **Details** for quote statistics, session OHLC and lot/tick information.
 

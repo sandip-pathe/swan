@@ -56,10 +56,11 @@ export function useWatchlist(request: Request, enabled: boolean, visible: boolea
 
 export type WatchState = ReturnType<typeof useWatchlist>;
 
-export default function Watchlist({ state, onOpen, onSearch, now, quoteAge }: { state: WatchState; onOpen: (row: WatchRow) => void; onSearch: () => void; now: number; quoteAge: number }) {
+export default function Watchlist({ state, onOpen, onSearch, now, quoteAge, refreshing, onRefresh }: { state: WatchState; onOpen: (row: WatchRow) => void; onSearch: () => void; now: number; quoteAge: number; refreshing: boolean; onRefresh: () => void }) {
   const { data, error, busy, change } = state;
   return <section className="panel saved-watchlist" aria-label="Saved watchlist">
     <div className="panelhead"><div><h2>Watchlist</h2><p>{data ? `${data.rows.length} of ${data.limit} contracts` : "Your saved contracts"}</p></div><button className="secondary" onClick={onSearch}><Icon name="markets" />Find contracts</button></div>
+    {!!data?.rows.length && <button className="secondary" disabled={refreshing || !data.rows.some(row => row.status === "listed")} onClick={onRefresh}><Icon name="refresh" />{refreshing ? "Refreshing prices?" : "Refresh prices"}</button>}
     {error && <p className="notice error" role="alert">{error}<button className="secondary" onClick={() => void state.retry()}>Retry</button></p>}
     {!data && !error ? <p role="status" className="empty-state">Loading watchlist…</p> : data?.rows.length === 0 ? <div className="market-empty"><Icon name="star" /><strong>Keep your contracts close</strong><p>Tap the star beside a Search result to save it here.</p></div> : <div>{data?.rows.map(row => {
       const item = row.instrument;

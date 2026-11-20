@@ -98,7 +98,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma }: { data: Candl
   </>;
 }
 
-export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain", quote = null, statistics, quoteError, quoteMaxAge = 10 }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string; quote?: MarketQuote | null; statistics?: QuoteStatistics; quoteError?: string | null; quoteMaxAge?: number }) {
+export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain", quote = null, statistics, quoteError, quoteMaxAge = 10, quoteBusy = false, onRefreshQuote }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string; quote?: MarketQuote | null; statistics?: QuoteStatistics; quoteError?: string | null; quoteMaxAge?: number; quoteBusy?: boolean; onRefreshQuote?: () => void }) {
   const today = istDate(new Date());
   const maximum = instrument.expiry < today ? instrument.expiry : today;
   const initial = quoteDate ? istDate(new Date(quoteDate)) : maximum;
@@ -158,6 +158,7 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
     <button className="text-button chart-back" onClick={onBack}><span aria-hidden="true">←</span>{backLabel}</button>
     <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{headerPrice == null ? "—" : money(headerPrice)}</strong><span>{headerCaption}</span></div></div>
     {quoteError && <p className="notice error" role="alert">{quoteError} Saved quotes may be out of date.</p>}
+    {onRefreshQuote && <button className="secondary quote-refresh" disabled={quoteBusy} onClick={onRefreshQuote}><Icon name="refresh" />{quoteBusy ? "Refreshing price?" : "Refresh price"}</button>}
     <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button></div>
     {surface === "details" && <InstrumentDetails instrument={instrument} quote={quote} statistics={statistics} maxAge={quoteMaxAge} error={quoteError} />}
     <div hidden={surface !== "chart"}>
