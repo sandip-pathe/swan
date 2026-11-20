@@ -55,3 +55,8 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .manual-order-receipt p { font-size: 13px; line-height: 1.5; }
 .manual-order-review .actions { flex-wrap: wrap; }
 .manual-order-review .actions button { flex: 1 1 100%; min-height: 44px; white-space: nowrap; }
+
+.paper-action-button { min-height: 44px; margin-block: 12px; }
+.paper-action-review { border-color: var(--accent); }
+.paper-action-review button { min-height: 44px; }
+@media (max-width: 480px) { .paper-action-review .actions { flex-direction: column; } .paper-action-review button, .paper-action-button { width: 100%; } }

@@ -162,3 +162,8 @@ after reservations and restricted proceeds. See [milestone evidence](__workspace
 Firebase's umbrella dependency includes an unused Firestore dependency that pinned a vulnerable gRPC version. The frontend overrides `@grpc/grpc-js` to patched `1.14.7`; production build, type checks and audit must remain green. Firestore is not used; validate its compatibility separately before introducing it.
 
 See [workspace index](__workspace/README.md), [implementation roadmap](__workspace/14-implementation-roadmap.md), and [environment setup evidence](__workspace/16-environment-setup.md).
+
+Orders now supports confirmed cancellation of remaining paper entry units and
+persistent exit requests for owned durable positions. Exit requests pause new
+entries; fills still require monitoring and fresh market depth. See
+[owned cancellation and exit](__workspace/59-owned-paper-cancel-and-exit.md).

@@ -11,6 +11,7 @@ import OptionChain, { type Chain, type ChainRow } from "./option-chain";
 import SystemSetup from "./system-setup";
 import ValidationPanel from "./validation";
 import PaperControls from "./paper-controls";
+import { PaperActionProvider, PaperActionStatus } from "./paper-action";
 import ExecutionHistory, { ActiveOrders, FundsPanel, Positions } from "./execution";
 import type { ExecutionData, Position } from "@/lib/paper";
 import { money, time } from "@/lib/paper";
@@ -304,7 +305,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   const nextStep = !workerOnline ? "Connect your trading service" : !ready?.configuration_complete ? "Finish setting up your paper account" : !ready.connections_verified ? "Check your market connections" : "Explore the market";
   const nextDetail = !workerOnline ? "Your account is available, but automatic position monitoring is offline." : !ready?.configuration_complete ? "A few trading and risk settings still need review before you can place paper trades." : !ready.connections_verified ? "Verify your broker and market data before starting a paper session." : "View option prices and available contracts. Paper trading stays paused until you choose to start.";
 
-  return <main className="workspace">
+  return <main className="workspace"><PaperActionProvider key={user.uid} ownerKey={user.uid} request={request} onRefresh={() => setRefresh(value => value + 1)}>
     <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 22 15 9l3 8 7-5-9 13-3-8Z" fill="currentColor"/></svg></span><div><p className="brand-name">swan<span className="brand-period">.</span></p></div></div><div className="header-actions"><button className="avatar-button" aria-label="Open account settings" onClick={() => navigate("System setup")}>{(user.displayName ?? user.email ?? "S").slice(0, 1).toUpperCase()}</button></div></header>
     <nav className="tabs" aria-label="Main navigation">{([["Overview", "Home", "home"], ["Option chain", "Markets", "markets"], ["Execution", "Orders", "orders"], ["Journal", "History", "history"], ["System setup", "Account", "account"]] as [string, string, IconName][]).map(([name, label, icon]) => <button key={name} aria-current={(name === "System setup" ? settingsPage : tab === name) ? "page" : undefined} onClick={() => navigate(name === "System setup" ? settingsTab : name)}><Icon name={icon} /><span>{label}</span></button>)}</nav>
     {settingsPage && <div className="account-heading"><div><h1>Account</h1><p>{user.email ?? user.displayName}</p></div><button className="text-button" onClick={onSignOut}><Icon name="logout" />Sign out</button></div>}
@@ -312,9 +313,10 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     {error && <div className="notice error" role="alert">{error}<button className="secondary" onClick={() => setRefresh(value => value + 1)}>Retry</button></div>}
     {actionError && <p className="notice error" role="alert">{actionError}</p>}
     {feedback && <p className="notice" role="status">{feedback}</p>}
+    <PaperActionStatus />
     {!data ? <section className="panel"><h2>{error ? "Workspace unavailable" : "Loading your workspace…"}</h2><p>Your balances and positions will appear here once your account is connected.</p></section> : <>
       <div className="statusline"><span className={`dot ${workerOnline ? "online" : ""}`} /><span>{workerOnline ? "Monitoring connected" : "Monitoring offline"}</span><span className="status-pill">{data.account.enabled && workerOnline ? "Entries enabled" : "Entries paused"}</span><span className="updated">Updated {time(data.as_of)} IST</span><button className="text-button refresh-button" aria-label="Refresh account" onClick={() => setRefresh(value => value + 1)}><Icon name="refresh" /></button></div>
-      {stale && <p className="notice error" role="status">Workspace data is stale. Controls are unavailable until it refreshes.</p>}
+      {stale && <p className="notice error" role="status">Account data is stale. Refresh to check current holdings. Cancellation and exit requests are checked against the latest account records.</p>}
       {!workerOnline && data.positions.length > 0 && <p className="notice error" role="alert">Your open positions are not being monitored. Restore the trading connection to manage automatic exits.</p>}
       {tab === "Overview" && <>
         <div className="page-heading"><div><p className="eyebrow">YOUR PORTFOLIO</p><h1>Overview</h1></div><span className="market-badge">{marketLabel}</span></div>
@@ -347,6 +349,6 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
         </div><p className="muted">Maximum quantity must accommodate an actual whole option lot. Entry cutoff must be earlier than flatten time. Execution policy and reviewed fees are configured separately.</p><label className="checkbox-label"><input name="reviewed" type="checkbox" required />I reviewed all limits, including quantity, liquidity and session cutoffs.</label><button type="submit">Save and review policy</button></fieldset></form></section>}
     </>}
     <footer>Paper execution only · NIFTY &amp; SENSEX · All times Asia/Kolkata</footer>
-  </main>;
+  </PaperActionProvider></main>;
 }
 

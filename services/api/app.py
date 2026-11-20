@@ -23,6 +23,7 @@ from services.api.manual_orders import router as manual_orders_router
 from services.api.manual_plans import router as plans_router
 from services.api.market import router as market_router
 from services.api.order_preview import router as preview_router
+from services.api.paper_actions import router as paper_actions_router
 from services.api.paper_control import router as paper_control_router
 from services.api.setup import router as setup_router
 from services.api.validation import router as validation_router
@@ -43,7 +44,7 @@ from services.core.models import (
 )
 from services.market.diagnostics import evidence_context
 from services.market.readiness import readiness
-from services.paper.accounting import ACTIVE, reservations, restricted_proceeds
+from services.paper.accounting import ACTIVE, LEGACY, reservations, restricted_proceeds
 from services.paper.qualification import qualification_context
 from services.worker.models import EvaluationSlot, RuntimeControl
 
@@ -62,6 +63,7 @@ app = FastAPI(
 )
 app.include_router(setup_router)
 app.include_router(paper_control_router)
+app.include_router(paper_actions_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(candle_router)
@@ -209,6 +211,69 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
         instruments = list(
             db.scalars(select(InstrumentRecord).where(InstrumentRecord.id.in_(instrument_ids)))
         )
+        linked_positions = {p.id: p for p in [*positions, *journal]}
+        position_ids = {o.position_id for o in [*orders, *active_orders] if o.position_id}
+        for held in db.scalars(
+            select(PaperPosition).where(
+                PaperPosition.account_id == identifier, PaperPosition.id.in_(position_ids)
+            )
+        ):
+            linked_positions[held.id] = held
+        entries = {
+            o.id: o
+            for o in db.scalars(
+                select(PaperOrder).where(
+                    PaperOrder.account_id == identifier,
+                    PaperOrder.id.in_([p.entry_order_id for p in linked_positions.values()]),
+                )
+            )
+        }
+
+        def origin(entry: PaperOrder | None) -> dict:
+            return {
+                "entry_source": (
+                    "HUMAN"
+                    if entry.manual_intent_id
+                    else "AI"
+                    if entry.decision_id
+                    else "LEGACY"
+                    if entry.execution_version == LEGACY
+                    else "UNKNOWN"
+                )
+                if entry
+                else "UNKNOWN",
+                "entry_order_id": str(entry.id) if entry else None,
+                "entry_manual_intent_id": str(entry.manual_intent_id)
+                if entry and entry.manual_intent_id
+                else None,
+                "entry_decision_id": str(entry.decision_id)
+                if entry and entry.decision_id
+                else None,
+            }
+
+        def order_view(order: PaperOrder) -> dict:
+            held = linked_positions.get(order.position_id) if order.position_id else None
+            entry = (
+                order if order.side == "BUY" else entries.get(held.entry_order_id) if held else None
+            )
+            return {
+                **row(order),
+                **origin(entry),
+                "can_cancel": order.side == "BUY"
+                and order.execution_version != LEGACY
+                and order.status in ACTIVE,
+            }
+
+        def position_view(position: PaperPosition) -> dict:
+            entry = entries.get(position.entry_order_id)
+            return {
+                **row(position),
+                **origin(entry),
+                "can_exit": position.closed_at is None
+                and entry is not None
+                and entry.execution_version != LEGACY,
+            }
+
         return {
             "as_of": datetime.now(UTC).isoformat(),
             "mode": "PAPER",
@@ -228,10 +293,10 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
                 "available_cash": str(account.cash - reserved_cash - restricted_cash),
             },
             "runtime": row(control) if control else None,
-            "positions": [row(value) for value in positions],
-            "journal": [row(value) for value in journal],
-            "orders": [row(value) for value in orders],
-            "active_orders": [row(value) for value in active_orders],
+            "positions": [position_view(value) for value in positions],
+            "journal": [position_view(value) for value in journal],
+            "orders": [order_view(value) for value in orders],
+            "active_orders": [order_view(value) for value in active_orders],
             "order_summary": {
                 "active_count": active_order_count or 0,
                 "active_truncated": (active_order_count or 0) > len(active_orders),
