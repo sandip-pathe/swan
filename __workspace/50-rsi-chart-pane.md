@@ -43,7 +43,8 @@ no pane accumulation, reload persistence, insufficient 15m data, synchronized
 chart controls, offline fallback and existing search/watchlist flows. No overflow
 or browser exceptions were found. Visual review of the 360px screenshot caught
 inherited price-axis margins extending beyond RSI bounds; the RSI scale now uses
-zero margins with its explicit 0-100 range. Fixture data stays isolated from the
+small RSI-specific margins with its explicit 0-100 range, keeping values at 0/100
+visible at pane edges. Fixture data stays isolated from the
 running application. The actual localhost sign-in/PWA smoke check passes.
 
 The user's price refresh and worker session were left alone. M3 live/reconnect

@@ -109,7 +109,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
           priceFormat: { type: "price", precision: 2, minMove: .01 },
           autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
         }, 1);
-        series.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
+        series.priceScale().applyOptions({ scaleMargins: { top: .02, bottom: .02 } });
         if (index === 0) for (const price of [30, 70]) series.createPriceLine({ price, color: "#929aab", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "" });
         rsiSeries.current.push(series);
       }
