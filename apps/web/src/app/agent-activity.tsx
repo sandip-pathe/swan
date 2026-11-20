@@ -5,6 +5,7 @@ import { money, time, words } from "@/lib/paper";
 import { usePaperRequest } from "./paper-action";
 import OrderHistory from "./order-history";
 import AgentEvidence from "./agent-evidence";
+import AgentRun from "./agent-run";
 
 type Activity = { id: string; timestamp: string; stage: string; state: string; title: string; summary: string; rationale: string | null; evidence_count: number | null; concerns: string[]; instrument: { underlying: string; strike: string; option_type: string; expiry: string } | null; risk: { quantity: number; cash_budget: string; risk_budget: string; expires_at: string } | null; order: { id: string; status: string; quantity: number; filled_quantity: number } | null };
 type Page = { as_of: string; mode: string; rows: Activity[]; next_before: string | null };
@@ -48,6 +49,7 @@ export default function AgentActivity() {
         <p>{row.summary}</p>
         {(row.rationale || row.concerns.length > 0 || row.risk || row.evidence_count != null) && <details><summary>Recorded explanation</summary>{row.rationale && <p className="recorded-rationale">{row.rationale}</p>}{row.concerns.length > 0 && <><h4>Recorded concerns</h4><ul>{row.concerns.map((text, index) => <li key={index}>{text}</li>)}</ul></>}{row.evidence_count != null && <p className="muted">{row.evidence_count} cited market observations. A citation count alone does not establish acceptance or freshness.</p>}{row.risk && <><dl className="execution-values"><div><dt>Approved quantity</dt><dd>{row.risk.quantity} units</dd></div><div><dt>Cash allowance</dt><dd>{money(row.risk.cash_budget)}</dd></div><div><dt>Risk allowance</dt><dd>{money(row.risk.risk_budget)}</dd></div></dl><p className="muted">Recorded approval valid until {time(row.risk.expires_at)} IST. This historical result grants no current permission.</p></>}</details>}
         {["analysis", "proposal", "review"].includes(row.stage) && <AgentEvidence eventId={row.id} />}
+        {row.stage !== "risk" && <AgentRun eventId={row.id} />}
         {row.stage === "risk" && <>{row.order ? <><p>Linked order · {words(row.order.status)} · {row.order.filled_quantity} / {row.order.quantity} units filled</p><OrderHistory orderId={row.order.id} /></> : <p className="muted">No linked paper order was found for this decision.</p>}</>}
       </li>)}</ol>}
       {data.next_before && <button className="secondary" disabled={busy} onClick={() => load(data.next_before!)}>Load older activity</button>}

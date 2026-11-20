@@ -28,7 +28,7 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D13 | Bulk protected exits and broader modification scope (M6) | Planned: individual exit and wholly-unfilled manual price amendments exist; no bulk exit, quantity increase, expiry extension or filled-position amendment | Specify/review semantics and implement reservation/fill-race/unresolved outcomes; do not add cosmetic actions | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md), [owned controls](./__workspace/59-owned-paper-cancel-and-exit.md) |
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
-| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation/strategy correlation and risk evidence remain planned | Add future IDs and evidence-age/source/news drill-down; leave older WAIT-or-reject outcomes unspecified; never time-join unrelated outputs | [activity](./__workspace/64-recorded-agent-activity.md) |
+| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome; strategy/risk evidence remains planned | Complete stage-validation and strategy/risk/order links plus richer source/age drill-down; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
 | D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. Immutable model/strategy binding, monetary cost and historical usage views remain planned | Record future exact model/strategy versions and failed/incomplete-call usage; add historical views and defensible pricing/billing attribution. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
@@ -40,12 +40,20 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 
 D16 remains open. [Checkpoint 67](./__workspace/67-linked-agent-evidence.md) adds
 future output-to-context links and an owned citation view. Older outputs are never
-linked by timestamp. Evaluation/strategy/risk correlation, evidence validation
-outcome tracking, news article links and richer depth/age analysis are still pending.
+linked by timestamp. Strategy/risk correlation, evidence validation outcome tracking, news article
+links and richer depth/age analysis are still pending.
 Proposal/review records cite market observations; only analysis records directly
 cite news. This view does not attribute analysis headlines to a later proposal.
 Missing/invalid observations remain unavailable; historical evidence grants no
 current trading permission. No broker/login/manual acceptance was attempted.
+
+[Checkpoint 68](./__workspace/68-linked-evaluation-history.md) adds explicit new
+output-to-evaluation IDs and an owned history showing recorded model stages plus
+the current slot outcome. Existing evaluation events can show their slot outcome,
+but legacy model outputs are not backfilled. Model-stage validation results and
+missing-output failure details are not separately persisted yet. History is capped
+at the first 20 outputs and marks truncation; pagination/query indexing/load review
+remain under D16/D20. Strategy/risk/order correlation remains open.
 
 ## Usage visibility limits carried forward
 

@@ -75,6 +75,7 @@ def test_future_output_links_persisted_context_and_only_cited_values(durable, mo
             }
         ],
         "risk": {"private": "not-for-client"},
+        "evaluation_id": str(uuid4()),
     }
     context["context_id"] = str(pipeline.persist_context(context))
     original_client = httpx.AsyncClient
@@ -104,6 +105,7 @@ def test_future_output_links_persisted_context_and_only_cited_values(durable, mo
     with Session(d.engine) as db:
         event = db.scalar(select(AuditEvent).where(AuditEvent.kind == "AI_OUTPUT"))
         assert event.details["context_id"] == context["context_id"]
+        assert event.details["evaluation_id"] == context["evaluation_id"]
         event_id = event.id
     result = read(d, event_id)
     assert result.status_code == 200

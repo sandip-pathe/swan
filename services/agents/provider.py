@@ -126,6 +126,7 @@ class StructuredProvider:
                 {
                     "reservation_id": str(reservation),
                     "context_id": context.get("context_id"),
+                    "evaluation_id": context.get("evaluation_id"),
                     "role": role,
                     "response_id": body.get("id"),
                     "usage": body.get("usage"),

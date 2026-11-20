@@ -53,7 +53,7 @@ def evaluation(status: str) -> tuple[str, str, str]:
         return (
             "unspecified",
             "No strategy accepted",
-            "This older outcome does not distinguish WAIT from review rejection. No strategy approval was recorded.",
+            "This recorded outcome does not distinguish WAIT from review rejection. No strategy approval was recorded.",
         )
     if status == "AWAITING_AGENT":
         return (

@@ -259,7 +259,7 @@ class TradingRuntime:
                 raise ProviderError("AI_NO_FRESH_STREAM")
             if self.agents is None:
                 return
-            envelope = await self.agents.evaluate(instruments, quotes, session, config)
+            envelope = await self.agents.evaluate(instruments, quotes, session, config, identifier)
             status = "STRATEGY_APPROVED" if envelope else "AGENT_WAIT_OR_REJECT"
             if generation != self.cache.generation or not self.cache.connected:
                 envelope, status = None, "INVALIDATED_DURING_ANALYSIS"

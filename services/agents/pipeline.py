@@ -26,6 +26,7 @@ class AgentPipeline:
         quotes: list[Quote],
         session: ExchangeSession,
         config: RiskConfig,
+        evaluation_id: UUID | None = None,
     ) -> StrategyEnvelope | None:
         if not self.settings.ready():
             raise ProviderError("AI_NOT_CONFIGURED")
@@ -40,6 +41,7 @@ class AgentPipeline:
                 raise ProviderError("AI_NO_MARKET_EVIDENCE")
             context = {
                 "as_of": datetime.now(UTC).isoformat(),
+                "evaluation_id": str(evaluation_id) if evaluation_id else None,
                 "session": session.model_dump(mode="json"),
                 "risk": config.model_dump(mode="json"),
                 "instruments": [

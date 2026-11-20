@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from services.api.agent_activity import router as agent_activity_router
 from services.api.agent_evidence import router as agent_evidence_router
+from services.api.agent_run import router as agent_run_router
 from services.api.agent_usage import router as agent_usage_router
 from services.api.auth import account_identity, settings
 from services.api.candles import router as candle_router
@@ -78,6 +79,7 @@ app.include_router(chart_trades_router)
 app.include_router(agent_activity_router)
 app.include_router(daily_report_router)
 app.include_router(agent_usage_router)
+app.include_router(agent_run_router)
 app.include_router(agent_evidence_router)
 app.include_router(validation_router)
 app.include_router(history_router)
