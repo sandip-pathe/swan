@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from services.agents.provenance import fingerprint, name
+from services.agents.provenance import fingerprint, name, normalized_usage
 from services.agents.settings import AgentSettings
 from services.core.contracts import IST
 from services.core.models import AuditEvent
@@ -125,6 +125,18 @@ class StructuredProvider:
             if len(response.content) > 1000000:
                 raise ProviderError("AI_RESPONSE_TOO_LARGE")
             body = response.json()
+            if not isinstance(body, dict):
+                raise ProviderError("AI_RESPONSE_UNAVAILABLE_OR_INVALID")
+            await asyncio.to_thread(
+                self.persist_usage,
+                {
+                    "reservation_id": str(reservation),
+                    "context_id": context.get("context_id"),
+                    "evaluation_id": context.get("evaluation_id"),
+                    "role": role,
+                    "usage": normalized_usage(body.get("usage")),
+                },
+            )
             if body.get("status") != "completed":
                 raise ProviderError("AI_INCOMPLETE")
             blocks = [
@@ -152,7 +164,7 @@ class StructuredProvider:
                 },
             )
             return value
-        except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
             raise ProviderError("AI_RESPONSE_UNAVAILABLE_OR_INVALID") from None
 
     def persist_output(self, details: dict) -> None:
@@ -161,6 +173,17 @@ class StructuredProvider:
                 AuditEvent(
                     account_id=self.account_id,
                     kind="AI_OUTPUT",
+                    timestamp=datetime.now(UTC),
+                    details=details,
+                )
+            )
+
+    def persist_usage(self, details: dict) -> None:
+        with Session(self.engine) as db, db.begin():
+            db.add(
+                AuditEvent(
+                    account_id=self.account_id,
+                    kind="AI_RESPONSE_USAGE",
                     timestamp=datetime.now(UTC),
                     details=details,
                 )

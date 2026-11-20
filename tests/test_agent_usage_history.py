@@ -30,6 +30,7 @@ def test_historical_allowance_is_recorded_and_late_response_follows_request_day(
     )
     save(d, "AI_RESERVATION", {"tokens": 100, "model": "old-model", "daily_allowance": 1000}, stamp)
     save(d, "AI_OUTPUT", {"reservation_id": first, "usage": {"total_tokens": 75}})
+    save(d, "AI_RESPONSE_USAGE", {"reservation_id": first, "usage": {"total_tokens": 75}})
     save(d, "AI_RESERVATION", {"tokens": 800, "model": "today", "daily_allowance": 9000})
 
     def no_current_settings():

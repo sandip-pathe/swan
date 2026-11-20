@@ -34,6 +34,10 @@ usage coverage and model counts. Historical allowance appears only when all requ
 saved the same limit; older/mixed limits stay unavailable. Late responses count
 against their request day. No billing amount is inferred.
 
+Reported usage now retains supplied token totals even when a response is incomplete,
+refused or fails output validation. These responses still fail trading checks.
+Usage is counted once per request; missing/conflicting totals remain unknown.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { time } from "@/lib/paper";
 import { usePaperRequest } from "./paper-action";
 
-type Usage = { day_ended: boolean; policy_source: string; day: string; as_of: string; resets_at: string; policy: { model: string | null; daily_allowance: number } | null; reservation_count: number; reserved_allowance: number | null; remaining_allowance: number | null; reported_tokens: number; reported_calls: number; unknown_calls: number; models: { model: string; reservations: number }[] };
+type Usage = { day_ended: boolean; policy_source: string; day: string; as_of: string; resets_at: string; policy: { model: string | null; daily_allowance: number } | null; reservation_count: number; reserved_allowance: number | null; remaining_allowance: number | null; reported_tokens: number; reported_calls: number; reported_without_output_calls: number; unknown_calls: number; models: { model: string; reservations: number }[] };
 const count = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString("en-IN");
 
 function todayIST() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
@@ -41,8 +41,8 @@ export default function AgentUsage() {
       {data.day_ended && <p className="muted">Historical allowance uses limits saved with requests, not the day's final settings. Usage follows the request date, including responses saved later.</p>}
       {!data.reservation_count && <p className="empty-state">No model requests reserved for this day.</p>}
       <details><summary>Reported usage and models</summary>
-        <dl className="execution-values"><div><dt>Reported tokens</dt><dd>{count(data.reported_tokens)}</dd></div><div><dt>Requests with usage</dt><dd>{count(data.reported_calls)}</dd></div><div><dt>Usage unavailable</dt><dd>{count(data.unknown_calls)}</dd></div></dl>
-        <p>Reported tokens cover only linked, valid completed responses with recorded usage. Missing usage is unknown, including failed or in-flight requests. This is not a billing total.</p>
+        <dl className="execution-values"><div><dt>Reported tokens</dt><dd>{count(data.reported_tokens)}</dd></div><div><dt>Requests with usage</dt><dd>{count(data.reported_calls)}</dd></div><div><dt>Usage without saved output</dt><dd>{count(data.reported_without_output_calls)}</dd></div><div><dt>Usage unavailable</dt><dd>{count(data.unknown_calls)}</dd></div></dl>
+        <p>Reported tokens include saved provider usage even when a response is incomplete or fails validation. Missing usage stays unknown. Usage without a saved output does not mean a trade was approved. This is not a billing total.</p>
         {!data.day_ended && <p>Configured model: <strong className="recorded-rationale">{data.policy?.model ?? "Unavailable"}</strong></p>}
         <p className="muted">{!data.day_ended && "Current settings may differ from a running worker. "}Models below come from each reservation; a model name does not identify an immutable version.</p>
         {data.models.map(row => <p className="recorded-rationale" key={row.model}>{row.model}: {count(row.reservations)} reserved requests</p>)}

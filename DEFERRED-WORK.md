@@ -1,6 +1,6 @@
 # Deferred-work ledger
 
-Updated 20 November 2026. This is the end-of-build review list. An implemented
+Updated 21 November 2026. This is the end-of-build review list. An implemented
 feature is not accepted evidence of live behavior. Keep IDs stable; close a row
 only with a linked result, test or explicit scope decision. Every future slice
 must add newly skipped/blocked work here and update resolved rows.
@@ -29,7 +29,7 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome, with saved stage-check results for new runs; accepted strategies now link to owned risk decisions and entry orders; richer evidence remains planned | Complete richer source/age drill-down and remaining downstream evidence gaps; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
-| D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. New runs also record requested/reported model names and local strategy/prompt/schema fingerprints. Immutable provider revision guarantees, monetary cost and complete failed-response usage remain open; historical day selection is implemented | Record/pin stable provider revisions where supported, capture failed/incomplete-call usage and review the reproducibility boundary; add defensible pricing/billing attribution and any needed historical configuration timeline. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
+| D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. New runs also record requested/reported model names and local strategy/prompt/schema fingerprints. Immutable provider revision guarantees, monetary cost and unavailable provider usage remain open; incomplete/invalid HTTP-200 response totals are now retained; historical day selection is implemented | Record/pin stable provider revisions where supported, resolve missing transport/error usage where defensible and review the reproducibility boundary; add defensible pricing/billing attribution and any needed historical configuration timeline. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D20 | M8 integrated recovery/security/load and bounded actual-market acceptance | Planned/evidence-blocked: slice suites pass; milestone-wide acceptance is not complete | Execute the integrated matrix and retain findings/closures, including concurrency, restart, stale data, ownership, load and private PWA behavior | [master plan](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
@@ -79,9 +79,11 @@ risk result; richer risk evidence and explicit denial events remain under D16.
 D17 remains open. Current-day allowance reads current settings, which may differ
 from a running worker; past days use saved request limits. Calls are grouped by
 the IST date of reservation. Reported
-usage is counted only for a unique owner-linked saved output with a valid token
-total; duplicate, missing, invalid, failed and in-flight usage stays unknown.
-Provider failures can consume tokens without a saved valid output. No monetary cost, provider billing reconciliation, immutable provider-weight
+usage prefers a unique owner-linked usage receipt, falling back to a legacy saved
+output only when no receipt exists. Duplicate, missing, invalid or conflicting
+usage stays unknown.
+Provider failures can consume tokens without a saved valid output; supplied
+HTTP-200 usage is now retained before output validation. No monetary cost, provider billing reconciliation, immutable provider-weight
 identity or full reproducible application/environment bundle is implemented. Historical day selection is implemented in checkpoint 72. New requested/reported model names and local-rule
 fingerprints are recorded as described in checkpoint 71. This slice does not change the budget
 guard or return reserved allowance after failures. See [checkpoint 66](./__workspace/66-analysis-allowance-and-recorded-usage.md).
@@ -105,7 +107,7 @@ remain unavailable. The context records the local strategy label and loaded
 pipeline-source fingerprint. This is not a full dependency/build snapshot or proof
 of immutable provider weights. Old runs are not backfilled from current settings.
 The display is bounded to 20 requests; excess/ambiguous responses are marked
-incomplete. Monetary cost, complete failed-call usage, pagination/index/load review
+incomplete. Monetary cost, missing transport/error usage, pagination/index/load review
 remain D17/D20; historical usage is implemented in checkpoint 72. No live API request was used for this slice.
 
 [Checkpoint 72](./__workspace/72-historical-analysis-usage.md) adds IST-day selection
@@ -115,8 +117,19 @@ save the exact allowance used by the guard. Past-day allowance is shown only whe
 all selected requests record the same valid limit; missing/mixed limits remain
 unavailable. Even a uniform recorded limit is not proof of final day-end settings.
 Empty old days have zero recorded requests but unknown historical allowance.
-Current settings are never read for past days. Complete failed-response usage,
-billing and any final-settings timeline remain D17; query indexing/load remains D20.
+Current settings are never read for past days. Missing transport/error usage, billing and any final-settings timeline remain D17; query indexing/load remains D20.
+
+[Checkpoint 73](./__workspace/73-retained-response-usage.md) saves normalized
+provider usage before completed-status, refusal and output validation checks.
+Incomplete/invalid responses still fail and cannot authorize trading. Daily usage
+counts each request once, preferring a unique receipt to its mirrored output;
+legacy outputs remain supported. Duplicate/conflicting values stay unknown.
+Non-200, oversized, malformed-JSON, timeout/cancelled transport and lost audit
+writes can still lack usable usage; these are not zero and are not billing totals.
+Token breakdowns remain supplied metadata, not a reconciled billing calculation.
+No pricing or invoice reconciliation is implemented. D17 remains open for those
+limits and provider/reproducibility guarantees. D16/D20 retain history pagination
+and query/index/load qualification. No live API or market check was performed.
 
 ## Current exclusions, not delayed promises
 
