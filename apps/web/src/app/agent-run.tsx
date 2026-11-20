@@ -7,7 +7,7 @@ import AgentEvidence from "./agent-evidence";
 import OrderHistory from "./order-history";
 
 type Execution = { state: string; truncated: boolean; strategy?: { version: string; action: string; instrument: string | null; issued_at: string; expires_at: string; min_entry: string; max_entry: string; stop_loss: string; target: string }; decisions: { id: string; status: string; timestamp: string | null; summary: string; orders: { id: string; side: string; status: string; quantity: number; filled_quantity: number }[] }[] };
-type Run = { next_outputs_before?: string | null; next_checks_before?: string | null; versions?: { truncated: boolean; rows: { id: string; stage: string; timestamp: string; requested_model: string | null; reported_model: string | null; strategy_version: string | null; rules_recorded: boolean }[] }; execution?: Execution; available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; checks_truncated?: boolean; checks?: { id: string; timestamp: string; stage: string; state: string; summary: string }[]; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
+type Run = { next_outputs_before?: string | null; next_checks_before?: string | null; versions?: { next_before?: string | null; outputs_incomplete?: boolean; truncated: boolean; rows: { id: string; stage: string; timestamp: string; requested_model: string | null; reported_model: string | null; strategy_version: string | null; rules_recorded: boolean }[] }; execution?: Execution; available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; checks_truncated?: boolean; checks?: { id: string; timestamp: string; stage: string; state: string; summary: string }[]; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
 const names: Record<string, string> = { analysis: "Analysis", proposal: "Proposal", review: "Review", strategy: "Strategy", unknown: "Recorded stage" };
 export default function AgentRun({ eventId }: { eventId: string }) {
   const request = usePaperRequest();
@@ -15,8 +15,8 @@ export default function AgentRun({ eventId }: { eventId: string }) {
   const [data, setData] = useState<Run | null>(null);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [pageBusy, setPageBusy] = useState<"outputs" | "checks" | null>(null);
-  const [pageError, setPageError] = useState<"outputs" | "checks" | null>(null);
+  const [pageBusy, setPageBusy] = useState<"outputs" | "checks" | "versions" | null>(null);
+  const [pageError, setPageError] = useState<"outputs" | "checks" | "versions" | null>(null);
   const generation = useRef(0);
   const pageController = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -28,9 +28,9 @@ export default function AgentRun({ eventId }: { eventId: string }) {
       .catch(() => { if (current === generation.current) setError(true); });
     return () => { generation.current++; controller.abort(); pageController.current?.abort(); };
   }, [open, request, eventId, retry]);
-  async function older(kind: "outputs" | "checks") {
+  async function older(kind: "outputs" | "checks" | "versions") {
     if (!request || !data || pageBusy) return;
-    const before = kind === "outputs" ? data.next_outputs_before : data.next_checks_before;
+    const before = kind === "outputs" ? data.next_outputs_before : kind === "checks" ? data.next_checks_before : data.versions?.next_before;
     if (!before) return;
     const current = generation.current; const controller = new AbortController();
     pageController.current = controller; setPageBusy(kind); setPageError(null);
@@ -39,6 +39,10 @@ export default function AgentRun({ eventId }: { eventId: string }) {
       if (!result.available) throw new Error("History unavailable");
       if (current === generation.current) setData(previous => {
         if (!previous) return previous;
+        if (kind === "versions") {
+          if (!result.versions) return previous;
+          return { ...previous, versions: { ...result.versions, outputs_incomplete: previous.versions?.outputs_incomplete || result.versions.outputs_incomplete, rows: [...(previous.versions?.rows ?? []), ...result.versions.rows.filter(row => !previous.versions?.rows.some(old => old.id === row.id))] } };
+        }
         if (kind === "outputs") return { ...previous, rows: [...(previous.rows ?? []), ...(result.rows ?? []).filter(row => !previous.rows?.some(old => old.id === row.id))], next_outputs_before: result.next_outputs_before, truncated: result.truncated };
         return { ...previous, checks: [...(previous.checks ?? []), ...(result.checks ?? []).filter(row => !previous.checks?.some(old => old.id === row.id))], next_checks_before: result.next_checks_before, checks_truncated: result.checks_truncated };
       });
@@ -48,9 +52,11 @@ export default function AgentRun({ eventId }: { eventId: string }) {
   return <details onToggle={event => { if (event.target === event.currentTarget) setOpen(event.currentTarget.open); }}><summary>Evaluation history</summary>{open && <>
     {error ? <p role="alert">History could not be loaded. <button className="secondary" onClick={() => setRetry(value => value + 1)}>Retry history</button></p> : !data ? <p role="status">Loading history...</p> : !data.available ? <p>No reliable evaluation link was saved for this record.</p> : <>
       <h4>{data.title}</h4><p>{data.summary}</p><p className="muted">Evaluation slot: {time(data.slot_at!)} IST. Outputs and checks are shown newest first; they do not confirm a trade.</p>
-      <details><summary>Models and rules</summary>
+      <details><summary>Models and rules</summary><p className="muted">Newest requests first.</p>
         {!data.versions?.rows.length ? <p>No model-version records were saved for this evaluation.</p> : <>{data.versions.rows.map(row => <div className="execution-card" key={row.id}><h4>{names[row.stage] ?? "Recorded stage"}</h4><p className="muted">Requested {time(row.timestamp)} IST</p><dl className="execution-values"><div><dt>Requested model</dt><dd className="recorded-rationale">{row.requested_model ?? "Unavailable"}</dd></div><div><dt>Provider-reported model</dt><dd className="recorded-rationale">{row.reported_model ?? "Unavailable"}</dd></div><div><dt>Strategy rules</dt><dd>{row.strategy_version ?? "Unavailable"}</dd></div><div><dt>Local rule fingerprints</dt><dd>{row.rules_recorded ? "Recorded" : "Unavailable"}</dd></div></dl></div>)}<p className="muted">Names may be aliases. Local rule fingerprints identify saved application rules, not immutable provider weights. Missing response metadata stays unavailable.</p></>}
-        {data.versions?.truncated && <p className="notice">Model history exceeds the display limit. Some records are unavailable.</p>}
+        {pageError === "versions" && <p role="alert">Older model requests could not be loaded. Your current results are still shown.</p>}
+        {data.versions?.next_before ? <button className="secondary" disabled={pageBusy != null} onClick={() => older("versions")}>{pageBusy === "versions" ? "Loading older models..." : pageError === "versions" ? "Retry older models" : "Load older models"}</button> : data.versions?.truncated && <p className="notice">More model requests are unavailable in this view.</p>}
+        {data.versions?.outputs_incomplete && <p className="notice">Some response metadata could not be verified because linked outputs exceeded the read limit. Requested model records are still shown.</p>}
       </details>
       <h4>Strategy and orders</h4>
       {!data.execution || data.execution.state === "unavailable" ? <p>No reliable accepted-strategy link is available.</p> : data.execution.state === "none" ? <p>No accepted strategy was recorded for this outcome.</p> : <>

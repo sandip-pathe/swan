@@ -50,6 +50,7 @@ def run(
     owner: UUID = Depends(account_identity),
     outputs_before: UUID | None = None,
     checks_before: UUID | None = None,
+    versions_before: UUID | None = None,
 ):
     with Session(request.app.state.engine) as db:
         db.connection(execution_options={"isolation_level": "REPEATABLE READ"})
@@ -138,7 +139,7 @@ def run(
             "summary": summary,
             "rows": rows,
             "execution": execution(db, owner, slot.id),
-            "versions": versions(db, owner, slot.id),
+            "versions": versions(db, owner, slot.id, versions_before),
             "checks": checks,
             "checks_truncated": len(records) > 20,
             "next_checks_before": str(records[19].id) if len(records) > 20 else None,

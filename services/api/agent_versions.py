@@ -3,7 +3,8 @@
 from collections import defaultdict
 from uuid import UUID
 
-from sqlalchemy import select
+from fastapi import HTTPException
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from services.agents.provenance import checksum, name
@@ -11,18 +12,28 @@ from services.api.agent_activity import identifier
 from services.core.models import AuditEvent
 
 
-def versions(db: Session, owner: UUID, evaluation_id: UUID) -> dict:
-    reservations = list(
-        db.scalars(
-            select(AuditEvent)
-            .where(
-                AuditEvent.account_id == owner,
-                AuditEvent.kind == "AI_RESERVATION",
-                AuditEvent.details["request"]["evaluation_id"].as_string() == str(evaluation_id),
-            )
-            .order_by(AuditEvent.timestamp, AuditEvent.id)
-            .limit(21)
+def versions(db: Session, owner: UUID, evaluation_id: UUID, before: UUID | None = None) -> dict:
+    statement = select(AuditEvent).where(
+        AuditEvent.account_id == owner,
+        AuditEvent.kind == "AI_RESERVATION",
+        AuditEvent.details["request"]["evaluation_id"].as_string() == str(evaluation_id),
+    )
+    if before:
+        cursor = db.get(AuditEvent, before)
+        request = cursor.details.get("request") if cursor else None
+        if (
+            cursor is None
+            or cursor.account_id != owner
+            or cursor.kind != "AI_RESERVATION"
+            or not isinstance(request, dict)
+            or request.get("evaluation_id") != str(evaluation_id)
+        ):
+            raise HTTPException(400, "RUN_CURSOR_INVALID")
+        statement = statement.where(
+            tuple_(AuditEvent.timestamp, AuditEvent.id) < (cursor.timestamp, cursor.id)
         )
+    reservations = list(
+        db.scalars(statement.order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc()).limit(21))
     )
     more = len(reservations) > 20
     reservations = reservations[:20]
@@ -91,4 +102,9 @@ def versions(db: Session, owner: UUID, evaluation_id: UUID) -> dict:
                 "fingerprints": {"prompt": prompt, "schema": schema, "pipeline": pipeline},
             }
         )
-    return {"rows": rows, "truncated": more or not complete}
+    return {
+        "rows": rows,
+        "truncated": more,
+        "next_before": str(reservations[-1].id) if more else None,
+        "outputs_incomplete": not complete,
+    }

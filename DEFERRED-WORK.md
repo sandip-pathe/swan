@@ -149,6 +149,15 @@ queries, concurrency, cold-cache/production-sized load and integrated restart/
 recovery remain D20. Remaining model-version pagination is next under D16/D17.
 No broker or actual-market acceptance was attempted.
 
+[Checkpoint 76](./__workspace/76-model-history-and-finish-batches.md) adds newest-first
+owned model-request pagination with independent cursor/retry/dedup behavior.
+Response-output overflow now has a separate incomplete-metadata warning, rather
+than implying more requests can be paged. D16 retains risk/order/report history
+limits and richer evidence; D17 retains billing/provider guarantees and missing
+usage. The same checkpoint groups remaining delivery into five finish batches;
+these are work groups, not completed milestones or a time estimate. Live/phone/
+manual acceptance and the supervised observation period remain open as above.
+
 ## Current exclusions, not delayed promises
 
 Real-money broker orders, public multi-user launch, broader asset classes,

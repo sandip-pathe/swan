@@ -1,3 +1,10 @@
+Latest slice: paginated model-request history and grouped finish path. Read
+`__workspace/76-model-history-and-finish-batches.md`. Models now page newest first
+with owner/run/kind cursors and independent retry/dedup/stale-close handling.
+Response-metadata overflow has a separate warning. Next batch: remaining owned
+history/evidence gaps (D16), using larger related reviewable slices. Preserve the
+ledger, skipped live/manual acceptance and disabled entry gates.
+
 Latest slice: indexed evaluation-history queries. Read
 `__workspace/75-history-query-indexes.md`. Evaluation links and nested model-request
 links now have account/kind/link/time/UUID indexes. Disposable 30,000-row plan
@@ -40,7 +47,7 @@ coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
 EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
 order-ticket integration still follow. Do not treat M3 as complete.
 
-Contract search is implemented at **Markets Ã¢â€ â€™ Search**, using a separately cached
+Contract search is implemented at **Markets ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Search**, using a separately cached
 supported instrument catalog and direct chart selection. See
 `__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
 implemented with Search stars, cached quotes and chart links; read
@@ -52,7 +59,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 341 tests;
+and device-local chart preferences. The last full backend suite passed 343 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
