@@ -1,3 +1,10 @@
+Latest slice: indexed evaluation-history queries. Read
+`__workspace/75-history-query-indexes.md`. Evaluation links and nested model-request
+links now have account/kind/link/time/UUID indexes. Disposable 30,000-row plan
+checks cover first/older pages and migration reversal. Next slice: model-version
+history pagination (D16/D17). Integrated recovery/load acceptance remains D20;
+broker/live/manual acceptance remains skipped and entries remain disabled.
+
 Latest slice: paginated evaluation outputs and stage checks. Read
 `__workspace/74-paginated-evaluation-history.md`. Both lists load newest first,
 with independent owned cursors, append/dedup/retry and stale-close suppression.
@@ -33,7 +40,7 @@ coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
 EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
 order-ticket integration still follow. Do not treat M3 as complete.
 
-Contract search is implemented at **Markets → Search**, using a separately cached
+Contract search is implemented at **Markets Ã¢â€ â€™ Search**, using a separately cached
 supported instrument catalog and direct chart selection. See
 `__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
 implemented with Search stars, cached quotes and chart links; read
@@ -45,7 +52,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 340 tests;
+and device-local chart preferences. The last full backend suite passed 341 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper

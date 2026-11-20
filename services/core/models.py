@@ -378,6 +378,25 @@ class AuditEvent(Base):
     details: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+# Match the JSON text expressions used by the owned evaluation-history queries.
+Index(
+    "audit_evaluation_history",
+    AuditEvent.account_id,
+    AuditEvent.kind,
+    AuditEvent.details["evaluation_id"].as_string(),
+    AuditEvent.timestamp,
+    AuditEvent.id,
+)
+Index(
+    "audit_request_history",
+    AuditEvent.account_id,
+    AuditEvent.kind,
+    AuditEvent.details["request"]["evaluation_id"].as_string(),
+    AuditEvent.timestamp,
+    AuditEvent.id,
+)
+
+
 class PaperValidation(Base):
     __tablename__ = "paper_validations"
     __table_args__ = (

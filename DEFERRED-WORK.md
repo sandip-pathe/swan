@@ -139,6 +139,16 @@ not one frozen cross-page snapshot; reopening refreshes newer records. Versions,
 risk decisions/orders and report fill lists keep their stated bounds. Their
 pagination plus database index/load qualification remain D16/D20.
 
+[Checkpoint 75](./__workspace/75-history-query-indexes.md) adds matching composite
+expression indexes for evaluation links and nested model-request evaluation links.
+A disposable 30,000-row synthetic audit dataset verifies first/older query plans
+use ordered index scans with no full-table scan or sort; migration downgrade and
+upgrade are tested in that schema. Local migration applied with bounded lock and
+statement waits. This qualifies these query shapes only: wider history/usage/risk
+queries, concurrency, cold-cache/production-sized load and integrated restart/
+recovery remain D20. Remaining model-version pagination is next under D16/D17.
+No broker or actual-market acceptance was attempted.
+
 ## Current exclusions, not delayed promises
 
 Real-money broker orders, public multi-user launch, broader asset classes,
