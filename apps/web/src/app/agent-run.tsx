@@ -5,8 +5,8 @@ import { time } from "@/lib/paper";
 import { usePaperRequest } from "./paper-action";
 import AgentEvidence from "./agent-evidence";
 
-type Run = { available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
-const names: Record<string, string> = { analysis: "Analysis", proposal: "Proposal", review: "Review", unknown: "Recorded stage" };
+type Run = { available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; checks_truncated?: boolean; checks?: { id: string; timestamp: string; stage: string; state: string; summary: string }[]; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
+const names: Record<string, string> = { analysis: "Analysis", proposal: "Proposal", review: "Review", strategy: "Strategy", unknown: "Recorded stage" };
 export default function AgentRun({ eventId }: { eventId: string }) {
   const request = usePaperRequest();
   const [open, setOpen] = useState(false);
@@ -24,6 +24,11 @@ export default function AgentRun({ eventId }: { eventId: string }) {
   return <details onToggle={event => { if (event.target === event.currentTarget) setOpen(event.currentTarget.open); }}><summary>Evaluation history</summary>{open && <>
     {error ? <p role="alert">History could not be loaded. <button className="secondary" onClick={() => setRetry(value => value + 1)}>Retry history</button></p> : !data ? <p role="status">Loading history...</p> : !data.available ? <p>No reliable evaluation link was saved for this record.</p> : <>
       <h4>{data.title}</h4><p>{data.summary}</p><p className="muted">Evaluation slot: {time(data.slot_at!)} IST. Model outputs are shown in recorded order; they do not confirm a trade.</p>
+      <h4>Stage checks</h4>
+      <p className="muted">These validate model responses. Trading permission and execution are separate.</p>
+      {!data.checks?.length ? <p>No stage-check results were saved for this evaluation.</p> : <ol className="agent-activity-list">{data.checks.map(check => <li className="execution-card" key={check.id}><div className="execution-card-head"><strong>{names[check.stage] ?? "Recorded stage"}</strong><span className={`status-pill activity-state ${check.state === "PASSED" ? "ready" : check.state === "FAILED" ? "failed" : ""}`}>{check.state === "PASSED" ? "Passed" : check.state === "FAILED" ? "Failed" : check.state === "INTERRUPTED" ? "Interrupted" : "Unavailable"}</span></div><p>{check.summary}</p><p className="muted">{time(check.timestamp)} IST</p></li>)}</ol>}
+      {data.checks_truncated && <p className="notice">Showing the first 20 check results. This list is incomplete.</p>}
+      <h4>Model outputs</h4>
       {!data.rows?.length && <p>No linked model outputs were recorded.</p>}
       <ol className="agent-activity-list">{data.rows?.map(row => <li className="execution-card" key={row.id}><p className="activity-stage">{names[row.stage] ?? "Recorded stage"}</p><h4>{row.summary}</h4><p className="muted">{time(row.timestamp)} IST</p>{row.rationale && <p className="recorded-rationale">{row.rationale}</p>}<AgentEvidence eventId={row.id} /></li>)}</ol>
       {data.truncated && <p className="notice">Showing the first 20 recorded outputs. This history is incomplete.</p>}

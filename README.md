@@ -16,6 +16,10 @@ without those links show unavailable. Recorded evidence does not enable trading.
 outputs with the evaluation outcome. Each stage opens its own evidence. Older
 unlinked outputs remain separate; this history does not imply a filled trade.
 
+Evaluation history now includes recorded stage checks with failure explanations.
+A valid wait proposal or rejected review may pass response checks; that grants no
+trading permission. Older runs without saved checks remain explicitly unavailable.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

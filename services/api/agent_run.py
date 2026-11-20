@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.agents.checks import FAILURES
 from services.agents.contracts import Analysis, Proposal, Review
 from services.api.agent_activity import evaluation, identifier
 from services.api.auth import account_identity
@@ -82,6 +83,41 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
                 except (ValueError, TypeError, KeyError):
                     pass
             rows.append(row)
+        records = list(
+            db.scalars(
+                select(AuditEvent)
+                .where(
+                    AuditEvent.account_id == owner,
+                    AuditEvent.kind == "AI_STAGE_CHECK",
+                    AuditEvent.details["evaluation_id"].as_string() == str(slot.id),
+                )
+                .order_by(AuditEvent.timestamp, AuditEvent.id)
+                .limit(21)
+            )
+        )
+        checks = []
+        for record in records[:20]:
+            detail = record.details
+            stage = detail.get("stage")
+            state = detail.get("state")
+            reason = detail.get("reason")
+            if stage not in ("analysis", "proposal", "review", "strategy"):
+                stage, state = "unknown", "UNKNOWN"
+            if state == "PASSED" and reason is None:
+                message = "Recorded checks passed."
+            elif state in ("FAILED", "INTERRUPTED"):
+                message = FAILURES.get(str(reason), "Check details are unavailable.")
+            else:
+                state, message = "UNKNOWN", "Check details are unavailable."
+            checks.append(
+                {
+                    "id": str(record.id),
+                    "timestamp": record.timestamp.isoformat(),
+                    "stage": stage,
+                    "state": state,
+                    "summary": message,
+                }
+            )
         state, title, summary = evaluation(slot.status)
         return {
             "available": True,
@@ -90,5 +126,7 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
             "title": title,
             "summary": summary,
             "rows": rows,
+            "checks": checks,
+            "checks_truncated": len(records) > 20,
             "truncated": len(events) > 20,
         }
