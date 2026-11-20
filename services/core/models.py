@@ -76,6 +76,24 @@ class UnderlyingReference(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class ManualPaperPlan(Base):
+    """User-authored planning record. Never an AI decision or execution permission."""
+
+    __tablename__ = "manual_paper_plans"
+    __table_args__ = (
+        UniqueConstraint("account_id", "idempotency_key", name="one_manual_plan_per_request"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
+    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"))
+    idempotency_key: Mapped[UUID]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    request_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    instrument_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    preview_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class SnapshotRecord(Base):
     __tablename__ = "market_snapshots"
     id: Mapped[UUID] = mapped_column(primary_key=True)

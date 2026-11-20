@@ -28,6 +28,10 @@ type Workspace = ExecutionData & {
 const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
 const errors: Record<string, string> = {
+  PAPER_PLAN_REQUEST_CONFLICT: "This save request was already used with different inputs. Preview again before saving.",
+  PREVIEW_ACCOUNT_CHANGED: "Your account changed. Preview again before saving this plan.",
+  PAPER_PLAN_LIMIT: "You have 50 saved paper plans. Archive an older plan before saving another.",
+  PAPER_PLAN_NOT_FOUND: "This saved plan is unavailable for your account.",
   ORDER_PRICES_OFF_TICK: "Use prices that are multiples of the contract tick size shown in Details.",
   BROKER_LOGIN_REQUIRED: "Your broker session needs a new login. Prices were not refreshed; previously saved quotes are still shown.",
   HISTORY_REFRESH_BUSY: "A candle refresh is already running. Try again shortly.",

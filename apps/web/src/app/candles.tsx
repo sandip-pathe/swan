@@ -209,7 +209,7 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
     {quoteError && <p className="notice error" role="alert">{quoteError} Saved quotes may be out of date.</p>}
     {onRefreshQuote && <button className="secondary quote-refresh" disabled={quoteBusy} onClick={onRefreshQuote}><Icon name="refresh" />{quoteBusy ? "Refreshing price?" : "Refresh price"}</button>}
     <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "depth"} onClick={() => setSurface("depth")}>Depth</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button><button className="secondary" aria-pressed={surface === "order"} onClick={() => setSurface("order")}>Order</button></div>
-    <div hidden={surface !== "order"}><OrderPreview instrument={instrument} quote={quote} request={request} /></div>
+    <div hidden={surface !== "order"}><OrderPreview visible={surface === "order"} instrument={instrument} quote={quote} request={request} /></div>
     {surface === "depth" && <InstrumentDepth quote={quote} statistics={statistics} error={quoteError} maxAge={quoteMaxAge} />}
     {surface === "details" && <InstrumentDetails instrument={instrument} quote={quote} statistics={statistics} maxAge={quoteMaxAge} error={quoteError} />}
     <div hidden={surface !== "chart"}>

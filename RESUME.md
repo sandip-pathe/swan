@@ -32,7 +32,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 197 tests;
+and device-local chart preferences. The last full backend suite passed 201 tests;
 ten frontend calculation/preference tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
@@ -49,7 +49,9 @@ Underlying reference/ATM context is implemented; read
 chain refresh/worker reference reads; no fresh live evidence is claimed.
 The manual BUY LIMIT preview is implemented in the contract Order tab; read
 `__workspace/54-manual-paper-order-preview.md`. It is read-only and cannot place
-orders or issue approvals. Manual submission/intent admission is the next slice.
+orders or issue approvals. User-owned, idempotent saved paper plans are implemented; read
+`__workspace/55-durable-manual-paper-plans.md`. Actual manual order admission
+and fill/protection integration remain the next slice.
 Calendar coverage currently ends 30 November 2026; extend it from official
 sources before testing later dates. Preserve all execution gates.
 
