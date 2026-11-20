@@ -1,5 +1,7 @@
-export type IconName = "home" | "markets" | "orders" | "history" | "account" | "arrow" | "refresh" | "shield" | "wallet" | "download" | "logout" | "signal";
+export type IconName = "home" | "markets" | "orders" | "history" | "account" | "arrow" | "refresh" | "shield" | "wallet" | "download" | "logout" | "signal" | "star" | "remove";
 const paths: Record<IconName, string> = {
+  star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z",
+  remove: "M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7m4-7v7",
   home: "m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z",
   markets: "M4 20V10m5 10V4m6 16v-8m5 8V7M2 20h20",
   orders: "M8 3H5v18h14V3h-3M9 3h6v4H9ZM8 12h8m-8 4h5",

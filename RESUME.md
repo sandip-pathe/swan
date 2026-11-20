@@ -22,9 +22,11 @@ order-ticket integration still follow. Do not treat M3 as complete.
 
 Contract search is implemented at **Markets → Search**, using a separately cached
 supported instrument catalog and direct chart selection. See
-`__workspace/45-contract-search.md`; saved watchlists remain next.
+`__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
+implemented with Search stars, cached quotes and chart links; read
+`__workspace/46-saved-watchlist.md`. Richer instrument/chain details remain next.
 
-The last full backend suite passed 157 tests; five frontend chart-calculation
+The last full backend suite passed 161 tests; five frontend chart-calculation
 tests also pass. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.

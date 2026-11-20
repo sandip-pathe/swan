@@ -96,7 +96,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma }: { data: Candl
   </>;
 }
 
-export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string }) {
+export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain" }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string }) {
   const today = istDate(new Date());
   const maximum = instrument.expiry < today ? instrument.expiry : today;
   const initial = quoteDate ? istDate(new Date(quoteDate)) : maximum;
@@ -148,7 +148,7 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
   const view = useMemo(() => data ? resample(data, minutes) : null, [data, minutes]);
   const latest = view?.bars.at(-1);
   return <section className="panel contract-chart" aria-label="Contract chart">
-    <button className="text-button chart-back" onClick={onBack}><span aria-hidden="true">←</span> Option chain</button>
+    <button className="text-button chart-back" onClick={onBack}><span aria-hidden="true">←</span>{backLabel}</button>
     <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{latest ? money(latest.close) : "—"}</strong><span>{latest ? `${stamp(latest.opens_at)} IST · candle close` : "No candle price"}</span></div></div>
     <div className="chart-controls"><label><span className="sr-only">Session</span><input aria-label="Chart session" type="date" value={date} max={maximum} disabled={busy} onChange={event => { if (event.target.value) { setDate(event.target.value); setData(null); setUpdated(null); setMessage(null); } }} /></label><button className="secondary" disabled={busy || !canRefresh} onClick={refreshHistory}><Icon name="refresh" />{busy ? "Loading…" : "Get candles"}</button></div>
     <div className="chart-options"><div className="timeframes" role="group" aria-label="Chart timeframe">{([1, 5, 15] as Timeframe[]).map(value => <button key={value} className="secondary" aria-pressed={minutes === value} onClick={() => setMinutes(value)}>{value}m</button>)}</div><label className="chart-view"><span className="sr-only">Chart style</span><select aria-label="Chart style" value={mode} onChange={event => setMode(event.target.value as "candles" | "line")}><option value="candles">Candles</option><option value="line">Line</option></select></label></div>

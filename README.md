@@ -3,6 +3,8 @@
 Use **Markets → Search** to find listed NIFTY/SENSEX contracts by strike, expiry
 and call/put, then open a chart. **Refresh contracts** updates the listing cache;
 prices and candle history load separately.
+Star a search result to save it under **Markets → Watchlist**. Saved contracts
+belong to your account; saving does not request a price or enable trading.
 
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
 candle or line charts, with optional EMA 20. Use **Get candles** to retrieve broker history for the selected

@@ -196,21 +196,26 @@ def selected_instrument(
 def select_instrument(
     body: Selection, request: Request, identifier: UUID = Depends(account_identity)
 ):
-    today = datetime.now(UTC).astimezone(IST).date()
     with Session(request.app.state.engine) as db, db.begin():
         owner(db, identifier)
-        listing = db.get(ListedInstrument, body.instrument_id)
-        latest = db.scalar(select(func.max(ListedInstrument.catalog_at)))
-        if listing is None or listing.catalog_at != latest:
-            raise HTTPException(404, "INSTRUMENT_NOT_LISTED")
-        if listing.catalog_at.astimezone(IST).date() != today:
-            raise HTTPException(409, "CATALOG_REFRESH_REQUIRED")
-        instrument = Instrument.model_validate(listing.payload)
-        if instrument.expiry < today:
-            raise HTTPException(409, "INSTRUMENT_EXPIRED")
-        try:
-            PaperEngine._persist_instrument(db, instrument)
-        except ConflictError:
-            raise HTTPException(409, "INSTRUMENT_IDENTITY_CHANGED") from None
-        db.flush()
+        instrument = persist_listing(db, body.instrument_id)
         return selected(db, instrument.id)
+
+
+def persist_listing(db: Session, instrument_id: str) -> Instrument:
+    today = datetime.now(UTC).astimezone(IST).date()
+    listing = db.get(ListedInstrument, instrument_id)
+    latest = db.scalar(select(func.max(ListedInstrument.catalog_at)))
+    if listing is None or listing.catalog_at != latest:
+        raise HTTPException(404, "INSTRUMENT_NOT_LISTED")
+    if listing.catalog_at.astimezone(IST).date() != today:
+        raise HTTPException(409, "CATALOG_REFRESH_REQUIRED")
+    instrument = Instrument.model_validate(listing.payload)
+    if instrument.expiry < today:
+        raise HTTPException(409, "INSTRUMENT_EXPIRED")
+    try:
+        PaperEngine._persist_instrument(db, instrument)
+    except ConflictError:
+        raise HTTPException(409, "INSTRUMENT_IDENTITY_CHANGED") from None
+    db.flush()
+    return instrument

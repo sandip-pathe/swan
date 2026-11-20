@@ -6,6 +6,7 @@ import type { Readiness } from "@/lib/readiness";
 import Icon, { type IconName } from "./icons";
 import ContractChart from "./candles";
 import InstrumentSearch, { type SelectedContract } from "./instrument-search";
+import Watchlist, { useWatchlist } from "./watchlist";
 import SystemSetup from "./system-setup";
 import ValidationPanel from "./validation";
 import PaperControls from "./paper-controls";
@@ -34,6 +35,7 @@ const errors: Record<string, string> = {
   HISTORY_UNSUPPORTED_INSTRUMENT_OR_RANGE: "Refresh market prices or choose another session. This contract?s history could not be requested.",
   HISTORY_PROVIDER_UNAVAILABLE: "The broker could not return candles. Check your broker login and try again.",
   HISTORY_RANGE_AFTER_EXPIRY: "Choose a session on or before this contract?s expiry.",
+  WATCHLIST_FULL: "Your watchlist has 50 contracts. Remove one before saving another.",
   CATALOG_REFRESH_BUSY: "Another contract refresh is running. Try again shortly.",
   CATALOG_REFRESH_RATE_LIMIT: "Please wait a minute between contract refreshes.",
   CATALOG_UNAVAILABLE: "The contract list could not be retrieved. Try again shortly.",
@@ -107,7 +109,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       const [section, query] = window.location.hash.slice(1).split("?");
       const params = new URLSearchParams(query);
       const page = pages[section] ?? "Overview";
-      setMarketView(params.get("view") === "search" ? "search" : "chain");
+      setMarketView(["search", "watchlist"].includes(params.get("view") ?? "") ? params.get("view")! : "chain");
       setChartId(section === "markets" ? params.get("instrument") : null);
       const market = params.get("underlying");
       if (market === "NIFTY" || market === "SENSEX") setUnderlying(market);
@@ -130,6 +132,8 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     }
     return result;
   }, [user]);
+
+  const watchlist = useWatchlist(request, tab === "Option chain", tab === "Option chain" && marketView === "watchlist" && !chartId);
 
   useEffect(() => {
     if (!chartId) return;
@@ -236,10 +240,10 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     window.scrollTo({ top: 0, behavior: "instant" });
   };
   const selectedContract = chartRecord?.instrument.id === chartId ? chartRecord : chain?.rows.find(row => row.instrument.id === chartId);
-  const returnToMarket = () => { setChartId(null); window.location.hash = marketView === "search" ? "markets?view=search" : "markets"; };
+  const returnToMarket = () => { setChartId(null); window.location.hash = marketView === "chain" ? "markets" : `markets?view=${marketView}`; };
   const openChart = (item: ChainRow["instrument"]) => {
     setChartId(item.id);
-    window.location.hash = `markets?${new URLSearchParams({ instrument: item.id, underlying: item.underlying, ...(marketView === "search" ? { view: "search" } : {}) })}`;
+    window.location.hash = `markets?${new URLSearchParams({ instrument: item.id, underlying: item.underlying, ...(marketView !== "chain" ? { view: marketView } : {}) })}`;
     window.scrollTo({ top: 0, behavior: "instant" });
   };
   const nextStep = !workerOnline ? "Connect your trading service" : !ready?.configuration_complete ? "Finish setting up your paper account" : !ready.connections_verified ? "Check your market connections" : "Explore the market";
@@ -271,10 +275,12 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
-      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} quoteDate={selectedContract.quote?.timestamp} request={request} marketLabel={marketLabel} onBack={returnToMarket} />}
+      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} quoteDate={selectedContract.quote?.timestamp} request={request} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
       {tab === "Option chain" && chartId && !selectedContract && <section className="panel"><p>{chartError ?? "Loading contract..."}</p><button className="secondary" onClick={returnToMarket}>Back to markets</button></section>}
-      {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Option chain"], ["search", "Search"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = value === "search" ? "markets?view=search" : "markets"; }}>{label}</button>)}</div>}
-      {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
+      {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Option chain"], ["watchlist", "Watchlist"], ["search", "Search"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = value === "chain" ? "markets" : `markets?view=${value}`; }}>{label}</button>)}</div>}
+      {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
+      {tab === "Option chain" && !chartId && watchlist.feedback && <p className="chart-feedback" role="status">{watchlist.feedback}</p>}
+      {tab === "Option chain" && !chartId && marketView === "watchlist" && <Watchlist state={watchlist} now={now} quoteAge={Number(data.account.config.quote_max_age_seconds)} onOpen={row => { setChartRecord(row); openChart(row.instrument); }} onSearch={() => { setMarketView("search"); window.location.hash = "markets?view=search"; }} />}
       {tab === "Option chain" && !chartId && marketView === "chain" && <section className="panel"><div className="panelhead"><div><h2>Option chain</h2><p>Index options &middot; prices in INR</p></div><label className="inline-label">Underlying<select value={underlying} onChange={event => { setUnderlying(event.target.value); setOffset(0); setChain(null); }}><option>NIFTY</option><option>SENSEX</option></select></label><button className="secondary" disabled={busy || stale} onClick={refreshPrices}><Icon name="refresh" />{busy ? "Refreshing..." : "Refresh prices"}</button></div><p className="muted">Last available quotes for the nearest expiry and up to five strikes. Refresh works after market hours; it does not make old prices live.</p>{chainError ? <p className="error" role="alert">{chainError}</p> : chain == null ? <p>Loading observations…</p> : !chain.rows.length ? <p>No prices are saved for {underlying} yet. Use Refresh prices to retrieve the last available quotes, including after market hours.</p> : <><div className="mobile-chain">{chain.rows.map(({instrument: item, quote}) => <article className="quote-card" key={item.id}><div className="quote-heading"><div><strong>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}</strong><span>{item.expiry} &middot; Lot {item.lot_size}</span></div><span className="quote-age">{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Last quote"}</span></div><dl><div><dt>Bid</dt><dd>{quote.bid == null ? "Unavailable" : money(quote.bid)}</dd></div><div><dt>Ask</dt><dd>{quote.ask == null ? "Unavailable" : money(quote.ask)}</dd></div><div><dt>Volume</dt><dd>{quote.volume?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div><div><dt>Open interest</dt><dd>{quote.oi?.toLocaleString("en-IN") ?? "Unavailable"}</dd></div></dl><div className="quote-card-footer"><small>{time(quote.timestamp)} IST &middot; IV {quote.iv ?? "Unavailable"}{quote.iv != null ? "%" : ""}</small><button className="secondary" onClick={() => openChart(item)} aria-label={`Open chart for ${item.underlying} ${item.strike} ${item.option_type === "CALL" ? "CE" : "PE"}`}><Icon name="markets" />Chart</button></div></article>)}</div><div className="tablewrap desktop-chain"><table><thead><tr>{["Contract", "Expiry", "Strike", "Type", "Lot", "Bid", "Ask", "OI", "Volume", "IV %", "Observed (IST)", "Freshness"].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{chain.rows.map(({ instrument: item, quote }) => <tr key={item.id}><td><button className="text-button" onClick={() => openChart(item)}>{item.underlying} {item.strike} {item.option_type === "CALL" ? "CE" : "PE"}<Icon name="markets" /></button></td><td>{item.expiry}</td><td>{item.strike}</td><td>{item.option_type}</td><td>{item.lot_size}</td><td>{quote.bid ?? "—"}</td><td>{quote.ask ?? "—"}</td><td>{quote.oi ?? "—"}</td><td>{quote.volume ?? "—"}</td><td>{quote.iv ?? "—"}</td><td>{time(quote.timestamp)}</td><td>{now - Date.parse(quote.timestamp) >= 0 && now - Date.parse(quote.timestamp) <= Number(data.account.config.quote_max_age_seconds) * 1000 ? "Fresh" : "Stale"}</td></tr>)}</tbody></table></div></>}<div className="actions"><button className="secondary" disabled={offset === 0} onClick={() => { setOffset(Math.max(0, offset - 100)); setChain(null); }}>Previous</button><button className="secondary" disabled={chain?.next_offset == null} onClick={() => { setOffset(chain?.next_offset ?? 0); setChain(null); }}>Next</button></div></section>}
       {tab === "Journal" && <><section className="panel"><div className="panelhead"><h2>Closed positions</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>Most recent 50 records. Realized P&amp;L includes recorded execution costs. CSV exports up to 10,000 closed positions.</p><Positions rows={data.journal} data={data} empty="No closed paper positions." /></section><section className="panel"><h2>Cash ledger</h2>{!data.ledger.length ? <p>No ledger entries recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Category</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</section></>}
       {tab === "Activity" && <section className="panel"><h2>Account activity</h2><p>Recent changes to your account and trading activity.</p>{!data.events.length ? <p>No activity recorded.</p> : data.events.map(event => <details key={event.id}><summary>{time(event.timestamp)} · {event.kind.replaceAll("_", " ")}</summary><p className="muted">Recorded in your account history.</p></details>)}</section>}
