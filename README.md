@@ -29,6 +29,11 @@ model names and the strategy rules used by each new request. Local rule fingerpr
 are saved for audit; they do not guarantee an immutable provider model. Missing
 metadata stays unavailable, including on older runs.
 
+Analysis allowance now has an IST date selector. Past days show recorded requests,
+usage coverage and model counts. Historical allowance appears only when all requests
+saved the same limit; older/mixed limits stay unavailable. Late responses count
+against their request day. No billing amount is inferred.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

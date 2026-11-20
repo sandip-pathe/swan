@@ -80,6 +80,11 @@ def test_saved_metadata_matches_actual_sent_request_and_not_current_settings(
     d = durable
     key, provider, context, sent = prepare(d, monkeypatch, model)
     asyncio.run(provider.generate("analysis", context, Analysis))
+    with Session(d.engine) as db:
+        reservation = db.scalar(select(AuditEvent).where(AuditEvent.kind == "AI_RESERVATION"))
+        assert (
+            reservation.details["daily_allowance"] == provider.settings.swan_ai_daily_token_budget
+        )
     provider.settings.openai_model = "changed-after-request"
     event = save(d, key, kind="AGENT_EVALUATION")
     result = read(d, event).json()["versions"]["rows"][0]

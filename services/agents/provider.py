@@ -26,6 +26,7 @@ class StructuredProvider:
     def reserve(self, role: str, tokens: int, metadata: dict | None = None) -> UUID:
         now = datetime.now(UTC)
         day = now.astimezone(IST).date()
+        daily_allowance = self.settings.swan_ai_daily_token_budget
         with Session(self.engine) as db, db.begin():
             PaperEngine._account(db, self.account_id)  # Serializes all budget reservations.
             records = db.scalars(
@@ -39,7 +40,7 @@ class StructuredProvider:
                 for row in records
                 if row.timestamp.astimezone(IST).date() == day
             )
-            if used + tokens > self.settings.swan_ai_daily_token_budget:
+            if used + tokens > daily_allowance:
                 raise ProviderError("AI_DAILY_TOKEN_BUDGET")
             event = AuditEvent(
                 account_id=self.account_id,
@@ -50,6 +51,7 @@ class StructuredProvider:
                     "tokens": tokens,
                     "model": metadata["model"] if metadata else self.settings.openai_model,
                     "request": metadata,
+                    "daily_allowance": daily_allowance,
                 },
             )
             db.add(event)

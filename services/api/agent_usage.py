@@ -1,6 +1,6 @@
 """Read-only daily reservation allowance and recorded provider usage."""
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -27,15 +27,25 @@ def token_usage(value: object) -> int | None:
 
 
 @router.get("/api/paper/agent-usage")
-def agent_usage(request: Request, owner: UUID = Depends(account_identity)):
+def agent_usage(request: Request, owner: UUID = Depends(account_identity), day: date | None = None):
     now = utc_now()
-    start = datetime.combine(now.astimezone(IST).date(), time.min, IST)
+    today = now.astimezone(IST).date()
+    selected = day or today
+    if selected > today:
+        raise HTTPException(422, "USAGE_DAY_NOT_STARTED")
+    historical = selected < today
+    start = datetime.combine(selected, time.min, IST)
+    policy_source = "current"
     try:
-        settings = AgentSettings()
-        policy = {
-            "model": settings.openai_model or None,
-            "daily_allowance": settings.swan_ai_daily_token_budget,
-        }
+        settings = AgentSettings() if not historical else None
+        policy = (
+            {
+                "model": settings.openai_model or None,
+                "daily_allowance": settings.swan_ai_daily_token_budget,
+            }
+            if settings
+            else None
+        )
     except (ValueError, OSError):
         policy = None
     with Session(request.app.state.engine) as db:
@@ -52,12 +62,23 @@ def agent_usage(request: Request, owner: UUID = Depends(account_identity)):
                 )
             )
         )
+        if historical:
+            limits = [row.details.get("daily_allowance") for row in reservations]
+            valid_limits = bool(limits) and all(
+                type(value) is int and value > 0 for value in limits
+            )
+            if valid_limits and len(set(limits)) == 1:
+                policy = {"model": None, "daily_allowance": limits[0]}
+                policy_source = "recorded"
+            else:
+                policy = None
+                policy_source = "changed" if valid_limits else "unrecorded"
         ids = {str(row.id): row for row in reservations}
         outputs = db.scalars(
             select(AuditEvent).where(
                 AuditEvent.account_id == owner,
                 AuditEvent.kind == "AI_OUTPUT",
-                AuditEvent.timestamp >= start,
+                AuditEvent.details["reservation_id"].as_string().in_(list(ids)),
             )
         )
         linked: dict[str, list[AuditEvent]] = {}
@@ -90,6 +111,8 @@ def agent_usage(request: Request, owner: UUID = Depends(account_identity)):
             "as_of": now.isoformat(),
             "resets_at": (start + timedelta(days=1)).isoformat(),
             "policy": policy,
+            "policy_source": policy_source,
+            "day_ended": historical,
             "reservation_count": len(reservations),
             "reserved_allowance": reserved if valid else None,
             "remaining_allowance": max(0, allowance - reserved)

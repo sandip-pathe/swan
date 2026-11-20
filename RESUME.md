@@ -1,9 +1,9 @@
-Latest slice: Models and rules in Evaluation history. Read
-`__workspace/71-recorded-model-and-rule-versions.md`. New reservations record the
-requested model and prompt/schema fingerprints; completed outputs record reported
-model metadata. Context retains strategy label/loaded pipeline fingerprint.
-Next slice: historical analysis allowance/usage by IST day (D17), preserving unknown
-billing and missing usage. Broker/live/manual acceptance stays skipped; no entries.
+Latest slice: historical analysis allowance and usage by IST day. Read
+`__workspace/72-historical-analysis-usage.md`. New reservations retain the guard's
+allowance; past views use recorded limits and keep missing/mixed history unknown.
+Late responses stay with the request day. Next slice: record provider usage for
+incomplete/invalid model responses (D17), preserving unknown values when absent.
+Broker/live/manual acceptance stays skipped; entries remain disabled.
 
 Latest slice: daily report and deferred-work ledger. Read
 `__workspace/65-daily-report-and-deferred-ledger.md` first, then
@@ -45,7 +45,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 317 tests;
+and device-local chart preferences. The last full backend suite passed 324 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
@@ -166,6 +166,7 @@ python -m pytest -q
 ```
 
 Run `npm.cmd run typecheck` and `npm.cmd run build` in `apps/web`.
-Ask the next coding agent to read this file and milestone 41, then continue M3.
+Ask the next coding agent to read the latest checkpoint and deferred-work ledger,
+then continue the next implementation slice above. M3 manual acceptance stays deferred.
 Keep paper entries disabled until genuine connected qualification and explicit
 arming have passed. Chart history must never substitute for executable depth.
