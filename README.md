@@ -171,3 +171,7 @@ entries; fills still require monitoring and fresh market depth. See
 Wholly unfilled manual paper entries also support reviewed changes to entry,
 stop and target prices, with fresh risk checks and atomic reservation updates.
 See [manual order amendments](__workspace/60-manual-order-amendments.md).
+
+Open an order timeline to review recorded activity, amendments, actual fills and
+itemized fees, or follow its linked position and entry/exit orders. See
+[order lifecycle history](__workspace/61-order-lifecycle-history.md).

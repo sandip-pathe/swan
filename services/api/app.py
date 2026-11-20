@@ -22,6 +22,7 @@ from services.api.instruments import router as instrument_router
 from services.api.manual_orders import router as manual_orders_router
 from services.api.manual_plans import router as plans_router
 from services.api.market import router as market_router
+from services.api.order_history import router as order_history_router
 from services.api.order_preview import router as preview_router
 from services.api.paper_actions import router as paper_actions_router
 from services.api.paper_control import router as paper_control_router
@@ -65,6 +66,7 @@ app = FastAPI(
 app.include_router(setup_router)
 app.include_router(paper_control_router)
 app.include_router(paper_actions_router)
+app.include_router(order_history_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(candle_router)

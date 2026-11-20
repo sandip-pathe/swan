@@ -65,3 +65,15 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .amend-fields input { width: 100%; min-height: 44px; }
 .paper-action-review fieldset { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
 @media (max-width: 480px) { .amend-fields { grid-template-columns: 1fr; } }
+
+.order-history { margin-top: 16px; min-width: 0; }
+.order-history button, .order-history summary { min-height: 44px; }
+.order-history > button { width: 100%; }
+.order-timeline-panel { max-width: none; border: 0; border-top: 1px solid var(--border); border-radius: 0; margin-top: 16px; padding: 16px 0 0; overflow-wrap: anywhere; }
+.order-timeline-panel .panelhead { flex-wrap: wrap; gap: 8px; }
+.order-event-list { list-style: none; padding: 0 0 0 16px; margin: 16px 0; border-left: 2px solid var(--border); }
+.order-event-list > li { margin-bottom: 24px; }
+.order-event-list time { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.timeline-position, .timeline-related { padding-block: 16px; border-top: 1px solid var(--border); }
+.timeline-related > button { display: block; width: 100%; text-align: left; margin-top: 8px; white-space: normal; }
+.timeline-related small { display: block; margin-top: 4px; }

@@ -7,7 +7,7 @@ type Action = { kind: "cancel" | "exit" | "amend"; id: string; label: string; qu
 type AmendmentPreview = { account_revision: number; quantity: number; before: Record<string, string>; after: Record<string, string>; expires_at: string };
 const validPrices = (action: Action) => [action.entry, action.stop_loss, action.target].every(value => typeof value === "string" && /^\d+(\.\d{1,4})?$/.test(value) && Number(value) > 0) && Number(action.stop_loss) < Number(action.entry) && Number(action.entry) < Number(action.target);
 type Request = (path: string, method?: string, signal?: AbortSignal, body?: unknown) => Promise<unknown>;
-const Context = createContext<{ select: (action: Action) => void; locked: boolean; review?: ReactNode }>({ select: () => {}, locked: true });
+const Context = createContext<{ select: (action: Action) => void; locked: boolean; review?: ReactNode; request?: Request }>({ select: () => {}, locked: true });
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function PaperActionProvider({ ownerKey, revision, request, onRefresh, children }: { ownerKey: string; revision?: number; request: Request; onRefresh: () => void; children: ReactNode }) {
@@ -71,7 +71,7 @@ export function PaperActionProvider({ ownerKey, revision, request, onRefresh, ch
       {message && <p role="status">{message}</p>}
       {!action && <button className="secondary" onClick={() => setMessage("")}>Dismiss</button>}
     </section>;
-  return <Context.Provider value={{ select: next => { if (!command.current && !busy) { setAction(next); setPreview(null); setMessage(""); } }, locked: busy || !!command.current, review }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ select: next => { if (!command.current && !busy) { setAction(next); setPreview(null); setMessage(""); } }, locked: busy || !!command.current, review, request }}>{children}</Context.Provider>;
 }
 
 export function PaperActionButton({ kind, id, label, quantity, entry, stop_loss, target, pending = false }: Action & { pending?: boolean }) {
@@ -80,3 +80,5 @@ export function PaperActionButton({ kind, id, label, quantity, entry, stop_loss,
 }
 
 export function PaperActionStatus() { return useContext(Context).review; }
+
+export function usePaperRequest() { return useContext(Context).request; }
