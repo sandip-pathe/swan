@@ -32,8 +32,9 @@ quote refresh and expiring chart/watchlist feed interest are implemented. Broker
 login expired at midnight on 20 November; login was skipped at user request, so
 actual open-market stream/reconnect verification remains pending.
 
-The last full backend suite passed 177 tests; five frontend chart-calculation
-tests also pass. Ruff, mypy, frontend type checking and production build
+Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
+and device-local chart preferences. The last full backend suite passed 177 tests;
+eight frontend calculation/preference tests pass. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.

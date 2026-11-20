@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resample, ema20, contiguous } = require('./chart-data.ts');
+const { resample, ema20, movingAverage, contiguous } = require('./chart-data.ts');
 const start = Date.parse('2026-11-19T09:15:00+05:30');
 const iso = minute => new Date(start + minute * 60000).toISOString();
 const session = (open = 0, close = 375) => ({ opens_at: iso(open), closes_at: iso(close), verified: true });
@@ -66,4 +66,37 @@ test('EMA and plotted line segments reset across gaps and sessions', () => {
   input.sessions = [session(0, 20), session(21, 42)];
   assert.equal(ema20(input, 1).length, 3);
   assert.equal(ema20(resample(data(30), 5), 5).length, 0);
+});
+
+
+test('configurable SMA rolls equally weighted closes; EMA uses selected-period seed and smoothing', () => {
+  const input = data(5);
+  input.bars.forEach((bar, index) => { bar.close = String([2, 4, 8, 10, 20][index]); });
+  movingAverage(input, 1, 'SMA', 3).forEach((point, index) => assert.ok(Math.abs(point.value - [14 / 3, 22 / 3, 38 / 3][index]) < 1e-12));
+  const ema = movingAverage(input, 1, 'EMA', 3);
+  assert.equal(ema[0].value, 14 / 3);
+  assert.ok(Math.abs(ema[1].value - 22 / 3) < 1e-12);
+  assert.ok(Math.abs(ema[2].value - 41 / 3) < 1e-12);
+  assert.deepEqual(movingAverage(input, 1, 'SMA', 9), []);
+  for (const period of [0, 1, 2.5, 201, NaN, Infinity]) assert.throws(() => movingAverage(input, 1, 'EMA', period), RangeError);
+});
+
+test('selected studies exclude forming closes and restart after gaps and verified sessions', () => {
+  const input = data(10);
+  input.bars[3].state = 'provisional';
+  input.bars.splice(7, 1);
+  for (const kind of ['EMA', 'SMA']) {
+    assert.deepEqual(movingAverage(input, 1, kind, 3).map(p => p.time), [2, 6].map(i => Date.parse(iso(i)) / 1000));
+    input.sessions = [session(0, 2), session(2, 10)];
+    assert.deepEqual(movingAverage(input, 1, kind, 3).map(p => p.time), [6].map(i => Date.parse(iso(i)) / 1000));
+    input.sessions = [session()];
+  }
+});
+
+test('device preferences validate every field and ignore unrelated stored data', () => {
+  const { parseChartPreferences, DEFAULT_CHART_PREFERENCES } = require('./chart-preferences.ts');
+  for (const raw of [null, '{', 'null', '[]', '1']) assert.deepEqual(parseChartPreferences(raw), DEFAULT_CHART_PREFERENCES);
+  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, token: 'ignored-fixture' })),
+    { minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50 });
+  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 60, mode: 'bad', showAverage: 'true', averageKind: 'bad', averagePeriod: '20' })), DEFAULT_CHART_PREFERENCES);
 });

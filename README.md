@@ -16,7 +16,9 @@ The option chain pairs calls and puts by strike and saved expiry. Open a contrac
 and choose **Details** for quote statistics, session OHLC and lot/tick information.
 
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
-candle or line charts, with optional EMA 20. Use **Get candles** to retrieve broker history for the selected
+candle or line charts. Expand **Moving average** to choose EMA or SMA with a
+9, 20, 50, 100 or 200-candle period. Timeframe, chart style and moving-average
+choices are remembered on this device. Use **Get candles** to retrieve broker history for the selected
 session. Chart polling reads saved data; missing minutes remain gaps and old
 prices keep their timestamps. See [chart behavior and verification](./__workspace/43-live-candles-and-mobile-chart.md).
 

@@ -51,8 +51,11 @@ export function contiguous(points: Point[], minutes: Timeframe): Point[][] {
   return result;
 }
 
-/** EMA(20): SMA seed, alpha=2/21; reset at each session/gap; forming bars excluded. */
-export function ema20(data: Candles, minutes: Timeframe): Point[] {
+export type AverageKind = "EMA" | "SMA";
+
+/** Completed closes only; seed/reset independently for each session and contiguous run. */
+export function movingAverage(data: Candles, minutes: Timeframe, kind: AverageKind, period: number): Point[] {
+  if (!Number.isInteger(period) || period < 2 || period > 200 || !["EMA", "SMA"].includes(kind)) throw new RangeError("Invalid moving average");
   const output: Point[] = [];
   for (const session of data.sessions ?? []) {
     if (!session.verified) continue;
@@ -60,14 +63,21 @@ export function ema20(data: Candles, minutes: Timeframe): Point[] {
     const points = data.bars.filter(bar => bar.state !== "provisional" && Date.parse(bar.opens_at) >= open && Date.parse(bar.opens_at) < close)
       .map(bar => ({ time: Date.parse(bar.opens_at) / 1000, value: Number(bar.close) }));
     for (const run of contiguous(points, minutes)) {
-      if (run.length < 20) continue;
-      let value = run.slice(0, 20).reduce((sum, point) => sum + point.value, 0) / 20;
-      output.push({ time: run[19].time, value });
-      for (const point of run.slice(20)) {
-        value += (2 / 21) * (point.value - value);
+      if (run.length < period) continue;
+      let value = run.slice(0, period).reduce((sum, point) => sum + point.value, 0) / period;
+      output.push({ time: run[period - 1].time, value });
+      for (let index = period; index < run.length; index++) {
+        const point = run[index];
+        value = kind === "EMA" ? value + (2 / (period + 1)) * (point.value - value)
+          : value + (point.value - run[index - period].value) / period;
         output.push({ time: point.time, value });
       }
     }
   }
   return output;
+}
+
+/** Backward-compatible default study. */
+export function ema20(data: Candles, minutes: Timeframe): Point[] {
+  return movingAverage(data, minutes, "EMA", 20);
 }
