@@ -40,7 +40,10 @@ class AccountSnapshot:
 def portfolio_snapshot(
     db: Session, account: Account, quotes: dict[str, Quote], now: datetime
 ) -> AccountSnapshot:
-    """Caller holds the account row lock; no incomplete subtotal becomes equity."""
+    """Admission holds the account lock; displays use a consistent read snapshot.
+
+    No incomplete subtotal becomes equity.
+    """
     positions = list(
         db.scalars(
             select(PaperPosition).where(

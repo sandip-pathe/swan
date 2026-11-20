@@ -26,6 +26,7 @@ from services.api.order_history import router as order_history_router
 from services.api.order_preview import router as preview_router
 from services.api.paper_actions import router as paper_actions_router
 from services.api.paper_control import router as paper_control_router
+from services.api.portfolio import router as portfolio_router
 from services.api.setup import router as setup_router
 from services.api.validation import router as validation_router
 from services.api.watchlist import router as watchlist_router
@@ -67,6 +68,7 @@ app.include_router(setup_router)
 app.include_router(paper_control_router)
 app.include_router(paper_actions_router)
 app.include_router(order_history_router)
+app.include_router(portfolio_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(candle_router)

@@ -175,3 +175,7 @@ See [manual order amendments](__workspace/60-manual-order-amendments.md).
 Open an order timeline to review recorded activity, amendments, actual fills and
 itemized fees, or follow its linked position and entry/exit orders. See
 [order lifecycle history](__workspace/61-order-lifecycle-history.md).
+
+Home shows reconciled portfolio value and P&L, with explicit stale/unavailable
+valuation states and separate recorded results. Estimates use executable bid
+depth and exit fees. See [portfolio valuation and P&L](__workspace/62-reconciled-portfolio-value-and-pnl.md).

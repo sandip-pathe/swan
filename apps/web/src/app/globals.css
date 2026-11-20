@@ -77,3 +77,11 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .timeline-position, .timeline-related { padding-block: 16px; border-top: 1px solid var(--border); }
 .timeline-related > button { display: block; width: 100%; text-align: left; margin-top: 8px; white-space: normal; }
 .timeline-related small { display: block; margin-top: 4px; }
+
+.portfolio-equity { display: block; font-size: clamp(26px, 6vw, 36px); font-weight: 600; letter-spacing: -.04em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.portfolio-panel .portfolio-caption { margin-bottom: 4px; }
+.portfolio-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin: 24px 0; }
+.portfolio-values > div { min-width: 0; }
+.portfolio-values dt { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.portfolio-values dd { margin: 5px 0 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.portfolio-panel summary { min-height: 44px; padding-block: 12px; }
