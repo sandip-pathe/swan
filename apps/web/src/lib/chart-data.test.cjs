@@ -126,3 +126,25 @@ test('RSI handles rising/falling/flat closes and excludes forming, gaps and sess
   assert.deepEqual(rsi14(input,1).map(p=>p.time),[28,29].map(i=>Date.parse(iso(i))/1000));
   input.sessions[1].verified=false; assert.deepEqual(rsi14(input,1),[]);
 });
+
+const { tradeMarkers } = require('./chart-trades.ts');
+test('trade markers align to real candle intervals and preserve actual fill price', () => {
+  const input=data(30);const fill={id:'a',order_id:'entry',side:'BUY',quantity:25,price:'104.75',timestamp:iso(7)};
+  const one=tradeMarkers(input,1,[fill]);assert.equal(one[0].time,Date.parse(iso(7))/1000);assert.equal(one[0].priceValue,104.75);
+  const five=tradeMarkers(resample(input,5),5,[fill]);assert.equal(five[0].time,Date.parse(iso(5))/1000);assert.equal(five[0].timestamp,fill.timestamp);
+  assert.equal(input.bars[7].open,'8');
+});
+test('markers never snap across missing bars, unverified sessions, closing boundary or future data', () => {
+  const input=data(15);input.bars=input.bars.filter(bar=>bar.opens_at!==iso(7));
+  const fill=(at,id='a')=>({id,order_id:'entry',side:'SELL',quantity:25,price:'110',timestamp:at});
+  assert.equal(tradeMarkers(input,1,[fill(iso(7)),fill(iso(375)),fill(iso(-1))]).length,0);
+  assert.equal(tradeMarkers(resample(input,5),5,[fill(iso(7))]).length,0);
+  assert.equal(tradeMarkers({...input,sessions:[{...session(),verified:false}]},1,[fill(iso(1))]).length,0);
+  assert.equal(tradeMarkers({...input,as_of:iso(0)},1,[fill(iso(1))]).length,0);
+  assert.equal(tradeMarkers({...data(1),sessions:[session(0,2),session(3,5)]},5,[fill(iso(3))]).length,0);
+});
+test('marker ordering is deterministic and invalid fill prices do not enter the chart', () => {
+  const input=data(15);const fill=(id,side,price='100')=>({id,side,order_id:'entry',quantity:25,price,timestamp:iso(3)});
+  const output=tradeMarkers(input,1,[fill('z','SELL'),fill('x','BUY','NaN'),fill('a','BUY'),fill('b','HOLD')]);
+  assert.deepEqual(output.map(row=>row.id),['a','z']);
+});

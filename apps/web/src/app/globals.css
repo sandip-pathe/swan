@@ -85,3 +85,12 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .portfolio-values dt { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .portfolio-values dd { margin: 5px 0 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .portfolio-panel summary { min-height: 44px; padding-block: 12px; }
+
+.chart-trade-controls { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; min-width: 0; }
+.chart-trade-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.chart-trade-controls button, .chart-trade-controls summary { min-height: 44px; }
+.chart-position-levels { background: var(--soft); border-radius: 10px; padding: 14px; margin-block: 12px; }
+.chart-fill-row { padding-block: 12px; border-top: 1px solid var(--border); }
+.chart-fill-row > span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.chart-trade-controls summary { padding-block: 12px; }
+@media (max-width: 480px) { .chart-trade-actions > button { flex: 1 1 auto; } }

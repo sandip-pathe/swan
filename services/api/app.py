@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from services.api.auth import account_identity, settings
 from services.api.candles import router as candle_router
 from services.api.chain import router as chain_router
+from services.api.chart_trades import router as chart_trades_router
 from services.api.history import router as history_router
 from services.api.instruments import router as instrument_router
 from services.api.manual_orders import router as manual_orders_router
@@ -69,6 +70,7 @@ app.include_router(paper_control_router)
 app.include_router(paper_actions_router)
 app.include_router(order_history_router)
 app.include_router(portfolio_router)
+app.include_router(chart_trades_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(candle_router)

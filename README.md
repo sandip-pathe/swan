@@ -179,3 +179,7 @@ itemized fees, or follow its linked position and entry/exit orders. See
 Home shows reconciled portfolio value and P&L, with explicit stale/unavailable
 valuation states and separate recorded results. Estimates use executable bid
 depth and exit fees. See [portfolio valuation and P&L](__workspace/62-reconciled-portfolio-value-and-pnl.md).
+
+Contract charts show owned paper fills and current entry/stop/target levels, with
+a show/hide control and recorded-fill details. Historical dates show fills only.
+See [chart trade overlays](__workspace/63-owned-chart-trade-overlays.md).

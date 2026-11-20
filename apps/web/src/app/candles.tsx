@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { IChartApi, ISeriesApi, SeriesDefinition, UTCTimestamp } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, SeriesDefinition, UTCTimestamp, IPriceLine, ISeriesMarkersPluginApi, Time } from "lightweight-charts";
 import { money } from "@/lib/paper";
 import { contiguous, movingAverage, rsi14, resample, type Candles, type Point, type Timeframe } from "@/lib/chart-data";
 import Icon from "./icons";
+import { ChartTradeControls, useChartTrades } from "./chart-trades";
+import { tradeMarkers, type ChartTrades, type TradePosition } from "@/lib/chart-trades";
 import { AVERAGE_PERIODS, CHART_PREFERENCES_KEY, DEFAULT_CHART_PREFERENCES, parseChartPreferences } from "@/lib/chart-preferences";
 import type { AverageKind } from "@/lib/chart-data";
 import InstrumentDetails from "./instrument-details";
@@ -19,10 +21,13 @@ const istDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "As
 const stamp = (value: string) => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 const timestamp = (value: string) => Math.floor(Date.parse(value) / 1000) as UTCTimestamp;
 
-function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, averagePeriod, showRsi }: { data: Candles; minutes: Timeframe; mode: "candles" | "line"; showEma: boolean; onToggleEma: () => void; averageKind: AverageKind; averagePeriod: number; showRsi: boolean }) {
+function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, averagePeriod, showRsi, trades, position, showTrades }: { trades: ChartTrades | null; position: TradePosition | null; showTrades: boolean; data: Candles; minutes: Timeframe; mode: "candles" | "line"; showEma: boolean; onToggleEma: () => void; averageKind: AverageKind; averagePeriod: number; showRsi: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const prices = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const carrier = useRef<ISeriesApi<"Line"> | null>(null);
+  const markers = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const tradeLines = useRef<IPriceLine[]>([]);
   const volumes = useRef<ISeriesApi<"Histogram"> | null>(null);
   const lineDefinition = useRef<SeriesDefinition<"Line"> | null>(null);
   const lines = useRef<ISeriesApi<"Line">[]>([]);
@@ -39,7 +44,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
 
   useEffect(() => {
     let active = true;
-    void import("lightweight-charts").then(({ createChart, CandlestickSeries, HistogramSeries, LineSeries, ColorType }) => {
+    void import("lightweight-charts").then(({ createChart, CandlestickSeries, HistogramSeries, LineSeries, ColorType, createSeriesMarkers }) => {
       if (!active || !host.current) return;
       const instance = createChart(host.current, {
         autoSize: true,
@@ -54,6 +59,8 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
       chart.current = instance;
       lineDefinition.current = LineSeries;
       prices.current = instance.addSeries(CandlestickSeries, { upColor: "#087f62", downColor: "#cf3d4f", wickUpColor: "#087f62", wickDownColor: "#cf3d4f", borderVisible: false, priceFormat: { type: "price", precision: 2, minMove: .01 } });
+      carrier.current = instance.addSeries(LineSeries, { lineVisible: false, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      markers.current = createSeriesMarkers(carrier.current, [], { zOrder: "top" });
       volumes.current = instance.addSeries(HistogramSeries, { priceScaleId: "volume", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
       volumes.current.priceScale().applyOptions({ scaleMargins: { top: .83, bottom: 0 }, visible: false });
       instance.subscribeCrosshairMove(event => {
@@ -61,7 +68,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
       });
       setReady(true);
     }).catch(() => { if (active) setFailure(true); });
-    return () => { active = false; chart.current?.remove(); chart.current = null; };
+    return () => { active = false; markers.current?.detach(); markers.current = null; chart.current?.remove(); chart.current = null; carrier.current = null; };
   }, []);
 
   useEffect(() => {
@@ -73,6 +80,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
       const bar = byTime.get(time);
       return bar ? { time, open: Number(bar.open), high: Number(bar.high), low: Number(bar.low), close: Number(bar.close) } : { time };
     }));
+    carrier.current?.setData(times.map(time => { const bar = byTime.get(time); return bar ? { time, value: Number(bar.close) } : { time }; }));
     volumes.current.setData(times.map(time => {
       const bar = byTime.get(time);
       return bar?.volume != null ? { time, value: bar.volume, color: Number(bar.close) >= Number(bar.open) ? "#087f6245" : "#cf3d4f45" } : { time };
@@ -91,6 +99,17 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
     syncLines(averages.current, showEma ? contiguous(ema, minutes) : [], "#9a5b09", showEma, true);
     if (!fitted.current && data.bars.length) { chart.current?.timeScale().fitContent(); fitted.current = true; }
   }, [data, ready, mode, showEma, ema, minutes]);
+
+  useEffect(() => {
+    if (!ready || !carrier.current || !markers.current) return;
+    for (const line of tradeLines.current) carrier.current.removePriceLine(line);
+    tradeLines.current = [];
+    markers.current.setMarkers(showTrades && trades ? tradeMarkers(data, minutes, trades.fills).map(fill => ({ id: fill.id, time: fill.time as UTCTimestamp, position: "atPriceMiddle" as const, price: fill.priceValue, shape: fill.side === "BUY" ? "arrowUp" as const : "arrowDown" as const, color: fill.side === "BUY" ? "#2455e6" : "#cf3d4f", text: fill.side === "BUY" ? "B" : "S" })) : []);
+    if (showTrades && position) for (const [title, value, color, lineStyle] of [["Entry", position.average_price, "#2455e6", 2], ["Stop", position.stop_loss, "#cf3d4f", 3], ["Target", position.target, "#087f62", 2]] as const) {
+      const price = Number(value);
+      if (Number.isFinite(price) && price > 0) tradeLines.current.push(carrier.current.createPriceLine({ price, color, lineWidth: 1, lineStyle, axisLabelVisible: true, title }));
+    }
+  }, [ready, data, minutes, showTrades, trades, position]);
 
   useEffect(() => {
     const instance = chart.current, definition = lineDefinition.current;
@@ -143,6 +162,10 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
   const initial = quoteDate ? istDate(new Date(quoteDate)) : maximum;
   const [date, setDate] = useState(initial > maximum ? maximum : initial);
   const [surface, setSurface] = useState("chart");
+  const [showTrades, setShowTrades] = useState(true);
+  const [positionId, setPositionId] = useState("");
+  const tradeState = useChartTrades(instrument.id, date, request, surface === "chart");
+  const selectedPosition = tradeState.levelsCurrent ? (tradeState.data?.positions.find(item => item.id === positionId) ?? tradeState.data?.positions[0] ?? null) : null;
   const [preferences, setPreferences] = useState(DEFAULT_CHART_PREFERENCES);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { minutes, mode, showAverage: showEma, averageKind, averagePeriod, showRsi } = preferences;
@@ -219,7 +242,8 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
     <button className="secondary rsi-toggle ema-toggle" aria-pressed={showRsi} onClick={() => setPreferences(current => ({ ...current, showRsi: !current.showRsi }))}>RSI 14 {showRsi ? "On" : "Off"}</button>
     <p className="chart-status">{marketLabel} · {date}{updated ? ` · Checked ${stamp(updated)} IST` : ""}</p>
     {error && <p className="notice error" role="alert">{error}</p>}{message && <p role="status" className="chart-feedback">{message}</p>}
-    {!validRange || session && Date.parse(session.opens_at) > Date.parse(end) ? <p className="chart-empty">This session has not started.</p> : view == null ? <p className="chart-empty" role="status">Loading candles…</p> : !view.bars.length ? <div className="chart-empty"><Icon name="markets" /><strong>{!session ? "Trading hours unavailable" : data?.bars.length ? "Not enough data for this timeframe" : "No candles saved for this session"}</strong><p>{!session ? "Choose another session. Trading hours must be verified before retrieving history." : data?.bars.length ? "Try 1m or Get candles to fill missing history. Larger candles need a verified session and every elapsed minute." : "Tap Get candles to load the broker’s available price history."}</p></div> : <PriceChart key={`${instrument.id}:${date}:${minutes}`} data={view} minutes={minutes} mode={mode} showEma={showEma} showRsi={showRsi} averageKind={averageKind} averagePeriod={averagePeriod} onToggleEma={() => setPreferences(current => ({ ...current, showAverage: !current.showAverage }))} />}
+    {!validRange || session && Date.parse(session.opens_at) > Date.parse(end) ? <p className="chart-empty">This session has not started.</p> : view == null ? <p className="chart-empty" role="status">Loading candles…</p> : !view.bars.length ? <div className="chart-empty"><Icon name="markets" /><strong>{!session ? "Trading hours unavailable" : data?.bars.length ? "Not enough data for this timeframe" : "No candles saved for this session"}</strong><p>{!session ? "Choose another session. Trading hours must be verified before retrieving history." : data?.bars.length ? "Try 1m or Get candles to fill missing history. Larger candles need a verified session and every elapsed minute." : "Tap Get candles to load the broker’s available price history."}</p></div> : <PriceChart trades={tradeState.data} position={selectedPosition} showTrades={showTrades} key={`${instrument.id}:${date}:${minutes}`} data={view} minutes={minutes} mode={mode} showEma={showEma} showRsi={showRsi} averageKind={averageKind} averagePeriod={averagePeriod} onToggleEma={() => setPreferences(current => ({ ...current, showAverage: !current.showAverage }))} />}
+    <ChartTradeControls state={tradeState} candles={view} minutes={minutes} shown={showTrades} onToggle={() => setShowTrades(value => !value)} selected={positionId} onSelect={setPositionId} />
     {view && <p className="chart-coverage">{view.gaps.length ? `${view.gaps.length} ${minutes === 1 ? "minutes" : "intervals"} have missing candles. Gaps are left blank. ` : ""}{view.bars.some(bar => bar.source === "observed_ltp_snapshots" || bar.source === "derived_mixed") ? "Stream candles use observed prices; volume is unavailable until history arrives. " : ""}{view.bars.some(bar => bar.state === "provisional") ? "The current candle can change. " : ""}{view.unknown_session_dates.length ? "Trading hours could not be verified for this date. " : ""}{view.truncated ? "Some saved records are outside this view’s limit. " : ""}</p>}
     {minutes > 1 && <p className="chart-method">{minutes}m candles combine saved 1m candles, aligned to verified trading hours. Missing minutes leave a gap.</p>}
     {showEma && <details className="chart-explainer"><summary>About {averageLabel}</summary><p className="chart-method">The dashed amber line uses completed candle closes. It needs {averagePeriod} consecutive candles and restarts each session or after a gap. Forming candles are excluded. {averageKind === "EMA" ? `EMA starts with a ${averagePeriod}-candle average, then gives each new close a weight of 2/${averagePeriod + 1}.` : `SMA gives equal weight to the latest ${averagePeriod} completed candle closes.`} These settings apply to this chart only.</p></details>}
