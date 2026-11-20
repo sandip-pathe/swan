@@ -60,3 +60,8 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .paper-action-review { border-color: var(--accent); }
 .paper-action-review button { min-height: 44px; }
 @media (max-width: 480px) { .paper-action-review .actions { flex-direction: column; } .paper-action-review button, .paper-action-button { width: 100%; } }
+
+.amend-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.amend-fields input { width: 100%; min-height: 44px; }
+.paper-action-review fieldset { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+@media (max-width: 480px) { .amend-fields { grid-template-columns: 1fr; } }

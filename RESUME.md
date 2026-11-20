@@ -32,7 +32,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 249 tests;
+and device-local chart preferences. The last full backend suite passed 259 tests;
 ten frontend calculation/preference tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
@@ -62,7 +62,9 @@ does not create an approval or authorize an order.
 Owned entry cancellation and persistent position exit controls are implemented;
 read `__workspace/59-owned-paper-cancel-and-exit.md`. They preserve fill races,
 pause new entries on exit and use the existing watchdog for actual exit fills.
-The next slice is guarded amend/replace for pending manual entries.
+Guarded amendments for wholly unfilled manual entries are implemented; read
+`__workspace/60-manual-order-amendments.md`. Quantity and expiry cannot increase.
+The next slice is per-order lifecycle, amendment, fill and fee history.
 Calendar coverage currently ends 30 November 2026; extend it from official
 sources before testing later dates. Preserve all execution gates.
 

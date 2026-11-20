@@ -36,6 +36,7 @@ from services.core.models import (
     DecisionRecord,
     InstrumentRecord,
     LedgerEntry,
+    ManualIntentRecord,
     PaperFill,
     PaperFundsHold,
     PaperOrder,
@@ -229,6 +230,22 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
             )
         }
 
+        manual_intents = {
+            intent.id: intent
+            for intent in db.scalars(
+                select(ManualIntentRecord).where(
+                    ManualIntentRecord.account_id == identifier,
+                    ManualIntentRecord.id.in_(
+                        [
+                            o.manual_intent_id
+                            for o in [*orders, *active_orders]
+                            if o.manual_intent_id
+                        ]
+                    ),
+                )
+            )
+        }
+
         def origin(entry: PaperOrder | None) -> dict:
             return {
                 "entry_source": (
@@ -256,8 +273,21 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
             entry = (
                 order if order.side == "BUY" else entries.get(held.entry_order_id) if held else None
             )
+            intent = manual_intents.get(order.manual_intent_id) if order.manual_intent_id else None
             return {
                 **row(order),
+                "manual_terms": {
+                    key: intent.payload[key] for key in ("entry_limit", "stop_loss", "target")
+                }
+                if intent
+                else None,
+                "can_amend": bool(
+                    intent
+                    and order.status == "OPEN"
+                    and order.filled_quantity == 0
+                    and order.side == "BUY"
+                    and order.execution_version != LEGACY
+                ),
                 **origin(entry),
                 "can_cancel": order.side == "BUY"
                 and order.execution_version != LEGACY

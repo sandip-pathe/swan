@@ -167,3 +167,7 @@ Orders now supports confirmed cancellation of remaining paper entry units and
 persistent exit requests for owned durable positions. Exit requests pause new
 entries; fills still require monitoring and fresh market depth. See
 [owned cancellation and exit](__workspace/59-owned-paper-cancel-and-exit.md).
+
+Wholly unfilled manual paper entries also support reviewed changes to entry,
+stop and target prices, with fresh risk checks and atomic reservation updates.
+See [manual order amendments](__workspace/60-manual-order-amendments.md).

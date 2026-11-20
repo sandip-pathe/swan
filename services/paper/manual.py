@@ -57,7 +57,10 @@ class ManualPaperService:
                 if previous.account_id != account.id or previous.request_payload != command:
                     raise ConflictError("MANUAL_REQUEST_CONFLICT")
                 existing = db.scalar(
-                    select(PaperOrder).where(PaperOrder.manual_intent_id == request_id)
+                    select(PaperOrder).where(
+                        PaperOrder.account_id == account.id,
+                        PaperOrder.idempotency_key == "manual:" + str(request_id),
+                    )
                 )
                 if existing:
                     return self.ledger.view(existing)
