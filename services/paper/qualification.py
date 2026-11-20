@@ -67,7 +67,12 @@ class ArmRequest(BaseModel):
 def session_facts(db: Session, account: Account, row: PaperValidation, binding: str) -> dict:
     """Inspect original records, never accept outcome JSON as proof of fills."""
     facts: dict = {"session_id": str(row.id), "exchange": row.exchange, "checks": [], "scope": {}}
-    if row.status != "STOPPED" or row.qualification_binding != binding or not row.stopped_at:
+    if (
+        row.request.get("entry_source", "AI") != "AI"
+        or row.status != "STOPPED"
+        or row.qualification_binding != binding
+        or not row.stopped_at
+    ):
         return facts
     if not all(
         row.preflight.get(key) is True
@@ -107,7 +112,7 @@ def session_facts(db: Session, account: Account, row: PaperValidation, binding: 
     if stop is None or buy.accepted_at is None or buy.accepted_at >= stop.timestamp:
         return facts
     instrument_row = db.get(InstrumentRecord, row.instrument_id)
-    decision = db.get(DecisionRecord, buy.decision_id)
+    decision = db.get(DecisionRecord, buy.decision_id) if buy.decision_id else None
     if instrument_row is None or decision is None or decision.account_id != account.id:
         return facts
     frozen_instrument = row.preflight.get("instrument")
@@ -422,13 +427,20 @@ def entry_permission(
     order_id: UUID | None = None,
     strategy_version: str | None = None,
     instrument: Instrument | None = None,
+    entry_source: str = "AI",
 ) -> EntryPermission:
-    control = db.get(RuntimeControl, account.id)
+    control = db.scalar(
+        select(RuntimeControl).where(RuntimeControl.account_id == account.id).with_for_update()
+    )
     if control and control.mode == "VALIDATION":
+        if entry_source == "HUMAN" and control.active_envelope:
+            raise ValueError("ENTRY_SOURCE_MISMATCH")
         from services.paper.validation import entry_lease
 
-        lease = entry_lease(db, account, now, instrument_id, quantity, order_id)
+        lease = entry_lease(db, account, now, instrument_id, quantity, order_id, entry_source)
         return EntryPermission(lease.id, None, lease.max_quantity, lease.expires_at)
+    if entry_source != "AI":
+        raise ValueError("MANUAL_VALIDATION_REQUIRED")
     arm = active_arm(db, account)
     if arm is None:
         raise ValueError("EXPLICIT_PAPER_ARM_REQUIRED")

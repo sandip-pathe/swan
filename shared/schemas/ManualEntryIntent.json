@@ -1,0 +1,73 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "entry_limit": {
+      "title": "Entry Limit",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "instrument_id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Instrument Id",
+      "type": "string"
+    },
+    "max_holding_seconds": {
+      "exclusiveMinimum": 0,
+      "title": "Max Holding Seconds",
+      "type": "integer"
+    },
+    "plan_id": {
+      "format": "uuid",
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "stop_loss": {
+      "title": "Stop Loss",
+      "type": "string"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    },
+    "target": {
+      "title": "Target",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "plan_id",
+    "instrument_id",
+    "quantity",
+    "entry_limit",
+    "stop_loss",
+    "target",
+    "max_holding_seconds",
+    "submitted_at",
+    "expires_at"
+  ],
+  "title": "ManualEntryIntent",
+  "type": "object"
+}

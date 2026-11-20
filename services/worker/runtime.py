@@ -222,7 +222,9 @@ class TradingRuntime:
             if self.validation_only
             else None
         )
-        if self.validation_only and (scope is None or scope["entry_used"]):
+        if self.validation_only and (
+            scope is None or scope["entry_used"] or scope.get("entry_source") == "HUMAN"
+        ):
             return
         allowed = (
             {scope["instrument_id"]}
@@ -493,6 +495,24 @@ class TradingRuntime:
             return
         if state["daily_blocked"]:
             await self.problem("DAILY_LOSS_LIMIT")
+            return
+        if scope and scope.get("entry_source") == "HUMAN":
+            instrument = self.instruments.get(scope["instrument_id"])
+            if instrument is None or quote_problem(
+                self.cache.quotes.get(instrument.id), now, config.quote_max_age_seconds
+            ):
+                await self.problem("MANUAL_QUOTES_UNAVAILABLE")
+                return
+            await asyncio.to_thread(
+                self.store.update, session_payload=session.model_dump(mode="json")
+            )
+            if state["resume_requested"] and not state["enabled"]:
+                await asyncio.to_thread(
+                    self.store.enable_manual_requested,
+                    UUID(scope["id"]),
+                    self.cache.generation,
+                    now,
+                )
             return
         # Any gap invalidates an old envelope before a new entry can be proposed.
         envelope = state["envelope"]

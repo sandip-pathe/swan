@@ -20,7 +20,7 @@ from services.core.execution import (
     PaperExecutionConfig,
     SourceEvidence,
 )
-from services.paper.contracts import FillBooking, OrderRequest, OrderRiskApproval
+from services.paper.contracts import FillBooking, ManualEntryIntent, OrderRequest, OrderRiskApproval
 
 MODELS = (
     DepthLevel,
@@ -37,6 +37,7 @@ MODELS = (
     ExecutionPolicy,
     PaperExecutionConfig,
     OrderRequest,
+    ManualEntryIntent,
     FillBooking,
     OrderRiskApproval,
 )

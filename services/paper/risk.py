@@ -20,7 +20,7 @@ from services.core.contracts import (
 )
 from services.core.execution import FeeSchedule, PaperExecutionConfig
 from services.core.models import PaperLiquidityLevel
-from services.paper.contracts import OrderRiskApproval
+from services.paper.contracts import ManualEntryIntent, OrderRiskApproval
 from services.paper.fees import raw_charge
 from services.paper.liquidity import (
     buy_capacity,
@@ -206,5 +206,163 @@ def size_entry(
             entry_limit=entry_limit,
         ),
         entry_limit,
+        stop_price,
+    )
+
+
+def size_manual_entry(
+    intent: ManualEntryIntent,
+    instrument: Instrument,
+    quote: Quote,
+    config: RiskConfig,
+    state: PortfolioState,
+    session: ExchangeSession,
+    now: datetime,
+    *,
+    execution: PaperExecutionConfig,
+    account_id: UUID,
+    account_revision: int,
+    budgets: dict[Decimal, PaperLiquidityLevel] | None,
+) -> DepthRiskResult:
+    """Approve the exact human quantity, without an AI decision or resizing it."""
+    from services.risk.engine import daily_limit_reached, quote_problem
+
+    def reject(reason: str) -> DepthRiskResult:
+        return DepthRiskResult(reason)
+
+    if now.tzinfo is None:
+        return reject("INVALID_CLOCK")
+    if (
+        account_revision < 0
+        or any(
+            not v.is_finite()
+            for v in (
+                state.cash,
+                state.equity,
+                state.session_opening_equity,
+                state.reserved_risk,
+            )
+        )
+        or state.reserved_risk < 0
+        or state.session_opening_equity <= 0
+    ):
+        return reject("INVALID_PORTFOLIO_AMOUNTS")
+    if not state.enabled:
+        return reject("PAUSED")
+    if not state.reconciled or not state.valuation_fresh:
+        return reject("UNRECONCILED_OR_STALE_PORTFOLIO")
+    if state.daily_blocked or daily_limit_reached(state, config):
+        return reject("DAILY_LOSS_LIMIT")
+    day = now.astimezone(IST).date()
+    if not session.verified or not state.session_matches or session.key != day:
+        return reject("SESSION_UNVERIFIED")
+    if not session.opens_at <= now < session.closes_at:
+        return reject("MARKET_CLOSED")
+    cutoff = session.closes_at - timedelta(minutes=config.entry_cutoff_minutes)
+    if now >= cutoff:
+        return reject("ENTRY_CUTOFF")
+    if not intent.submitted_at <= now < intent.expires_at:
+        return reject("EXPIRED_MANUAL_INTENT")
+    if intent.instrument_id != instrument.id or quote.instrument_id != instrument.id:
+        return reject("INSTRUMENT_MISMATCH")
+    if instrument.verified_at > now or instrument.verified_at.astimezone(IST).date() != day:
+        return reject("INVALID_METADATA_TIME")
+    if not 0 <= (instrument.expiry - day).days <= 7:
+        return reject("INELIGIBLE_EXPIRY")
+    if intent.quantity % instrument.lot_size or intent.quantity > config.max_fill_quantity:
+        return reject("QUANTITY_LIMIT")
+    if any(p % instrument.tick_size for p in (intent.entry_limit, intent.stop_loss, intent.target)):
+        return reject("ORDER_PRICES_OFF_TICK")
+    if intent.max_holding_seconds > config.max_holding_seconds:
+        return reject("HOLDING_LIMIT")
+    if state.open_positions >= config.max_positions:
+        return reject("POSITION_LIMIT")
+    problem = quote_problem(quote, now, config.quote_max_age_seconds)
+    if problem:
+        return reject(problem)
+    if quote.volume is None or quote.oi is None:
+        return reject("MISSING_METRICS")
+    assert quote.bid is not None and quote.ask is not None
+    if quote.volume < config.min_volume or quote.oi < config.min_oi:
+        return reject("INSUFFICIENT_LIQUIDITY")
+    if (quote.ask - quote.bid) / quote.ask * 10000 > config.max_spread_bps:
+        return reject("EXCESSIVE_SPREAD")
+    if execution.blockers(day):
+        return reject("EXECUTION_CONFIGURATION_UNAVAILABLE")
+    policy = execution.execution
+    assert policy.quote_max_age_ms is not None
+    assert policy.extra_adverse_slippage_bps is not None
+    assert policy.assumed_latency_ms is not None
+    assert policy.pending_entry_lifetime_ms is not None
+    if (now - quote.timestamp).total_seconds() * 1000 > policy.quote_max_age_ms:
+        return reject("STALE_EXECUTION_QUOTE")
+    if (
+        quote.timestamp_basis != "exchange_feed"
+        or not quote.market_event_id
+        or quote.depth_kind != "best_five"
+        or not quote.ask_depth
+        or quote.quantity_unit != policy.quantity_unit
+        or not quote.quantity_unit_source
+    ):
+        return reject("EXECUTABLE_DEPTH_UNAVAILABLE")
+    try:
+        capacity = buy_capacity(
+            quote,
+            instrument,
+            execution,
+            account_id,
+            day,
+            budgets,
+            minimum=intent.stop_loss + instrument.tick_size,
+            limit=intent.entry_limit,
+        )
+        stop_price = execution_price(
+            intent.stop_loss, instrument.tick_size, "SELL", policy.extra_adverse_slippage_bps
+        )
+    except ValueError as error:
+        return reject(str(error))
+    if intent.quantity > capacity:
+        return reject("INSUFFICIENT_EXECUTABLE_DEPTH")
+    schedule = next(
+        s for s in execution.fee_schedules if s.exchange == instrument.exchange and s.applies(day)
+    )
+    entry_unit = intent.entry_limit.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    stop_unit = stop_price.quantize(Decimal("0.01"), rounding=ROUND_FLOOR)
+    premium, proceeds = entry_unit * intent.quantity, stop_unit * intent.quantity
+    debit = premium + fee_ceiling(schedule, "BUY", premium)
+    risk = debit - proceeds + fee_ceiling(schedule, "SELL", proceeds)
+    headroom = (
+        state.session_opening_equity * config.max_daily_loss_pct
+        - max(Decimal(0), state.session_opening_equity - state.equity)
+        - state.reserved_risk
+    )
+    budget = min(min(config.capital, state.equity) * config.max_trade_risk_pct, headroom)
+    if debit > state.cash:
+        return reject("INSUFFICIENT_UNRESERVED_CASH")
+    if risk > budget or budget <= 0:
+        return reject("MANUAL_RISK_LIMIT")
+    expiry = min(
+        intent.expires_at,
+        cutoff,
+        now + timedelta(milliseconds=policy.pending_entry_lifetime_ms),
+        quote.timestamp + timedelta(milliseconds=policy.quote_max_age_ms),
+    )
+    if expiry <= now + timedelta(milliseconds=policy.assumed_latency_ms):
+        return reject("INSUFFICIENT_EXECUTION_WINDOW")
+    return DepthRiskResult(
+        "APPROVED",
+        OrderRiskApproval(
+            quantity=intent.quantity,
+            cash_budget=debit,
+            risk_budget=risk,
+            account_revision=account_revision,
+            risk_config_version=config.version,
+            execution_config_version=execution.version,
+            expires_at=expiry,
+            evidence_ids=(quote.id,),
+            net_liquidation_equity=state.equity,
+            entry_limit=intent.entry_limit,
+        ),
+        intent.entry_limit,
         stop_price,
     )

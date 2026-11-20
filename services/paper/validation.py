@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +38,7 @@ class ValidationRequest(BaseModel):
     request_id: UUID
     expected_revision: int = Field(ge=0, strict=True)
     instrument_id: str = Field(min_length=1, max_length=100)
+    entry_source: Literal["AI", "HUMAN"] = "AI"
     duration_seconds: int = Field(default=300, ge=60, le=900, strict=True)
 
 
@@ -75,6 +77,7 @@ def view(row: PaperValidation) -> dict:
         "status": row.status,
         "max_quantity": row.max_quantity,
         "max_entry_attempts": 1,
+        "entry_source": row.request.get("entry_source", "AI"),
         "started_at": row.started_at.astimezone(UTC).isoformat(),
         "expires_at": row.expires_at.astimezone(UTC).isoformat(),
         "stopped_at": row.stopped_at.astimezone(UTC).isoformat() if row.stopped_at else None,
@@ -102,7 +105,7 @@ def problem(db: Session, account: Account, lease: PaperValidation, now: datetime
     control = db.scalar(
         select(RuntimeControl).where(RuntimeControl.account_id == account.id).with_for_update()
     )
-    if control is None or control.mode != "VALIDATION":
+    if control is None or control.mode != "VALIDATION" or control.status == "MODE_SWITCHING":
         return "VALIDATION_WORKER_REQUIRED"
     if control.stream_generation != lease.stream_generation:
         return "VALIDATION_STREAM_CHANGED"
@@ -126,11 +129,14 @@ def entry_lease(
     instrument_id: str,
     quantity: int | None = None,
     order_id: UUID | None = None,
+    entry_source: str = "AI",
 ) -> PaperValidation:
     """Caller holds account lock. Rechecked at submission and every BUY fill."""
     lease = current(db, account.id)
     if lease is None:
         raise ValueError("CONTROLLED_VALIDATION_REQUIRED")
+    if lease.request.get("entry_source", "AI") != entry_source:
+        raise ValueError("ENTRY_SOURCE_MISMATCH")
     reason = problem(db, account, lease, now)
     if reason:
         raise ValueError(reason)
@@ -233,9 +239,10 @@ class ValidationService:
             account = PaperEngine._account(db, self.account_id)
             previous = db.get(PaperValidation, request.request_id)
             if previous:
-                if previous.account_id != account.id or previous.request != request.model_dump(
-                    mode="json"
-                ):
+                if previous.account_id != account.id or {
+                    "entry_source": "AI",
+                    **previous.request,
+                } != request.model_dump(mode="json"):
                     raise ValueError("VALIDATION_REQUEST_CONFLICT")
                 return view(previous)
             control = db.scalar(
@@ -361,7 +368,11 @@ class ValidationService:
                 None,
                 None,
             )
-            control.status = "VALIDATION_AWAITING_STRATEGY"
+            control.status = (
+                "MANUAL_AWAITING_ENTRY"
+                if request.entry_source == "HUMAN"
+                else "VALIDATION_AWAITING_STRATEGY"
+            )
             account.revision += 1
             event(
                 db,

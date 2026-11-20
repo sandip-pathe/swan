@@ -100,6 +100,20 @@ export type Instrument = {
   verified_at: string;
 };
 
+export type ManualEntryIntent = {
+  schema_version?: 1;
+  id: string;
+  plan_id: string;
+  instrument_id: string;
+  quantity: number;
+  entry_limit: string;
+  stop_loss: string;
+  target: string;
+  max_holding_seconds: number;
+  submitted_at: string;
+  expires_at: string;
+};
+
 export type OrderRequest = {
   schema_version?: 1;
   idempotency_key: string;
@@ -113,6 +127,7 @@ export type OrderRequest = {
   submitted_at: string;
   expires_at: string;
   decision_id?: string | null;
+  manual_intent_id?: string | null;
   position_id?: string | null;
   cash_budget: string;
   risk_budget: string;

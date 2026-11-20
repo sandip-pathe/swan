@@ -22,6 +22,7 @@ from services.core.models import (
     Account,
     DecisionRecord,
     InstrumentRecord,
+    ManualIntentRecord,
     PaperLiquidityLevel,
     PaperOrder,
     PaperPosition,
@@ -44,6 +45,8 @@ PRIORITY = {
     "PRE_CLOSE": 1,
     "STOP_LOSS": 2,
     "STRATEGY_INVALIDATED": 3,
+    "FEED_UNAVAILABLE": 3,
+    "MANUAL_SESSION_STOPPED": 3,
     "MAX_HOLD": 4,
     "TARGET": 5,
 }
@@ -313,7 +316,10 @@ class PaperCoordinator:
         # Paused/recovered/invalidated pending entries cannot linger or acquire new exposure.
         for order in orders:
             if order.side == "BUY" and (
-                order.filled_quantity or not enabled or not healthy or not active
+                order.filled_quantity
+                or not enabled
+                or not healthy
+                or (not order.manual_intent_id and not active)
             ):
                 self.cancel(order)
         for position in positions:
@@ -335,15 +341,37 @@ class PaperCoordinator:
         blocked: bool,
     ) -> None:
         now = self.clock()
-        with Session(self.engine) as db:
+        with Session(self.engine) as db, db.begin():
+            account = PaperEngine._account(db, self.account_id)
             entry = db.get(PaperOrder, position.entry_order_id)
             if entry is None or entry.execution_version == LEGACY:
                 return
+            manual_entry = entry.manual_intent_id is not None
             execution = PaperExecutionConfig.model_validate(entry.execution_config)
-            decision = db.get(DecisionRecord, entry.decision_id)
-            if decision is None:
-                raise ValueError("Held entry decision evidence unavailable")
-            strategy_id = decision.payload["strategy_id"]
+            manual_stopped = False
+            strategy_id = None
+            if manual_entry:
+                intent = db.get(ManualIntentRecord, entry.manual_intent_id)
+                if intent is None or intent.account_id != self.account_id:
+                    raise ValueError("Held manual intent unavailable")
+                try:
+                    entry_permission(
+                        db,
+                        account,
+                        now,
+                        entry.instrument_id,
+                        entry.quantity,
+                        entry.id,
+                        entry_source="HUMAN",
+                    )
+                    manual_stopped = not account.enabled
+                except ValueError:
+                    manual_stopped = True
+            else:
+                decision = db.get(DecisionRecord, entry.decision_id)
+                if decision is None:
+                    raise ValueError("Held entry decision evidence unavailable")
+                strategy_id = decision.payload["strategy_id"]
         instrument = instruments[position.instrument_id]
         session = sessions.get(instrument.exchange)
         risk = RiskConfig.model_validate(position.config)
@@ -353,7 +381,12 @@ class PaperCoordinator:
             candidates.append("DAILY_LOSS_LIMIT")
         if session is None or now >= session.closes_at - timedelta(minutes=risk.flatten_minutes):
             candidates.append("PRE_CLOSE")
-        if (
+        if manual_entry:
+            if not healthy:
+                candidates.append("FEED_UNAVAILABLE")
+            if manual_stopped:
+                candidates.append("MANUAL_SESSION_STOPPED")
+        elif (
             not healthy
             or not active
             or active.get("id") != strategy_id

@@ -27,6 +27,8 @@ from services.core.models import (
     DecisionRecord,
     InstrumentRecord,
     LedgerEntry,
+    ManualIntentRecord,
+    ManualPaperPlan,
     PaperFill,
     PaperFundsHold,
     PaperLiquidityLevel,
@@ -49,7 +51,7 @@ from services.paper.accounting import (
     reservations,
     restricted_proceeds,
 )
-from services.paper.contracts import FillBooking, OrderRequest, OrderRiskApproval
+from services.paper.contracts import FillBooking, ManualEntryIntent, OrderRequest, OrderRiskApproval
 from services.paper.engine import ConflictError, PaperEngine
 from services.paper.fees import fee_contexts, incremental_fees
 from services.paper.liquidity import (
@@ -85,6 +87,26 @@ class DurableOrderLedger:
         if order is None or order.account_id != account_id or order.execution_version == LEGACY:
             raise ValueError("Unknown durable paper order")
         return order
+
+    @staticmethod
+    def _manual_intent(
+        db: Session, account: Account, identifier: UUID, instrument: Instrument, now: datetime
+    ) -> ManualEntryIntent:
+        row = db.get(ManualIntentRecord, identifier)
+        if row is None or row.account_id != account.id or row.result.get("status") != "APPROVED":
+            raise ValueError("Approved owned manual intent required")
+        intent = ManualEntryIntent.model_validate(row.payload)
+        frozen = Instrument.model_validate(row.result["instrument"])
+        if (
+            intent.id != row.id
+            or intent.plan_id != row.plan_id
+            or intent.instrument_id != instrument.id
+            or not intent.submitted_at <= now < intent.expires_at
+            or frozen.model_dump(exclude={"verified_at"})
+            != instrument.model_dump(exclude={"verified_at"})
+        ):
+            raise ValueError("Manual intent scope expired or changed")
+        return intent
 
     @staticmethod
     def view(order: PaperOrder) -> dict:
@@ -149,8 +171,11 @@ class DurableOrderLedger:
     ) -> dict:
         """Persist an upstream risk-approved order; never creates an execution/fill."""
         self._clock(now)
+        request_payload = request.model_dump(mode="json")
+        if request.manual_intent_id is None:
+            request_payload.pop("manual_intent_id", None)
         payload = {
-            "request": request.model_dump(mode="json"),
+            "request": request_payload,
             "configuration": config.model_dump(mode="json"),
             "risk_allocation": "whole_order_until_flat",
         }
@@ -217,7 +242,13 @@ class DurableOrderLedger:
                 from services.paper.qualification import entry_permission
 
                 validation = entry_permission(
-                    db, account, now, instrument.id, request.quantity, instrument=instrument
+                    db,
+                    account,
+                    now,
+                    instrument.id,
+                    request.quantity,
+                    instrument=instrument,
+                    entry_source="HUMAN" if request.manual_intent_id else "AI",
                 )
                 validation_id, arm_id = validation.validation_id, validation.arm_id
                 expires_at = min(expires_at, validation.expires_at)
@@ -250,13 +281,17 @@ class DurableOrderLedger:
                     raise ValueError("Insufficient unreserved cash")
                 if request.risk_budget > risk_config.capital * risk_config.max_trade_risk_pct:
                     raise ValueError("Per-trade risk limit")
-                decision = db.get(DecisionRecord, request.decision_id)
+                decision = (
+                    db.get(ManualIntentRecord, request.manual_intent_id)
+                    if request.manual_intent_id
+                    else db.get(DecisionRecord, request.decision_id)
+                )
                 if (
                     decision is None
                     or decision.account_id != account_id
                     or decision.result.get("status") != "APPROVED"
                 ):
-                    raise ValueError("Upstream approved decision required")
+                    raise ValueError("Upstream approved entry source required")
                 approval = OrderRiskApproval.model_validate(decision.result.get("approval"))
                 if (
                     approval.quantity != request.quantity
@@ -285,46 +320,69 @@ class DurableOrderLedger:
                     for identifier in approval.evidence_ids
                 ):
                     raise ValueError("Risk approval evidence unavailable")
-                if decision.payload.get("instrument_id") != instrument.id or decision.payload.get(
-                    "action"
-                ) != ("BUY_CALL" if instrument.option_type == "CALL" else "BUY_PUT"):
-                    raise ValueError("Decision instrument/action mismatch")
-                strategy_id = decision.payload.get("strategy_id")
-                from services.worker.models import RuntimeControl
+                source_expires = []
+                if request.manual_intent_id:
+                    intent = self._manual_intent(
+                        db, account, request.manual_intent_id, instrument, now
+                    )
+                    plan = db.get(ManualPaperPlan, intent.plan_id)
+                    if plan is None or plan.archived_at is not None:
+                        raise ValueError("PAPER_PLAN_NOT_FOUND")
+                    if (
+                        request.quantity != intent.quantity
+                        or request.limit_price != intent.entry_limit
+                        or request.submitted_at != intent.submitted_at
+                    ):
+                        raise ValueError("Order differs from approved manual intent")
+                    source_expires.append(intent.expires_at)
+                else:
+                    if decision.payload.get(
+                        "instrument_id"
+                    ) != instrument.id or decision.payload.get("action") != (
+                        "BUY_CALL" if instrument.option_type == "CALL" else "BUY_PUT"
+                    ):
+                        raise ValueError("Decision instrument/action mismatch")
+                    strategy_id = decision.payload.get("strategy_id")
+                    from services.worker.models import RuntimeControl
 
-                control = db.scalar(
-                    select(RuntimeControl)
-                    .where(RuntimeControl.account_id == account_id)
-                    .with_for_update()
-                )
-                if (
-                    control is None
-                    or not control.active_envelope
-                    or control.active_envelope.get("id") != strategy_id
-                    or control.active_envelope.get("invalidated")
-                ):
-                    raise ValueError("Runtime strategy invalidated before admission")
-                strategy = db.get(StrategyRecord, UUID(strategy_id)) if strategy_id else None
-                if strategy is None or strategy.account_id != account_id:
-                    raise ValueError("Approved strategy required")
-                envelope = StrategyEnvelope.model_validate(strategy.payload)
-                if envelope.invalidated or not envelope.issued_at <= now < envelope.expires_at:
-                    raise ValueError("Strategy expired/invalidated")
-                entry_permission(
-                    db,
-                    account,
-                    now,
-                    instrument.id,
-                    request.quantity,
-                    strategy_version=envelope.version,
-                )
+                    control = db.scalar(
+                        select(RuntimeControl)
+                        .where(RuntimeControl.account_id == account_id)
+                        .with_for_update()
+                    )
+                    if (
+                        control is None
+                        or not control.active_envelope
+                        or control.active_envelope.get("id") != strategy_id
+                        or control.active_envelope.get("invalidated")
+                    ):
+                        raise ValueError("Runtime strategy invalidated before admission")
+                    strategy = db.get(StrategyRecord, UUID(strategy_id)) if strategy_id else None
+                    if strategy is None or strategy.account_id != account_id:
+                        raise ValueError("Approved strategy required")
+                    envelope = StrategyEnvelope.model_validate(strategy.payload)
+                    if envelope.invalidated or not envelope.issued_at <= now < envelope.expires_at:
+                        raise ValueError("Strategy expired/invalidated")
+                    entry_permission(
+                        db,
+                        account,
+                        now,
+                        instrument.id,
+                        request.quantity,
+                        strategy_version=envelope.version,
+                    )
+                    source_expires.extend(
+                        [
+                            envelope.expires_at,
+                            datetime.fromisoformat(decision.payload["expires_at"]),
+                        ]
+                    )
                 lifetime = config.execution.pending_entry_lifetime_ms
                 assert lifetime is not None
                 expires_at = min(
                     expires_at,
                     cutoff,
-                    envelope.expires_at,
-                    datetime.fromisoformat(decision.payload["expires_at"]),
+                    *source_expires,
                     now + timedelta(milliseconds=lifetime),
                     approval.expires_at,
                 )
@@ -375,6 +433,7 @@ class DurableOrderLedger:
                 validation_id=validation_id,
                 account_id=account_id,
                 decision_id=request.decision_id,
+                manual_intent_id=request.manual_intent_id,
                 instrument_id=instrument.id,
                 idempotency_key=request.idempotency_key,
                 side=request.side,
@@ -700,41 +759,58 @@ class DurableOrderLedger:
                 from services.paper.qualification import entry_permission
 
                 validation = entry_permission(
-                    db, account, now, instrument.id, order.quantity, order.id, instrument=instrument
+                    db,
+                    account,
+                    now,
+                    instrument.id,
+                    order.quantity,
+                    order.id,
+                    instrument=instrument,
+                    entry_source="HUMAN" if order.manual_intent_id else "AI",
                 )
                 if (
                     validation.validation_id != order.validation_id
                     or validation.arm_id != order.arm_id
                 ):
                     raise ValueError("VALIDATION_ORDER_MISMATCH")
-                decision = db.get(DecisionRecord, order.decision_id)
-                assert decision is not None
-                from services.worker.models import RuntimeControl
+                if order.manual_intent_id:
+                    intent = self._manual_intent(
+                        db, account, order.manual_intent_id, instrument, now
+                    )
+                    if (
+                        not intent.stop_loss < booking.price <= intent.entry_limit
+                        or booking.price >= intent.target
+                    ):
+                        raise ValueError("Fill violates human entry prices")
+                else:
+                    decision = db.get(DecisionRecord, order.decision_id)
+                    assert decision is not None
+                    from services.worker.models import RuntimeControl
 
-                control = db.scalar(
-                    select(RuntimeControl)
-                    .where(RuntimeControl.account_id == account_id)
-                    .with_for_update()
-                )
-                if (
-                    control is None
-                    or not control.active_envelope
-                    or control.active_envelope.get("id") != decision.payload["strategy_id"]
-                    or control.active_envelope.get("invalidated")
-                ):
-                    raise ValueError("Runtime strategy invalidated before entry fill")
-                strategy = db.get(StrategyRecord, UUID(decision.payload["strategy_id"]))
-                assert strategy is not None
-                envelope = StrategyEnvelope.model_validate(strategy.payload)
-                entry_permission(
-                    db, account, now, instrument.id, order.quantity, order.id, envelope.version
-                )
-                if (
-                    envelope.invalidated
-                    or now >= envelope.expires_at
-                    or not envelope.min_entry <= booking.price <= envelope.max_entry
-                ):
-                    raise ValueError("Fill violates approved strategy envelope")
+                    control = db.scalar(
+                        select(RuntimeControl)
+                        .where(RuntimeControl.account_id == account_id)
+                        .with_for_update()
+                    )
+                    if (
+                        control is None
+                        or not control.active_envelope
+                        or control.active_envelope.get("id") != decision.payload["strategy_id"]
+                        or control.active_envelope.get("invalidated")
+                    ):
+                        raise ValueError("Runtime strategy invalidated before entry fill")
+                    strategy = db.get(StrategyRecord, UUID(decision.payload["strategy_id"]))
+                    assert strategy is not None
+                    envelope = StrategyEnvelope.model_validate(strategy.payload)
+                    entry_permission(
+                        db, account, now, instrument.id, order.quantity, order.id, envelope.version
+                    )
+                    if (
+                        envelope.invalidated
+                        or now >= envelope.expires_at
+                        or not envelope.min_entry <= booking.price <= envelope.max_entry
+                    ):
+                        raise ValueError("Fill violates approved strategy envelope")
             position = (
                 db.scalar(select(PaperPosition).where(PaperPosition.entry_order_id == order.id))
                 if order.side == "BUY"
@@ -871,11 +947,18 @@ class DurableOrderLedger:
                     else Decimal(0)
                 )
             if position is None:
-                decision = db.get(DecisionRecord, order.decision_id)
-                assert decision is not None
-                strategy = db.get(StrategyRecord, UUID(decision.payload["strategy_id"]))
-                assert strategy is not None
-                envelope = StrategyEnvelope.model_validate(strategy.payload)
+                protection: ManualEntryIntent | StrategyEnvelope
+                if order.manual_intent_id:
+                    protection = self._manual_intent(
+                        db, account, order.manual_intent_id, instrument, now
+                    )
+                else:
+                    decision = db.get(DecisionRecord, order.decision_id)
+                    assert decision is not None
+                    strategy = db.get(StrategyRecord, UUID(decision.payload["strategy_id"]))
+                    assert strategy is not None
+                    envelope = StrategyEnvelope.model_validate(strategy.payload)
+                    protection = envelope
                 risk_config = RiskConfig.model_validate(account.config)
                 position = PaperPosition(
                     account_id=account_id,
@@ -885,11 +968,11 @@ class DurableOrderLedger:
                     closed_quantity=0,
                     average_price=booking.price,
                     entry_fees=booking.fees,
-                    stop_loss=envelope.stop_loss,
-                    target=envelope.target,
+                    stop_loss=protection.stop_loss,
+                    target=protection.target,
                     planned_risk=prorated_risk(order, order.filled_quantity),
                     max_holding_seconds=min(
-                        risk_config.max_holding_seconds, envelope.max_holding_seconds
+                        risk_config.max_holding_seconds, protection.max_holding_seconds
                     ),
                     opened_at=now,
                     config=risk_config.model_dump(mode="json"),

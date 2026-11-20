@@ -94,6 +94,19 @@ class ManualPaperPlan(Base):
     preview_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class ManualIntentRecord(Base):
+    """Immutable human intent and server-calculated risk result, never AI evidence."""
+
+    __tablename__ = "manual_paper_intents"
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
+    plan_id: Mapped[UUID] = mapped_column(ForeignKey("manual_paper_plans.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    request_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class SnapshotRecord(Base):
     __tablename__ = "market_snapshots"
     id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -148,6 +161,10 @@ class PaperOrder(Base):
     __table_args__ = (
         UniqueConstraint("account_id", "idempotency_key", name="order_idempotency"),
         UniqueConstraint("decision_id", name="one_entry_per_decision"),
+        UniqueConstraint("manual_intent_id", name="one_entry_per_manual_intent"),
+        CheckConstraint(
+            "decision_id IS NULL OR manual_intent_id IS NULL", name="exclusive_entry_source"
+        ),
         Index(
             "one_entry_per_validation",
             "validation_id",
@@ -172,6 +189,7 @@ class PaperOrder(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
     decision_id: Mapped[UUID | None] = mapped_column(ForeignKey("trade_decisions.id"))
+    manual_intent_id: Mapped[UUID | None] = mapped_column(ForeignKey("manual_paper_intents.id"))
     instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"))
     idempotency_key: Mapped[str]
     side: Mapped[str]

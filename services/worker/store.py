@@ -190,6 +190,53 @@ class RuntimeStore:
             )
             return True
 
+    def enable_manual_requested(self, validation_id: UUID, generation: int, now: datetime) -> bool:
+        """Enable only a still-requested, bounded HUMAN lease; a pause always wins."""
+        from services.paper.validation import current, entry_lease
+
+        with Session(self.engine) as db, db.begin():
+            account = PaperEngine._account(db, self.account_id)
+            control = db.scalar(
+                select(RuntimeControl)
+                .where(RuntimeControl.account_id == account.id)
+                .with_for_update()
+            )
+            if (
+                control is None
+                or control.mode != "VALIDATION"
+                or not control.resume_requested
+                or control.active_envelope
+                or control.stream_generation != generation
+                or account.daily_blocked
+                or not PaperEngine._reconcile(db, account)
+                or PaperEngine._open_positions(db, account.id)
+            ):
+                return False
+            lease = current(db, account.id)
+            if (
+                lease is None
+                or lease.id != validation_id
+                or account.session_key != lease.session_key
+            ):
+                return False
+            try:
+                entry_lease(db, account, now, lease.instrument_id, entry_source="HUMAN")
+            except ValueError:
+                return False
+            if not account.enabled:
+                account.enabled = True
+                account.revision += 1
+                PaperEngine._event(
+                    db,
+                    account,
+                    "MANUAL_PREFLIGHT_PASSED",
+                    now,
+                    validation_id=str(lease.id),
+                    entry_source="HUMAN",
+                )
+            control.status, control.problem = "MANUAL_READY", None
+            return True
+
     def update(self, **changes) -> None:
         with Session(self.engine) as db, db.begin():
             control = db.scalar(
