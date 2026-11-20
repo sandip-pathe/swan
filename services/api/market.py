@@ -18,7 +18,7 @@ from services.market.analysis import normalize_rest_quote, provider_price, provi
 from services.market.angelone import AngelOneClient
 from services.market.catalog import InstrumentCatalog
 from services.market.selection import display_contracts
-from services.market.settings import MarketSettings, ProviderError
+from services.market.settings import AuthenticationRequired, MarketSettings, ProviderError
 from services.paper.engine import PaperEngine
 from services.worker.models import LatestMarketQuote
 
@@ -91,6 +91,7 @@ def refresh_quotes(
 ):
     now = datetime.now(UTC)
     failed = False
+    failure_code = "MARKET_PRICES_UNAVAILABLE"
     with Session(request.app.state.engine) as db, db.begin():
         if db.get(Account, identifier) is None:
             raise HTTPException(409, "PAPER_ACCOUNT_NOT_CONFIGURED")
@@ -142,6 +143,14 @@ def refresh_quotes(
                 "coverage": "nearest_expiry_up_to_five_strikes",
                 "price_status": "last_available_observations_not_proof_of_live_feed",
             }
+        except AuthenticationRequired:
+            failed = True
+            failure_code = "BROKER_LOGIN_REQUIRED"
+            result = {
+                "status": "unavailable",
+                "underlying": body.underlying,
+                "problem": failure_code,
+            }
         except (ProviderError, ValueError, TypeError, KeyError, OSError, TimeoutError):
             failed = True
             result = {"status": "unavailable", "underlying": body.underlying}
@@ -151,5 +160,5 @@ def refresh_quotes(
             )
         )
     if failed:
-        raise HTTPException(409, "MARKET_PRICES_UNAVAILABLE")
+        raise HTTPException(409, failure_code)
     return result

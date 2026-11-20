@@ -17,7 +17,7 @@ from services.core.contracts import IST
 from services.core.models import Account, AuditEvent, PaperOrder, SnapshotRecord
 from services.market.catalog import InstrumentCatalog
 from services.market.selection import display_contracts
-from services.market.settings import ProviderError
+from services.market.settings import AuthenticationRequired, ProviderError
 from services.worker.models import LatestMarketQuote
 
 
@@ -194,11 +194,18 @@ def test_explicit_after_hours_refresh_is_bounded_and_never_executes(
 
 
 @pytest.mark.integration
-def test_provider_failure_is_recorded_and_throttled(paper, db_engine, monkeypatch):
+@pytest.mark.parametrize(
+    "error, expected",
+    [
+        (ProviderError("BROKER_AUTH_REJECTED"), "MARKET_PRICES_UNAVAILABLE"),
+        (AuthenticationRequired("DAILY_BROKER_LOGIN_REQUIRED"), "BROKER_LOGIN_REQUIRED"),
+    ],
+)
+def test_provider_failure_is_recorded_and_throttled(paper, db_engine, monkeypatch, error, expected):
     _, identifier = paper
 
     async def unavailable(underlying):
-        raise ProviderError("BROKER_AUTH_REJECTED")
+        raise error
 
     monkeypatch.setattr(api, "fetch_quotes", unavailable)
     app.dependency_overrides[account_identity] = lambda: identifier
@@ -208,7 +215,8 @@ def test_provider_failure_is_recorded_and_throttled(paper, db_engine, monkeypatc
             app.state.engine = db_engine
             try:
                 endpoint = "/api/market/quotes/refresh"
-                assert client.post(endpoint, json={"underlying": "NIFTY"}).status_code == 409
+                response = client.post(endpoint, json={"underlying": "NIFTY"})
+                assert response.status_code == 409 and response.json()["detail"] == expected
                 assert client.post(endpoint, json={"underlying": "NIFTY"}).status_code == 429
                 with Session(db_engine) as db:
                     event = db.scalar(
