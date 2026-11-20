@@ -28,17 +28,19 @@ implemented with Search stars, cached quotes and chart links; read
 and a chart-adjacent Details view are implemented; read
 `__workspace/47-instrument-details-and-paired-chain.md`, then
 `__workspace/48-selected-prices-and-display-subscriptions.md`. Exact selected
-quote refresh and expiring chart/watchlist feed interest are implemented. Broker
-login expired at midnight on 20 November; login was skipped at user request, so
-actual open-market stream/reconnect verification remains pending.
+quote refresh and expiring chart/watchlist feed interest are implemented. The user renewed broker login on 20 November and confirmed price refresh works.
+Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 177 tests;
+and device-local chart preferences. The last full backend suite passed 178 tests;
 ten frontend calculation/preference tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
 orders/fills, no qualification and no arm. Its worker runs in observation mode.
 Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.
+The option chain now defaults to newest quote pairs first, with strike ordering
+available. Read `__workspace/51-quote-order-and-finish-path.md` for the fix and
+remaining delivery priorities.
 Calendar coverage currently ends 30 November 2026; extend it from official
 sources before testing later dates. Preserve all execution gates.
 

@@ -6,7 +6,7 @@ import Icon from "./icons";
 
 export type ChainRow = { instrument: ChartContract; quote: MarketQuote };
 export type Chain = { rows: ChainRow[]; next_offset: number | null; as_of: string; expiry?: string | null; expiries?: string[]; page_size?: number; truncated?: boolean };
-type Props = { chain: Chain | null; error: string | null; underlying: string; expiry: string; busy: boolean; stale: boolean; offset: number; now: number; maxAge: number; onMarket: (value: string) => void; onExpiry: (value: string) => void; onRefresh: () => void; onPage: (value: number) => void; onOpen: (item: ChartContract) => void };
+type Props = { sort: "latest" | "strike"; onSort: (value: "latest" | "strike") => void; chain: Chain | null; error: string | null; underlying: string; expiry: string; busy: boolean; stale: boolean; offset: number; now: number; maxAge: number; onMarket: (value: string) => void; onExpiry: (value: string) => void; onRefresh: () => void; onPage: (value: number) => void; onOpen: (item: ChartContract) => void };
 
 function Side({ rows, name, now, maxAge, onOpen }: { rows: ChainRow[]; name: "CE" | "PE"; now: number; maxAge: number; onOpen: Props["onOpen"] }) {
   if (rows.length !== 1) return <div className="chain-side chain-unavailable">{rows.length ? "Multiple listings" : "No saved quote"}</div>;
@@ -27,10 +27,12 @@ export default function OptionChain(props: Props) {
     if (!groups.has(key)) groups.set(key, { strike: instrument.strike, expiry: instrument.expiry, calls: [], puts: [] });
     groups.get(key)![instrument.option_type === "CALL" ? "calls" : "puts"].push(row);
   }
-  const sorted = [...groups.values()].sort((a, b) => a.expiry.localeCompare(b.expiry) || Number(a.strike) - Number(b.strike));
+  const newest = (group: { calls: ChainRow[]; puts: ChainRow[] }) => Math.max(0, ...[...group.calls, ...group.puts].map(row => Date.parse(row.quote.timestamp) || 0));
+  const sorted = [...groups.values()].sort((a, b) => a.expiry.localeCompare(b.expiry) || (props.sort === "latest" ? newest(b) - newest(a) : 0) || Number(a.strike) - Number(b.strike));
   return <section className="panel paired-chain" aria-label="Option chain">
     <div className="panelhead"><div><h2>Option chain</h2><p>Calls &amp; puts · prices in INR</p></div><button className="secondary" disabled={props.busy || props.stale} onClick={props.onRefresh}><Icon name="refresh" />{props.busy ? "Refreshing..." : "Refresh prices"}</button></div>
     <div className="chain-filters"><label>Market<select value={underlying} onChange={event => props.onMarket(event.target.value)}><option>NIFTY</option><option>SENSEX</option></select></label><label>Expiry<select value={props.expiry || chain?.expiry || ""} onChange={event => props.onExpiry(event.target.value)}><option value="">Nearest saved expiry</option>{(chain?.expiries ?? []).map(value => <option key={value}>{value}</option>)}</select></label></div>
+    <label className="chain-sort">Order<select aria-label="Option chain order" value={props.sort} onChange={event => props.onSort(event.target.value as "latest" | "strike")}><option value="latest">Latest quotes first</option><option value="strike">Strike: low to high</option></select></label>
     <p className="catalog-status">Saved quotes only · exchange times in IST. Tap a call or put for its chart and details.</p>
     {props.error ? <p className="notice error" role="alert">{props.error}</p> : chain == null ? <p role="status" className="empty-state">Loading option chain…</p> : !sorted.length ? <p className="empty-state">No saved quotes for this selection. Use Refresh prices for the nearest listed expiry, or find another contract in Search.</p> : <>
       <div className="paired-chain-head"><span>CALLS · CE</span><span>STRIKE</span><span>PUTS · PE</span></div>

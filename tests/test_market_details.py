@@ -141,3 +141,31 @@ def test_selected_details_preserve_quote_age_zero_values_and_account_state(
         with Session(db_engine) as db:
             assert db.scalar(select(func.count()).select_from(PaperOrder)) == 0
             assert db.get(Account, owner).cash == scenario.config.capital
+
+
+@pytest.mark.integration
+def test_chain_newest_pairs_precede_old_quotes_across_pages(paper, db_engine, scenario):
+    _, owner = paper
+    base = instruments(scenario)[0]
+    items = [
+        base.model_copy(
+            update={"id": f"fresh-{i}-{side}", "strike": Decimal(100 + i * 50), "option_type": side}
+        )
+        for i in range(51)
+        for side in ("CALL", "PUT")
+    ]
+    seed(db_engine, scenario, items)
+    with Session(db_engine) as db, db.begin():
+        # The highest strike has the newest exchange time on only one side.
+        row = db.get(LatestMarketQuote, "fresh-50-PUT")
+        row.timestamp = datetime.now(UTC)
+        row.payload = {**row.payload, "timestamp": row.timestamp.isoformat()}
+    with client_for(db_engine, owner) as client:
+        latest = client.get("/api/chain").json()
+        assert latest["rows"][0]["instrument"]["strike"] == "2600"
+        assert {row["instrument"]["option_type"] for row in latest["rows"][:2]} == {"CALL", "PUT"}
+        tail = client.get("/api/chain", params={"offset": 50}).json()
+        assert {row["instrument"]["strike"] for row in tail["rows"]} == {"2550"}
+        ascending = client.get("/api/chain", params={"sort": "strike"}).json()
+        assert ascending["rows"][0]["instrument"]["strike"] == "100"
+        assert client.get("/api/chain", params={"sort": "bad"}).status_code == 422

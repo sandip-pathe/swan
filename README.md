@@ -12,7 +12,9 @@ renewed only while the chart is visible. Open exposure and the worker universe
 retain subscription priority. Old prices keep their exchange timestamps.
 If refresh reports a broker login is required, run `market.cmd login` privately
 and retry; a web sign-in does not renew the daily broker session.
-The option chain pairs calls and puts by strike and saved expiry. Open a contract
+The option chain pairs calls and puts by strike and saved expiry. Its default
+**Latest quotes first** order puts the pair with the newest exchange timestamp at
+the top; choose **Strike: low to high** for strike order. Open a contract
 and choose **Details** for quote statistics, session OHLC and lot/tick information.
 
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m

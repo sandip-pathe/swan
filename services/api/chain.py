@@ -2,10 +2,11 @@
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import Numeric, select
+from sqlalchemy import Numeric, func, select
 from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
@@ -23,6 +24,7 @@ def chain(
     request: Request,
     underlying: str = Query("NIFTY", pattern="^(NIFTY|SENSEX)$"),
     expiry: date | None = None,
+    sort: Literal["latest", "strike"] = "latest",
     offset: int = Query(0, ge=0, le=10000),
     identifier: UUID = Depends(account_identity),
 ):
@@ -53,8 +55,14 @@ def chain(
                 select(strike.label("strike"))
                 .join(LatestMarketQuote, LatestMarketQuote.instrument_id == InstrumentRecord.id)
                 .where(*filters)
-                .distinct()
-                .order_by("strike")
+                .group_by(strike)
+                .order_by(
+                    *(
+                        [func.max(LatestMarketQuote.timestamp).desc(), strike]
+                        if sort == "latest"
+                        else [strike]
+                    )
+                )
                 .offset(offset)
                 .limit(PAGE_SIZE + 1)
             )
@@ -66,7 +74,17 @@ def chain(
             .order_by(strike, fields["option_type"].as_string(), InstrumentRecord.id)
             .limit(201)
         ).all()
+        rank = {value: index for index, value in enumerate(strikes[:PAGE_SIZE])}
+        records = sorted(
+            records,
+            key=lambda row: (
+                rank[Decimal(row[0].payload["strike"])],
+                row[0].payload["option_type"],
+                row[0].id,
+            ),
+        )
         return {
+            "sort": sort,
             "as_of": now.isoformat(),
             "underlying": underlying,
             "expiry": chosen,

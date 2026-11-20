@@ -99,6 +99,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   const [chartId, setChartId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [chainSort, setChainSort] = useState<"latest" | "strike">("latest");
   const [chainError, setChainError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -179,7 +180,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
         if (active) { setData(workspace); setError(null); setNow(Date.now()); }
         if (tab === "Option chain" || tab === "Overview") {
           try {
-            const options: Chain = await request(`/api/chain?underlying=${underlying}&offset=${offset}${chainExpiry ? `&expiry=${encodeURIComponent(chainExpiry)}` : ""}`, "GET", controller.signal);
+            const options: Chain = await request(`/api/chain?underlying=${underlying}&offset=${offset}&sort=${chainSort}${chainExpiry ? `&expiry=${encodeURIComponent(chainExpiry)}` : ""}`, "GET", controller.signal);
             if (active) { setChain(options); setChainError(null); }
           } catch { if (active) { setChainError("Option observations could not be loaded. Account data is still available."); setChain(null); } }
         }
@@ -191,7 +192,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     }
     void load();
     return () => { active = false; controller.abort(); clearTimeout(timer); };
-  }, [request, tab, underlying, offset, chainExpiry, refresh]);
+  }, [request, tab, underlying, offset, chainExpiry, chainSort, refresh]);
 
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
 
@@ -316,7 +317,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
       {tab === "Option chain" && !chartId && watchlist.feedback && <p className="chart-feedback" role="status">{watchlist.feedback}</p>}
       {tab === "Option chain" && !chartId && marketView === "watchlist" && <Watchlist refreshing={busy} onRefresh={() => void refreshSelectedPrices(watchlist.data?.rows.filter(row => row.status === "listed").map(row => row.instrument.id) ?? [])} state={watchlist} now={now} quoteAge={Number(data.account.config.quote_max_age_seconds)} onOpen={row => { setChartRecord(row); openChart(row.instrument); }} onSearch={() => { setMarketView("search"); window.location.hash = "markets?view=search"; }} />}
-      {tab === "Option chain" && !chartId && marketView === "chain" && <OptionChain chain={chain} error={chainError} underlying={underlying} expiry={chainExpiry} busy={busy} stale={stale} offset={offset} now={now} maxAge={Number(data.account.config.quote_max_age_seconds)} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onExpiry={value => { setChainExpiry(value); setOffset(0); setChain(null); }} onRefresh={() => { setChainExpiry(""); setOffset(0); void refreshPrices(); }} onPage={value => { setOffset(value); setChain(null); }} onOpen={openChart} />}
+      {tab === "Option chain" && !chartId && marketView === "chain" && <OptionChain sort={chainSort} onSort={value => { setChainSort(value); setOffset(0); setChain(null); }} chain={chain} error={chainError} underlying={underlying} expiry={chainExpiry} busy={busy} stale={stale} offset={offset} now={now} maxAge={Number(data.account.config.quote_max_age_seconds)} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onExpiry={value => { setChainExpiry(value); setOffset(0); setChain(null); }} onRefresh={() => { setChainExpiry(""); setOffset(0); void refreshPrices(); }} onPage={value => { setOffset(value); setChain(null); }} onOpen={openChart} />}
       {tab === "Journal" && <><section className="panel"><div className="panelhead"><h2>Closed positions</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>Most recent 50 records. Realized P&amp;L includes recorded execution costs. CSV exports up to 10,000 closed positions.</p><Positions rows={data.journal} data={data} empty="No closed paper positions." /></section><section className="panel"><h2>Cash ledger</h2>{!data.ledger.length ? <p>No ledger entries recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Category</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</section></>}
       {tab === "Activity" && <section className="panel"><h2>Account activity</h2><p>Recent changes to your account and trading activity.</p>{!data.events.length ? <p>No activity recorded.</p> : data.events.map(event => <details key={event.id}><summary>{time(event.timestamp)} · {event.kind.replaceAll("_", " ")}</summary><p className="muted">Recorded in your account history.</p></details>)}</section>}
       {tab === "Risk settings" && <section className="panel"><h2>Review your complete risk policy</h2><p>Pause entries and resolve pending orders and positions before saving. Capital is preserved in the ledger; changing it requires a separate funding operation.</p><form onSubmit={saveRisk} key={data.account.revision}><fieldset disabled={busy || stale || data.account.enabled || data.positions.length > 0 || (data.order_summary?.active_count ?? 1) > 0 || data.runtime?.resume_requested}><p>Configured paper capital: <strong>{money(String(data.account.config.capital))}</strong></p><div className="riskform">
