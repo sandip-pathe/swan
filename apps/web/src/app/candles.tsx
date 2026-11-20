@@ -8,6 +8,7 @@ import Icon from "./icons";
 import { AVERAGE_PERIODS, CHART_PREFERENCES_KEY, DEFAULT_CHART_PREFERENCES, parseChartPreferences } from "@/lib/chart-preferences";
 import type { AverageKind } from "@/lib/chart-data";
 import InstrumentDetails from "./instrument-details";
+import InstrumentDepth from "./instrument-depth";
 import type { MarketQuote, QuoteStatistics } from "@/lib/market";
 
 type Request = (path: string, method?: string, signal?: AbortSignal, body?: unknown) => Promise<unknown>;
@@ -204,7 +205,8 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
     <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{headerPrice == null ? "—" : money(headerPrice)}</strong><span>{headerCaption}</span></div></div>
     {quoteError && <p className="notice error" role="alert">{quoteError} Saved quotes may be out of date.</p>}
     {onRefreshQuote && <button className="secondary quote-refresh" disabled={quoteBusy} onClick={onRefreshQuote}><Icon name="refresh" />{quoteBusy ? "Refreshing price?" : "Refresh price"}</button>}
-    <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button></div>
+    <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "depth"} onClick={() => setSurface("depth")}>Depth</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button></div>
+    {surface === "depth" && <InstrumentDepth quote={quote} statistics={statistics} error={quoteError} maxAge={quoteMaxAge} />}
     {surface === "details" && <InstrumentDetails instrument={instrument} quote={quote} statistics={statistics} maxAge={quoteMaxAge} error={quoteError} />}
     <div hidden={surface !== "chart"}>
     <div className="chart-controls"><label><span className="sr-only">Session</span><input aria-label="Chart session" type="date" value={date} max={maximum} disabled={busy} onChange={event => { if (event.target.value) { setDate(event.target.value); setData(null); setUpdated(null); setMessage(null); } }} /></label><button className="secondary" disabled={busy || !canRefresh} onClick={refreshHistory}><Icon name="refresh" />{busy ? "Loading…" : "Get candles"}</button></div>

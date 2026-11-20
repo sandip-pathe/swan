@@ -15,7 +15,10 @@ and retry; a web sign-in does not renew the daily broker session.
 The option chain pairs calls and puts by strike and saved expiry. Its default
 **Latest quotes first** order puts the pair with the newest exchange timestamp at
 the top; choose **Strike: low to high** for strike order. Open a contract
-and choose **Details** for quote statistics, session OHLC and lot/tick information.
+and choose **Depth** for up to five saved bid/ask price levels, or **Details**
+for quote statistics, session OHLC and lot/tick information. Depth quantities are
+shown only when the saved quote carries verified units and their source; otherwise
+prices remain visible and quantities are unavailable.
 
 Open **Markets → Chart** on an option contract to view mobile-first 1m/5m/15m
 candle or line charts. Expand **Moving average** to choose EMA or SMA with a

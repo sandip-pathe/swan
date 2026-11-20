@@ -41,6 +41,9 @@ Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open
 The option chain now defaults to newest quote pairs first, with strike ordering
 available. Read `__workspace/51-quote-order-and-finish-path.md` for the fix and
 remaining delivery priorities.
+M3 manual/live acceptance was explicitly deferred at the user's request; continue
+implementation without marking that evidence complete. The contract Depth tab is
+implemented; read `__workspace/52-mobile-market-depth.md`.
 Calendar coverage currently ends 30 November 2026; extend it from official
 sources before testing later dates. Preserve all execution gates.
 
