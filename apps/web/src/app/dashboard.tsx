@@ -28,6 +28,7 @@ type Workspace = ExecutionData & {
 const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
 const errors: Record<string, string> = {
+  ORDER_PRICES_OFF_TICK: "Use prices that are multiples of the contract tick size shown in Details.",
   BROKER_LOGIN_REQUIRED: "Your broker session needs a new login. Prices were not refreshed; previously saved quotes are still shown.",
   HISTORY_REFRESH_BUSY: "A candle refresh is already running. Try again shortly.",
   HISTORY_REFRESH_RATE_LIMIT: "Please wait a few seconds before requesting candles again.",

@@ -32,6 +32,12 @@ synchronized pane with 30/70 reference levels; its visibility is also remembered
 session. Chart polling reads saved data; missing minutes remain gaps and old
 prices keep their timestamps. See [chart behavior and verification](./__workspace/43-live-candles-and-mobile-chart.md).
 
+Open a contract's **Order** tab to preview a manual intraday BUY LIMIT plan.
+Choose lots and limit/stop/target prices, then **Preview costs & risk**. Premium,
+gross scenarios, fee allowances and account checks are computed by the server.
+Missing reviewed inputs remain unavailable. This preview places no order and
+reserves no funds.
+
 Resuming on another laptop: start with [RESUME.md](./RESUME.md), which records
 the current milestone, setup requirements and private data that GitHub excludes.
 
