@@ -38,6 +38,10 @@ Reported usage now retains supplied token totals even when a response is incompl
 refused or fails output validation. These responses still fail trading checks.
 Usage is counted once per request; missing/conflicting totals remain unknown.
 
+Evaluation outputs and stage checks now show newest records first. Use **Load older
+outputs** or **Load older checks** to continue; a failed load keeps your current
+rows available for retry. Reopen the history to refresh newer records.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

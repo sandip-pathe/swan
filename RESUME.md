@@ -1,9 +1,9 @@
-Latest slice: retain supplied usage from incomplete/invalid model responses.
-Read `__workspace/73-retained-response-usage.md`. Unique usage receipts take
-precedence over mirrored outputs; legacy fallback remains, conflicts stay unknown.
-Next slice: pagination for evaluation outputs/check results (D16/D20), preserving
-remaining bounded-history and billing gaps in the ledger. Broker/live/manual
-acceptance remains skipped; entries remain disabled.
+Latest slice: paginated evaluation outputs and stage checks. Read
+`__workspace/74-paginated-evaluation-history.md`. Both lists load newest first,
+with independent owned cursors, append/dedup/retry and stale-close suppression.
+Next slice: history query indexes and bounded load verification (D20). Remaining
+version/risk/report pagination and billing gaps stay in DEFERRED-WORK.md.
+Broker/live/manual acceptance remains skipped; entries remain disabled.
 
 Latest slice: daily report and deferred-work ledger. Read
 `__workspace/65-daily-report-and-deferred-ledger.md` first, then
@@ -45,7 +45,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 335 tests;
+and device-local chart preferences. The last full backend suite passed 340 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper

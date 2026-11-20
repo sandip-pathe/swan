@@ -61,8 +61,8 @@ executed stage checks, not a separate result for every predicate. A valid WAIT o
 rejected review can pass response checks without granting entry permission. Older
 checks are not backfilled. Failures before saved context (configuration/news/evidence
 selection), process death, and an unavailable audit database can still leave no
-stage-check result; never infer success from that absence. Stage results and output
-lists are independently capped at 20 with explicit truncation.
+stage-check result; never infer success from that absence. Stage results and output lists now use independent 20-record cursor pages
+(checkpoint 74); other bounded lists remain explicit.
 
 [Checkpoint 70](./__workspace/70-strategy-risk-order-history.md) follows an owned
 accepted evaluation envelope to risk records by exact strategy ID, then to entry
@@ -128,8 +128,16 @@ Non-200, oversized, malformed-JSON, timeout/cancelled transport and lost audit
 writes can still lack usable usage; these are not zero and are not billing totals.
 Token breakdowns remain supplied metadata, not a reconciled billing calculation.
 No pricing or invoice reconciliation is implemented. D17 remains open for those
-limits and provider/reproducibility guarantees. D16/D20 retain history pagination
-and query/index/load qualification. No live API or market check was performed.
+limits and provider/reproducibility guarantees. D16/D20 retain remaining bounded-list pagination and query/index/load qualification. No live API or market check was performed.
+
+[Checkpoint 74](./__workspace/74-paginated-evaluation-history.md) adds independent
+20-record newest-first cursor pages for evaluation outputs and stage checks.
+Cursors are scoped to owner, evaluation and kind; equal timestamps use UUID ties.
+Older pages append without duplicates; failures retain existing rows, and closing
+or reopening ignores stale responses. Page reads are consistent individually,
+not one frozen cross-page snapshot; reopening refreshes newer records. Versions,
+risk decisions/orders and report fill lists keep their stated bounds. Their
+pagination plus database index/load qualification remain D16/D20.
 
 ## Current exclusions, not delayed promises
 

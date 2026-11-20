@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from services.agents.checks import FAILURES
@@ -18,8 +18,39 @@ from services.worker.models import EvaluationSlot
 router = APIRouter()
 
 
+def page(
+    db: Session, owner: UUID, evaluation_id: UUID, kind: str, before: UUID | None
+) -> list[AuditEvent]:
+    statement = select(AuditEvent).where(
+        AuditEvent.account_id == owner,
+        AuditEvent.kind == kind,
+        AuditEvent.details["evaluation_id"].as_string() == str(evaluation_id),
+    )
+    if before:
+        cursor = db.get(AuditEvent, before)
+        if (
+            cursor is None
+            or cursor.account_id != owner
+            or cursor.kind != kind
+            or cursor.details.get("evaluation_id") != str(evaluation_id)
+        ):
+            raise HTTPException(400, "RUN_CURSOR_INVALID")
+        statement = statement.where(
+            tuple_(AuditEvent.timestamp, AuditEvent.id) < (cursor.timestamp, cursor.id)
+        )
+    return list(
+        db.scalars(statement.order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc()).limit(21))
+    )
+
+
 @router.get("/api/paper/agent-activity/{event_id}/run")
-def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity)):
+def run(
+    event_id: UUID,
+    request: Request,
+    owner: UUID = Depends(account_identity),
+    outputs_before: UUID | None = None,
+    checks_before: UUID | None = None,
+):
     with Session(request.app.state.engine) as db:
         db.connection(execution_options={"isolation_level": "REPEATABLE READ"})
         event = db.get(AuditEvent, event_id)
@@ -33,18 +64,7 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
         slot = db.get(EvaluationSlot, key) if key else None
         if slot is None or slot.account_id != owner:
             return {"available": False}
-        events = list(
-            db.scalars(
-                select(AuditEvent)
-                .where(
-                    AuditEvent.account_id == owner,
-                    AuditEvent.kind == "AI_OUTPUT",
-                    AuditEvent.details["evaluation_id"].as_string() == str(slot.id),
-                )
-                .order_by(AuditEvent.timestamp, AuditEvent.id)
-                .limit(21)
-            )
-        )
+        events = page(db, owner, slot.id, "AI_OUTPUT", outputs_before)
         rows = []
         models: dict[str, type[Analysis] | type[Proposal] | type[Review]] = {
             "analysis": Analysis,
@@ -85,18 +105,7 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
                 except (ValueError, TypeError, KeyError):
                     pass
             rows.append(row)
-        records = list(
-            db.scalars(
-                select(AuditEvent)
-                .where(
-                    AuditEvent.account_id == owner,
-                    AuditEvent.kind == "AI_STAGE_CHECK",
-                    AuditEvent.details["evaluation_id"].as_string() == str(slot.id),
-                )
-                .order_by(AuditEvent.timestamp, AuditEvent.id)
-                .limit(21)
-            )
-        )
+        records = page(db, owner, slot.id, "AI_STAGE_CHECK", checks_before)
         checks = []
         for record in records[:20]:
             detail = record.details
@@ -132,5 +141,7 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
             "versions": versions(db, owner, slot.id),
             "checks": checks,
             "checks_truncated": len(records) > 20,
+            "next_checks_before": str(records[19].id) if len(records) > 20 else None,
+            "next_outputs_before": str(events[19].id) if len(events) > 20 else None,
             "truncated": len(events) > 20,
         }
