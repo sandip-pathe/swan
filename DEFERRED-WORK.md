@@ -28,7 +28,7 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D13 | Bulk protected exits and broader modification scope (M6) | Planned: individual exit and wholly-unfilled manual price amendments exist; no bulk exit, quantity increase, expiry extension or filled-position amendment | Specify/review semantics and implement reservation/fill-race/unresolved outcomes; do not add cosmetic actions | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md), [owned controls](./__workspace/59-owned-paper-cancel-and-exit.md) |
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
-| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome, with saved stage-check results for new runs; strategy/risk evidence remains planned | Complete strategy/risk/order links plus richer source/age drill-down; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
+| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome, with saved stage-check results for new runs; accepted strategies now link to owned risk decisions and entry orders; richer evidence remains planned | Complete richer source/age drill-down and remaining downstream evidence gaps; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
 | D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. Immutable model/strategy binding, monetary cost and historical usage views remain planned | Record future exact model/strategy versions and failed/incomplete-call usage; add historical views and defensible pricing/billing attribution. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
@@ -40,8 +40,8 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 
 D16 remains open. [Checkpoint 67](./__workspace/67-linked-agent-evidence.md) adds
 future output-to-context links and an owned citation view. Older outputs are never
-linked by timestamp. Strategy/risk correlation, news article
-links and richer depth/age analysis are still pending.
+linked by timestamp. News article links and richer depth/age analysis are still pending. Strategy/risk
+correlation is implemented in checkpoint 70.
 Proposal/review records cite market observations; only analysis records directly
 cite news. This view does not attribute analysis headlines to a later proposal.
 Missing/invalid observations remain unavailable; historical evidence grants no
@@ -53,7 +53,7 @@ the current slot outcome. Existing evaluation events can show their slot outcome
 but legacy model outputs are not backfilled. Stage checks are now persisted as described in checkpoint 69; pre-context failures
 and hard-process loss can still lack a stage result. History is capped
 at the first 20 outputs and marks truncation; pagination/query indexing/load review
-remain under D16/D20. Strategy/risk/order correlation remains open.
+remain under D16/D20. Strategy/risk/order correlation is implemented in checkpoint 70.
 
 [Checkpoint 69](./__workspace/69-recorded-stage-checks.md) records new analysis,
 proposal, review and strategy-stage passed/failed/interrupted results. This logs
@@ -63,6 +63,16 @@ checks are not backfilled. Failures before saved context (configuration/news/evi
 selection), process death, and an unavailable audit database can still leave no
 stage-check result; never infer success from that absence. Stage results and output
 lists are independently capped at 20 with explicit truncation.
+
+[Checkpoint 70](./__workspace/70-strategy-risk-order-history.md) follows an owned
+accepted evaluation envelope to risk records by exact strategy ID, then to entry
+orders by decision ID. Recorded fill quantities come from actual fills; existing
+order timelines provide events and related exits. No acceptance root, invalid roots
+or duplicate outcome records are unavailable, never guessed. No decision/order
+found is distinct from rejection or a fill. Risk decisions are capped at 20 and
+orders at 100 with truncation; full pagination/index/load review stays D16/D20.
+Pre-admission control denials that never persisted a DecisionRecord have no linked
+risk result; richer risk evidence and explicit denial events remain under D16.
 
 ## Usage visibility limits carried forward
 

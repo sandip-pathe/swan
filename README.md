@@ -20,6 +20,10 @@ Evaluation history now includes recorded stage checks with failure explanations.
 A valid wait proposal or rejected review may pass response checks; that grants no
 trading permission. Older runs without saved checks remain explicitly unavailable.
 
+Evaluation history also follows accepted strategies through recorded risk decisions
+to entry orders and actual filled quantities. Open an order timeline for events and
+related exits. Acceptance, risk approval, order submission and fills remain separate.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

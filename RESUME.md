@@ -1,8 +1,9 @@
-Latest slice: persisted analysis/proposal/review/strategy stage-check results.
-Read `__workspace/69-recorded-stage-checks.md`. Evaluation history shows passed,
-failed, interrupted and unavailable checks without inferring old results.
-Next slice: explicit accepted-strategy to risk/order correlation. D16/D17 remain
-open; broker/live/manual acceptance remains skipped and entries disabled.
+Latest slice: accepted strategy -> risk decision -> entry-order history.
+Read `__workspace/70-strategy-risk-order-history.md`. The owned evaluation history
+uses exact stored IDs and actual fill quantities, with links to order timelines.
+Next slice: recorded model/strategy version binding for each run (D17). Remaining
+D16 evidence and pagination gaps stay in the ledger. Broker/live/manual acceptance
+remains skipped; entries remain disabled.
 
 Latest slice: daily report and deferred-work ledger. Read
 `__workspace/65-daily-report-and-deferred-ledger.md` first, then
@@ -44,7 +45,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 305 tests;
+and device-local chart preferences. The last full backend suite passed 312 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper

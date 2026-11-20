@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from services.agents.checks import FAILURES
 from services.agents.contracts import Analysis, Proposal, Review
 from services.api.agent_activity import evaluation, identifier
+from services.api.agent_execution import execution
 from services.api.auth import account_identity
 from services.core.models import AuditEvent
 from services.worker.models import EvaluationSlot
@@ -126,6 +127,7 @@ def run(event_id: UUID, request: Request, owner: UUID = Depends(account_identity
             "title": title,
             "summary": summary,
             "rows": rows,
+            "execution": execution(db, owner, slot.id),
             "checks": checks,
             "checks_truncated": len(records) > 20,
             "truncated": len(events) > 20,
