@@ -1,6 +1,7 @@
 """Owned, idempotent human plans. No order admission, reservation or AI approval."""
 
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -10,7 +11,14 @@ from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
 from services.api.order_preview import ManualPreview, calculate_preview
-from services.core.models import Account, AuditEvent, InstrumentRecord, ManualPaperPlan
+from services.core.models import (
+    Account,
+    AuditEvent,
+    InstrumentRecord,
+    ManualIntentRecord,
+    ManualPaperPlan,
+    PaperOrder,
+)
 
 router = APIRouter()
 PLAN_LIMIT = 50
@@ -21,7 +29,38 @@ class SavePlan(ManualPreview):
     expected_account_revision: int = Field(ge=0, strict=True)
 
 
-def view(plan: ManualPaperPlan):
+def plan_orders(db: Session, plans: list[ManualPaperPlan]) -> dict[UUID, PaperOrder]:
+    if not plans:
+        return {}
+    ranked = (
+        select(
+            PaperOrder.id,
+            ManualIntentRecord.plan_id,
+            func.row_number()
+            .over(
+                partition_by=ManualIntentRecord.plan_id,
+                order_by=(PaperOrder.accepted_at.desc(), PaperOrder.id.desc()),
+            )
+            .label("rank"),
+        )
+        .join(ManualIntentRecord, PaperOrder.manual_intent_id == ManualIntentRecord.id)
+        .where(
+            ManualIntentRecord.plan_id.in_([p.id for p in plans]),
+            PaperOrder.account_id == plans[0].account_id,
+        )
+        .subquery()
+    )
+    return {
+        cast(UUID, plan_id): cast(PaperOrder, order)
+        for order, plan_id in db.execute(
+            select(PaperOrder, ranked.c.plan_id)
+            .join(ranked, PaperOrder.id == ranked.c.id)
+            .where(ranked.c.rank == 1)
+        )
+    }
+
+
+def view(plan: ManualPaperPlan, order: PaperOrder | None = None):
     return {
         "id": str(plan.id),
         "instrument": plan.instrument_payload,
@@ -31,7 +70,8 @@ def view(plan: ManualPaperPlan):
         "preview": plan.preview_payload,
         "status": "archived" if plan.archived_at else "saved",
         "source": "human",
-        "order_id": None,
+        "order_id": str(order.id) if order else None,
+        "last_order_status": order.status if order else None,
         "submission_ready": False,
     }
 
@@ -57,7 +97,7 @@ def save_plan(body: SavePlan, request: Request, identifier: UUID = Depends(accou
         if existing:
             if existing.request_payload != canonical:
                 raise HTTPException(409, "PAPER_PLAN_REQUEST_CONFLICT")
-            return view(existing)
+            return view(existing, plan_orders(db, [existing]).get(existing.id))
         if account.revision != body.expected_account_revision:
             raise HTTPException(409, "PREVIEW_ACCOUNT_CHANGED")
         count = db.scalar(
@@ -95,7 +135,7 @@ def save_plan(body: SavePlan, request: Request, identifier: UUID = Depends(accou
                 },
             )
         )
-        return view(plan)
+        return view(plan, plan_orders(db, [plan]).get(plan.id))
 
 
 @router.get("/api/paper/plans")
@@ -120,8 +160,9 @@ def plans(
                 .limit(26)
             )
         )
+        orders = plan_orders(db, rows[:25])
         return {
-            "rows": [view(row) for row in rows[:25]],
+            "rows": [view(row, orders.get(row.id)) for row in rows[:25]],
             "next_offset": offset + 25 if len(rows) > 25 else None,
             "limit": PLAN_LIMIT,
         }
@@ -146,4 +187,4 @@ def archive(plan_id: UUID, request: Request, identifier: UUID = Depends(account_
                     details={"plan_id": str(plan.id)},
                 )
             )
-        return view(plan)
+        return view(plan, plan_orders(db, [plan]).get(plan.id))

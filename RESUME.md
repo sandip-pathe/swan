@@ -32,7 +32,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 236 tests;
+and device-local chart preferences. The last full backend suite passed 241 tests;
 ten frontend calculation/preference tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
@@ -52,9 +52,11 @@ The manual BUY LIMIT preview is implemented in the contract Order tab; read
 orders or issue approvals. User-owned, idempotent saved paper plans are implemented; read
 `__workspace/55-durable-manual-paper-plans.md`. Actual manual order admission
 and fill/protection integration now exist as an internal, bounded HUMAN validation
-path; read `__workspace/57-manual-execution-lifecycle.md`. The mobile placement
-flow and authenticated submission route remain unfinished; no Place order action
-is exposed. Read `__workspace/56-usable-depth-in-manual-preview.md` for shared
+path; read `__workspace/57-manual-execution-lifecycle.md`. The authenticated
+submission API and mobile session/review/place flow are implemented; read
+`__workspace/58-mobile-manual-placement.md`. Placement remains gated by a bounded
+HUMAN session and fresh deterministic checks. This is not unrestricted manual
+trading or completion of M6. Read `__workspace/56-usable-depth-in-manual-preview.md` for shared
 depth-capacity checks used by both AI sizing and manual previews. A preview still
 does not create an approval or authorize an order.
 Calendar coverage currently ends 30 November 2026; extend it from official

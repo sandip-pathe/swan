@@ -29,7 +29,21 @@ const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").r
 const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
 const errors: Record<string, string> = {
   PAPER_PLAN_REQUEST_CONFLICT: "This save request was already used with different inputs. Preview again before saving.",
-  PREVIEW_ACCOUNT_CHANGED: "Your account changed. Preview again before saving this plan.",
+  PREVIEW_ACCOUNT_CHANGED: "Your account changed. Preview again before saving or placing this plan.",
+  MANUAL_MARKET_CLOSED: "The market is closed or its session is unverified. You can still save a plan.",
+  MANUAL_ADMISSION_CHANGED: "Order checks changed. Calculate a fresh preview before trying again.",
+  MANUAL_QUOTE_UNAVAILABLE: "A current stored quote is required before placing a paper order.",
+  MANUAL_REQUEST_CONFLICT: "This order request belongs to different inputs. Check Orders before trying again.",
+  MANUAL_CONTRACT_CHANGED: "Contract details changed. Load the contract and make a new plan.",
+  ENTRY_SOURCE_MISMATCH: "Another entry mode owns this session. Stop it before starting a manual session.",
+  CONTROLLED_VALIDATION_REQUIRED: "Start a manual paper session before placing this order.",
+  MANUAL_VALIDATION_REQUIRED: "Manual orders need an explicit manual paper session.",
+  MANUAL_RISK_LIMIT: "This order exceeds the remaining risk budget. Review quantity and stop price.",
+  INSUFFICIENT_EXECUTABLE_DEPTH: "Usable depth no longer covers this order. Preview again.",
+  INSUFFICIENT_UNRESERVED_CASH: "Available cash no longer covers this order and its costs.",
+  VALIDATION_ENTRY_LIMIT: "This session already has its one entry. Track it in Orders.",
+  VALIDATION_SCOPE_EXCEEDED: "This session supports one lot of its selected contract.",
+  VALIDATION_STOPPING: "The session is stopping. Existing exposure is still being managed.",
   PAPER_PLAN_LIMIT: "You have 50 saved paper plans. Archive an older plan before saving another.",
   PAPER_PLAN_NOT_FOUND: "This saved plan is unavailable for your account.",
   ORDER_PRICES_OFF_TICK: "Use prices that are multiples of the contract tick size shown in Details.",
@@ -137,7 +151,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     if (!response.ok) {
       const code = typeof result.detail === "string" ? result.detail : result.detail?.code;
       const message = typeof code === "string" ? errors[code] : null;
-      throw new Error(message ?? (response.status === 422 ? "Some configuration fields are invalid or missing. Review the required fields and permitted ranges." : "Unable to complete the request. Check the connection and settings."));
+      throw Object.assign(new Error(message ?? (response.status === 422 ? "Some fields are invalid or missing. Review your inputs." : "Unable to complete the request. Check the connection and settings.")), { status: response.status, code });
     }
     return result;
   }, [user]);
@@ -316,7 +330,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
-      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={chartId} instrument={selectedContract.instrument} reference={"reference" in selectedContract ? selectedContract.reference : chain?.reference} quoteDate={selectedContract.quote?.timestamp} quote={selectedContract.quote} statistics={"statistics" in selectedContract ? selectedContract.statistics : undefined} quoteError={chartError} quoteMaxAge={Number(data.account.config.quote_max_age_seconds)} request={request} quoteBusy={busy} onRefreshQuote={() => void refreshSelectedPrices([chartId])} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
+      {tab === "Option chain" && chartId && selectedContract && <ContractChart key={`${user.uid}:${chartId}`} instrument={selectedContract.instrument} reference={"reference" in selectedContract ? selectedContract.reference : chain?.reference} quoteDate={selectedContract.quote?.timestamp} quote={selectedContract.quote} statistics={"statistics" in selectedContract ? selectedContract.statistics : undefined} quoteError={chartError} quoteMaxAge={Number(data.account.config.quote_max_age_seconds)} request={request} quoteBusy={busy} onRefreshQuote={() => void refreshSelectedPrices([chartId])} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
       {tab === "Option chain" && chartId && !selectedContract && <section className="panel"><p>{chartError ?? "Loading contract..."}</p><button className="secondary" onClick={returnToMarket}>Back to markets</button></section>}
       {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Option chain"], ["watchlist", "Watchlist"], ["search", "Search"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = value === "chain" ? "markets" : `markets?view=${value}`; }}>{label}</button>)}</div>}
       {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}

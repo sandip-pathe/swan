@@ -42,6 +42,18 @@ reserves no funds. **Save paper plan** retains your inputs and a newly calculate
 preview in your account. Expand **Saved paper plans** to load inputs or archive
 a plan. Loading saved inputs requires a new preview; saved plans are not orders.
 
+During a verified open session, **Manual paper trading** supports an explicit
+five-minute session with one entry of one lot. Prepare the trading monitor in
+**Account → Paper controls** first, then **Start manual session** in the ticket.
+Preview and save a fresh plan, select **Review paper order**, then **Place paper
+order**. The server repeats the checks before acceptance. Track fills and
+protection in **Orders**. A session stop disables entries and drains exposure;
+it does not promise an immediate fill. Closed-market planning remains available.
+If a response is unconfirmed, **Retry same order request** retains the original
+identity. Pending request IDs survive ticket reloads in account-scoped session
+storage when the browser permits it; no credentials are stored there.
+
+
 Resuming on another laptop: start with [RESUME.md](./RESUME.md), which records
 the current milestone, setup requirements and private data that GitHub excludes.
 

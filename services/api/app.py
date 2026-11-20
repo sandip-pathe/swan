@@ -19,6 +19,7 @@ from services.api.candles import router as candle_router
 from services.api.chain import router as chain_router
 from services.api.history import router as history_router
 from services.api.instruments import router as instrument_router
+from services.api.manual_orders import router as manual_orders_router
 from services.api.manual_plans import router as plans_router
 from services.api.market import router as market_router
 from services.api.order_preview import router as preview_router
@@ -68,6 +69,7 @@ app.include_router(chain_router)
 app.include_router(market_router)
 app.include_router(preview_router)
 app.include_router(plans_router)
+app.include_router(manual_orders_router)
 app.include_router(instrument_router)
 app.include_router(watchlist_router)
 app.add_middleware(

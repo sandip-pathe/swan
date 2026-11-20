@@ -19,6 +19,7 @@ from services.core.models import (
     ListedInstrument,
     PaperLiquidityLevel,
     PaperPosition,
+    PaperValidation,
 )
 from services.market.calendar import SessionCalendar
 from services.market.settings import MarketSettings
@@ -28,7 +29,7 @@ from services.paper.portfolio import portfolio_snapshot
 from services.paper.risk import fee_ceiling
 from services.paper.settings import DEFAULT_CONFIG
 from services.risk.engine import quote_problem
-from services.worker.models import LatestMarketQuote
+from services.worker.models import LatestMarketQuote, RuntimeControl
 
 router = APIRouter()
 PriceInput = Annotated[Decimal, Field(gt=0, max_digits=14, decimal_places=2)]
@@ -151,7 +152,29 @@ def calculate_preview(body: ManualPreview, db: Session, account: Account, now: d
         state.reconciled and state.valuation_fresh,
     )
     check("POSITIONS", "Position capacity available", state.open_positions < config.max_positions)
-    check("ENTRY_MODE", "Automated entries are paused", not account.enabled)
+    control = db.get(RuntimeControl, identifier)
+    human = db.scalar(
+        select(PaperValidation.id).where(
+            PaperValidation.account_id == identifier,
+            PaperValidation.status == "ACTIVE",
+            PaperValidation.instrument_id == instrument.id,
+            PaperValidation.expires_at > now,
+            PaperValidation.started_at <= now,
+        )
+    )
+    lease = db.get(PaperValidation, human) if human else None
+    manual_owner = bool(
+        control
+        and control.mode == "VALIDATION"
+        and not control.active_envelope
+        and lease
+        and lease.request.get("entry_source", "AI") == "HUMAN"
+    )
+    check(
+        "ENTRY_MODE",
+        "Manual entry ownership selected" if manual_owner else "Automated entries are paused",
+        manual_owner or not account.enabled,
+    )
     execution = None
     try:
         execution = load_execution()
@@ -269,7 +292,7 @@ def calculate_preview(body: ManualPreview, db: Session, account: Account, now: d
         and not state.daily_blocked
         and planned_loss <= budget,
     )
-    check("MANUAL_SUBMISSION", "Order placement is unavailable in this preview", False)
+    check("MANUAL_SUBMISSION", "A preview does not submit an order", False)
 
     def amount(value):
         return str(money(value)) if value is not None else None

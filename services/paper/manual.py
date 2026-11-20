@@ -15,7 +15,10 @@ from services.core.models import (
     ManualPaperPlan,
     PaperLiquidityLevel,
     PaperOrder,
+    PaperPosition,
 )
+from services.market.calendar import SessionCalendar
+from services.market.settings import MarketSettings
 from services.paper.contracts import ManualEntryIntent, OrderRequest, OrderRiskApproval
 from services.paper.engine import ConflictError, PaperEngine
 from services.paper.matching import mapped_quote
@@ -24,6 +27,7 @@ from services.paper.portfolio import portfolio_snapshot
 from services.paper.qualification import entry_permission
 from services.paper.risk import size_manual_entry
 from services.paper.settings import DEFAULT_CONFIG
+from services.worker.models import LatestMarketQuote
 
 
 class ManualPaperService:
@@ -39,9 +43,9 @@ class ManualPaperService:
         plan_id: UUID,
         request_id: UUID,
         expected_revision: int,
-        observed: Quote,
-        session: ExchangeSession,
-        quotes: dict[str, Quote],
+        observed: Quote | None = None,
+        session: ExchangeSession | None = None,
+        quotes: dict[str, Quote] | None = None,
     ) -> dict:
         command = dict(plan_id=str(plan_id), expected_revision=expected_revision)
         approval: OrderRiskApproval | None
@@ -106,6 +110,26 @@ class ManualPaperService:
                     instrument=instrument,
                     entry_source="HUMAN",
                 )
+                session = session or load_session(instrument.exchange, now)
+                if session is None:
+                    raise ValueError("MANUAL_MARKET_CLOSED")
+                if observed is None:
+                    row = db.get(LatestMarketQuote, instrument.id)
+                    if row is None:
+                        raise ValueError("MANUAL_QUOTE_UNAVAILABLE")
+                    observed = Quote.model_validate(row.payload)
+                if quotes is None:
+                    held = select(PaperPosition.instrument_id).where(
+                        PaperPosition.account_id == account.id, PaperPosition.closed_at.is_(None)
+                    )
+                    quotes = {
+                        r.instrument_id: Quote.model_validate(r.payload)
+                        for r in db.scalars(
+                            select(LatestMarketQuote).where(
+                                LatestMarketQuote.instrument_id.in_(held)
+                            )
+                        )
+                    }
                 quote = mapped_quote(observed, execution)
                 snapshot = portfolio_snapshot(db, account, quotes, now)
                 levels = db.scalars(
@@ -187,6 +211,9 @@ class ManualPaperService:
                 if approval is None:
                     return payload
         assert approval is not None
+        session = session or load_session(instrument.exchange, self.clock())
+        if session is None:
+            raise ValueError("MANUAL_MARKET_CLOSED")
         request = OrderRequest(
             idempotency_key="manual:" + str(intent.id),
             instrument_id=intent.instrument_id,
@@ -204,3 +231,11 @@ class ManualPaperService:
         return self.ledger.submit(
             self.account_id, request, instrument, execution, session, self.clock()
         )
+
+
+def load_session(exchange: str, now: datetime) -> ExchangeSession | None:
+    from services.core.contracts import IST
+
+    return SessionCalendar(MarketSettings().calendar_file, strict=False).get(
+        exchange, now.astimezone(IST).date()
+    )
