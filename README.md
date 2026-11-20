@@ -1,5 +1,13 @@
 # SWAN Trade
 
+History now includes a date-selectable IST daily report of recorded fills, net
+realized P&L, fees, cash movement and decision stages. Today is provisional; cash
+movement is separate from profit and no historical marked equity is inferred.
+
+Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
+accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
+closure requirements for the final review.
+
 Use **Markets → Search** to find listed NIFTY/SENSEX contracts by strike, expiry
 and call/put, then open a chart. **Refresh contracts** updates the listing cache;
 prices and candle history load separately.
