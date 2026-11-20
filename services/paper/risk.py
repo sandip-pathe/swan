@@ -23,8 +23,7 @@ from services.core.models import PaperLiquidityLevel
 from services.paper.contracts import OrderRiskApproval
 from services.paper.fees import raw_charge
 from services.paper.liquidity import (
-    available_units,
-    displayed_units,
+    buy_capacity,
     execution_price,
     protection_price,
 )
@@ -131,34 +130,19 @@ def size_entry(
         or not envelope.min_entry <= entry_limit < envelope.target
     ):
         return DepthRiskResult("ENTRY_PREDICATE_FAILED")
-    capacity = 0
-    for level in quote.ask_depth:
-        previous = budgets.get(level.price)
-        if previous is not None and (
-            previous.account_id != account_id
-            or previous.instrument_id != instrument.id
-            or previous.session_key != day
-            or previous.side != "BUY"
-            or previous.price != level.price
-            or previous.config_version != execution.version
-        ):
-            return DepthRiskResult("LIQUIDITY_BUDGET_SCOPE_MISMATCH")
-        price = execution_price(
-            level.price, instrument.tick_size, "BUY", policy.extra_adverse_slippage_bps
+    try:
+        capacity = buy_capacity(
+            quote,
+            instrument,
+            execution,
+            account_id,
+            day,
+            budgets,
+            minimum=envelope.min_entry,
+            limit=entry_limit,
         )
-        if price > entry_limit:
-            break
-        if price < envelope.min_entry:
-            continue
-        try:
-            units = available_units(
-                previous, quote, displayed_units(level, quote, instrument), policy
-            )
-        except ValueError:
-            return DepthRiskResult("DEPTH_OLDER_THAN_LIQUIDITY_BUDGET")
-        if policy.partial_fill_granularity == "lots":
-            units = units // instrument.lot_size * instrument.lot_size
-        capacity += units
+    except ValueError as error:
+        return DepthRiskResult(str(error))
     headroom = (
         state.session_opening_equity * config.max_daily_loss_pct
         - max(Decimal(0), state.session_opening_equity - state.equity)

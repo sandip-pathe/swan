@@ -1,6 +1,6 @@
 """Manual planning cannot mutate trading state or forge strategy approval."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -11,7 +11,7 @@ from test_instrument_search import client_for, instruments, save
 from test_market_details import seed
 
 from services.api import order_preview as api
-from services.core.contracts import IST
+from services.core.contracts import IST, DepthLevel, Quote
 from services.core.execution import PaperExecutionConfig
 from services.core.models import (
     Account,
@@ -19,10 +19,12 @@ from services.core.models import (
     DecisionRecord,
     LedgerEntry,
     PaperFill,
+    PaperLiquidityLevel,
     PaperOrder,
     SnapshotRecord,
     StrategyRecord,
 )
+from services.worker.models import LatestMarketQuote
 
 
 @pytest.fixture
@@ -103,6 +105,7 @@ def counts(engine):
             db.scalar(select(func.count()).select_from(model))
             for model in (
                 PaperOrder,
+                PaperLiquidityLevel,
                 PaperFill,
                 LedgerEntry,
                 DecisionRecord,
@@ -193,3 +196,164 @@ def test_preview_missing_configuration_and_unknown_account(preview_case, db_engi
         )
     with client_for(db_engine, uuid4()) as client:
         assert client.post("/api/paper/orders/preview", json=body).status_code == 409
+
+
+def fresh_depth(engine, item, *, changes=None):
+    stamp = datetime.now(UTC)
+    quote = Quote(
+        instrument_id=item.id,
+        timestamp=stamp,
+        received_at=stamp,
+        source="isolated-preview",
+        market_event_id="fixture:" + str(uuid4()),
+        timestamp_basis="exchange_feed",
+        quantity_unit="units",
+        quantity_unit_source="isolated-fixture",
+        depth_kind="best_five",
+        bid="99.95",
+        ask="100",
+        bid_quantity=item.lot_size * 4,
+        ask_quantity=item.lot_size * 4,
+        bid_depth=(DepthLevel(price="99.95", quantity=item.lot_size * 4),),
+        ask_depth=(
+            DepthLevel(price="100", quantity=item.lot_size * 4),
+            DepthLevel(price="101", quantity=item.lot_size * 4),
+        ),
+        volume=10000,
+        oi=10000,
+    )
+    if changes:
+        quote = quote.model_copy(update=changes)
+    with Session(engine) as db, db.begin():
+        row = db.get(LatestMarketQuote, item.id)
+        row.payload, row.timestamp = quote.model_dump(mode="json"), quote.timestamp
+    return quote
+
+
+@pytest.mark.integration
+def test_preview_usable_depth_respects_limit_consumption_and_read_only(preview_case, db_engine):
+    owner, item, execution = preview_case
+    quote = fresh_depth(db_engine, item)
+    with Session(db_engine) as db, db.begin():
+        db.add(
+            PaperLiquidityLevel(
+                account_id=owner,
+                session_key=quote.timestamp.astimezone(IST).date(),
+                instrument_id=item.id,
+                side="BUY",
+                price=Decimal("100"),
+                displayed=item.lot_size * 4,
+                capacity=item.lot_size * 2,
+                consumed=item.lot_size,
+                observation_at=quote.timestamp,
+                source=quote.source,
+                config_version=execution.version,
+            )
+        )
+    before = counts(db_engine)
+    body = dict(instrument_id=item.id, lots=2, entry="100", stop_loss="96", target="106")
+    with client_for(db_engine, owner) as client:
+        result = client.post("/api/paper/orders/preview", json=body).json()
+        checks = {c["code"]: c["status"] for c in result["checks"]}
+        assert checks["DEPTH"] == "passed" and checks["DEPTH_CAPACITY"] == "blocked"
+        assert result["available_depth_quantity"] == item.lot_size
+        assert result["available_depth_lots"] == 1
+        one = client.post("/api/paper/orders/preview", json={**body, "lots": 1}).json()
+        assert next(c for c in one["checks"] if c["code"] == "DEPTH_CAPACITY")["status"] == "passed"
+        # A higher limit can access the second level; the consumed first level stays consumed.
+        higher = client.post("/api/paper/orders/preview", json={**body, "entry": "101"}).json()
+        assert higher["available_depth_quantity"] == 3 * item.lot_size
+        assert higher["submission_ready"] is False
+    assert counts(db_engine) == before
+    with Session(db_engine) as db:
+        row = db.scalar(select(PaperLiquidityLevel).where(PaperLiquidityLevel.account_id == owner))
+        assert row.consumed == item.lot_size and row.capacity == 2 * item.lot_size
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "problem", ["future", "stale", "unknown_source", "budget_ahead", "wrong_config"]
+)
+def test_preview_unusable_depth_is_unknown_not_zero(preview_case, db_engine, problem):
+    owner, item, execution = preview_case
+    changes = {}
+    stamp = datetime.now(UTC)
+    if problem == "future":
+        changes = dict(
+            timestamp=stamp + timedelta(seconds=30), received_at=stamp + timedelta(seconds=30)
+        )
+    elif problem == "stale":
+        changes = dict(timestamp=stamp - timedelta(seconds=30))
+    elif problem == "unknown_source":
+        changes = dict(timestamp_basis="unknown")
+    quote = fresh_depth(db_engine, item, changes=changes)
+    if problem in {"budget_ahead", "wrong_config"}:
+        with Session(db_engine) as db, db.begin():
+            db.add(
+                PaperLiquidityLevel(
+                    account_id=owner,
+                    session_key=quote.timestamp.astimezone(IST).date(),
+                    instrument_id=item.id,
+                    side="BUY",
+                    price=Decimal("100"),
+                    displayed=4 * item.lot_size,
+                    capacity=2 * item.lot_size,
+                    consumed=0,
+                    observation_at=quote.timestamp + timedelta(seconds=1)
+                    if problem == "budget_ahead"
+                    else quote.timestamp,
+                    source=quote.source,
+                    config_version="different" if problem == "wrong_config" else execution.version,
+                )
+            )
+    with client_for(db_engine, owner) as client:
+        result = client.post(
+            "/api/paper/orders/preview",
+            json=dict(
+                instrument_id=item.id,
+                lots=1,
+                entry="100",
+                stop_loss="96",
+                target="106",
+            ),
+        ).json()
+        assert result["available_depth_quantity"] is None and result["available_depth_lots"] is None
+        assert (
+            next(c for c in result["checks"] if c["code"] == "DEPTH_CAPACITY")["status"]
+            == "blocked"
+        )
+
+
+@pytest.mark.integration
+def test_preview_slippage_lots_and_order_quantity_limit(preview_case, db_engine, monkeypatch):
+    owner, item, execution = preview_case
+    # Unit conversion applies before participation and whole-lot rounding.
+    changes = dict(
+        quantity_unit="lots", ask_quantity=3, ask_depth=(DepthLevel(price="100", quantity=3),)
+    )
+    fresh_depth(db_engine, item, changes=changes)
+    lot_policy = execution.model_copy(
+        update={"execution": execution.execution.model_copy(update={"quantity_unit": "lots"})}
+    )
+    monkeypatch.setattr(api, "load_execution", lambda: lot_policy)
+    body = dict(instrument_id=item.id, lots=1, entry="100", stop_loss="96", target="106")
+    with client_for(db_engine, owner) as client:
+        result = client.post("/api/paper/orders/preview", json=body).json()
+        assert result["available_depth_lots"] == 1
+        # Slippage is applied before comparing executable prices with the limit.
+        slipped = lot_policy.model_copy(
+            update={
+                "execution": lot_policy.execution.model_copy(
+                    update={"extra_adverse_slippage_bps": Decimal("10")}
+                )
+            }
+        )
+        monkeypatch.setattr(api, "load_execution", lambda: slipped)
+        result = client.post("/api/paper/orders/preview", json=body).json()
+        assert result["available_depth_quantity"] == 0
+        assert (
+            next(c for c in result["checks"] if c["code"] == "DEPTH_CAPACITY")["status"]
+            == "blocked"
+        )
+        result = client.post("/api/paper/orders/preview", json={**body, "lots": 1000}).json()
+        assert next(c for c in result["checks"] if c["code"] == "QUANTITY")["status"] == "blocked"

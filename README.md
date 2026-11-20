@@ -35,7 +35,9 @@ prices keep their timestamps. See [chart behavior and verification](./__workspac
 Open a contract's **Order** tab to preview a manual intraday BUY LIMIT plan.
 Choose lots and limit/stop/target prices, then **Preview costs & risk**. Premium,
 gross scenarios, fee allowances and account checks are computed by the server.
-Missing reviewed inputs remain unavailable. This preview places no order and
+Usable depth at your limit accounts for reviewed participation limits, modeled
+slippage and prior paper fills. Planning checks flag insufficient depth and
+quantity limits. Missing reviewed inputs remain unavailable. This preview places no order and
 reserves no funds. **Save paper plan** retains your inputs and a newly calculated
 preview in your account. Expand **Saved paper plans** to load inputs or archive
 a plan. Loading saved inputs requires a new preview; saved plans are not orders.

@@ -13,10 +13,16 @@ from sqlalchemy.orm import Session
 from services.api.auth import account_identity
 from services.core.contracts import IST, Instrument, Quote, RiskConfig, money
 from services.core.execution import PaperExecutionConfig
-from services.core.models import Account, InstrumentRecord, ListedInstrument, PaperPosition
+from services.core.models import (
+    Account,
+    InstrumentRecord,
+    ListedInstrument,
+    PaperLiquidityLevel,
+    PaperPosition,
+)
 from services.market.calendar import SessionCalendar
 from services.market.settings import MarketSettings
-from services.paper.liquidity import execution_price
+from services.paper.liquidity import buy_capacity, execution_price
 from services.paper.matching import mapped_quote
 from services.paper.portfolio import portfolio_snapshot
 from services.paper.risk import fee_ceiling
@@ -157,20 +163,52 @@ def calculate_preview(body: ManualPreview, db: Session, account: Account, now: d
         execution is not None and not execution.execution.blockers(),
     )
     depth_ok = False
+    capacity = None
     if execution is not None and quote is not None:
         try:
             mapped = mapped_quote(quote, execution)
             depth_ok = (
-                mapped.depth_kind == "best_five"
+                not execution.execution.blockers()
+                and mapped.instrument_id == instrument.id
+                and quote_problem(mapped, now, config.quote_max_age_seconds) is None
+                and mapped.depth_kind == "best_five"
                 and bool(mapped.ask_depth)
                 and mapped.timestamp_basis == "exchange_feed"
                 and bool(mapped.market_event_id)
                 and (now - mapped.timestamp).total_seconds() * 1000
                 <= (execution.execution.quote_max_age_ms or 0)
             )
+            if depth_ok:
+                budgets = {
+                    row.price: row
+                    for row in db.scalars(
+                        select(PaperLiquidityLevel).where(
+                            PaperLiquidityLevel.account_id == identifier,
+                            PaperLiquidityLevel.session_key == today,
+                            PaperLiquidityLevel.instrument_id == instrument.id,
+                            PaperLiquidityLevel.side == "BUY",
+                        )
+                    )
+                }
+                capacity = buy_capacity(
+                    mapped,
+                    instrument,
+                    execution,
+                    identifier,
+                    today,
+                    budgets,
+                    minimum=instrument.tick_size,
+                    limit=body.entry,
+                )
         except ValueError:
             pass
     check("DEPTH", "Depth quantities and quote source verified", depth_ok)
+    check(
+        "DEPTH_CAPACITY",
+        "Usable depth at your limit covers requested lots",
+        capacity is not None and quantity <= capacity,
+    )
+    check("QUANTITY", "Requested quantity meets order limit", quantity <= config.max_fill_quantity)
     schedule = (
         next(
             (
@@ -249,6 +287,8 @@ def calculate_preview(body: ManualPreview, db: Session, account: Account, now: d
         "lots": body.lots,
         "quantity": quantity,
         "lot_size": instrument.lot_size,
+        "available_depth_quantity": capacity,
+        "available_depth_lots": capacity // instrument.lot_size if capacity is not None else None,
         "entry": str(body.entry),
         "stop_loss": str(body.stop_loss),
         "target": str(body.target),

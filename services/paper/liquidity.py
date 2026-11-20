@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.core.contracts import DepthLevel, Instrument, Quote
-from services.core.execution import ExecutionPolicy
+from services.core.execution import ExecutionPolicy, PaperExecutionConfig
 from services.core.models import PaperLiquidityLevel
 
 
@@ -94,3 +94,54 @@ def available_units(
         (units * policy.displayed_participation).to_integral_value(rounding=ROUND_FLOOR)
     )
     return max(0, min(cap - (previous.consumed if previous else 0), visible_cap))
+
+
+def buy_capacity(
+    quote: Quote,
+    instrument: Instrument,
+    execution: PaperExecutionConfig,
+    account_id: UUID,
+    session_key: date,
+    budgets: dict[Decimal, PaperLiquidityLevel] | None,
+    *,
+    minimum: Decimal,
+    limit: Decimal,
+) -> int:
+    """Read usable BUY units without consuming or replenishing durable depth.
+
+    Callers must first validate quote provenance, freshness and reviewed policy.
+    A known empty budget map differs from an unavailable budget read (None).
+    """
+    if budgets is None:
+        raise ValueError("LIQUIDITY_BUDGET_UNAVAILABLE")
+    policy = execution.execution
+    assert policy.extra_adverse_slippage_bps is not None
+    capacity = 0
+    for level in quote.ask_depth:
+        previous = budgets.get(level.price)
+        if previous is not None and (
+            previous.account_id != account_id
+            or previous.instrument_id != instrument.id
+            or previous.session_key != session_key
+            or previous.side != "BUY"
+            or previous.price != level.price
+            or previous.config_version != execution.version
+        ):
+            raise ValueError("LIQUIDITY_BUDGET_SCOPE_MISMATCH")
+        price = execution_price(
+            level.price, instrument.tick_size, "BUY", policy.extra_adverse_slippage_bps
+        )
+        if price > limit:
+            break
+        if price < minimum:
+            continue
+        try:
+            units = available_units(
+                previous, quote, displayed_units(level, quote, instrument), policy
+            )
+        except ValueError as error:
+            raise ValueError("DEPTH_OLDER_THAN_LIQUIDITY_BUDGET") from error
+        if policy.partial_fill_granularity == "lots":
+            units = units // instrument.lot_size * instrument.lot_size
+        capacity += units
+    return capacity
