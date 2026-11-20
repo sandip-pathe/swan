@@ -31,6 +31,13 @@ class RuntimeStore:
     def __init__(self, engine: Engine, account_id: UUID):
         self.engine, self.account_id = engine, account_id
 
+    def publish_references(self, references) -> None:
+        from services.market.references import save_reference
+
+        with Session(self.engine) as db, db.begin():
+            for reference in references:
+                save_reference(db, reference)
+
     def display_instruments(self, now: datetime) -> list[Instrument]:
         with Session(self.engine) as db:
             selected = db.scalar(

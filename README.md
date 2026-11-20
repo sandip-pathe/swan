@@ -14,7 +14,11 @@ If refresh reports a broker login is required, run `market.cmd login` privately
 and retry; a web sign-in does not renew the daily broker session.
 The option chain pairs calls and puts by strike and saved expiry. Its default
 **Latest quotes first** order puts the pair with the newest exchange timestamp at
-the top; choose **Strike: low to high** for strike order. Open a contract
+the top; choose **Strike: low to high** for strike order. Chain and contract views
+show the saved underlying index reference in points, its change from previous
+close and the nearest listed strike for the selected expiry. References populate
+on chain price refresh or the worker's existing index read; ordinary page polling
+does not fetch index prices. Prior-session references do not produce ATM markers. Open a contract
 and choose **Depth** for up to five saved bid/ask price levels, or **Details**
 for quote statistics, session OHLC and lot/tick information. Depth quantities are
 shown only when the saved quote carries verified units and their source; otherwise

@@ -15,9 +15,10 @@ from services.api.auth import account_identity
 from services.api.instruments import persist_listing
 from services.core.contracts import Instrument, Quote
 from services.core.models import Account, AuditEvent
-from services.market.analysis import normalize_rest_quote, provider_price, provider_time
+from services.market.analysis import normalize_rest_quote
 from services.market.angelone import AngelOneClient
 from services.market.catalog import InstrumentCatalog
+from services.market.references import IndexReference, normalize_reference, save_reference
 from services.market.selection import display_contracts
 from services.market.settings import AuthenticationRequired, MarketSettings, ProviderError
 from services.paper.engine import PaperEngine
@@ -71,7 +72,7 @@ async def fetch_selected_quotes(instruments: list[Instrument]) -> list[Quote]:
             await client.close()
 
 
-async def fetch_quotes(underlying: str) -> tuple[list[Instrument], list[Quote], datetime]:
+async def fetch_quotes(underlying: str) -> tuple[list[Instrument], list[Quote], IndexReference]:
     async with asyncio.timeout(80):
         settings = MarketSettings()
         catalog = await InstrumentCatalog.fetch()
@@ -95,11 +96,9 @@ async def fetch_quotes(underlying: str) -> tuple[list[Instrument], list[Quote], 
             ]
             if len(matches) != 1 or not matches[0].get("exchFeedTime"):
                 raise ProviderError("INDEX_REFERENCE_UNAVAILABLE")
-            spot = provider_price(matches[0].get("ltp"))
-            reference_at = provider_time(matches[0]["exchFeedTime"])
             now = datetime.now(UTC)
-            if spot is None or reference_at > now:
-                raise ProviderError("INDEX_REFERENCE_UNAVAILABLE")
+            reference = normalize_reference(matches[0], underlying, token, now)
+            spot = reference.last_price
             instruments = display_contracts(catalog, underlying, spot, now)
             venue = instruments[0].exchange
             lookup = {item.provider_token: item for item in instruments}
@@ -120,7 +119,7 @@ async def fetch_quotes(underlying: str) -> tuple[list[Instrument], list[Quote], 
                 if quote.timestamp > quote.received_at:
                     raise ProviderError("INVALID_QUOTE_TIMESTAMP")
                 quotes.append(quote)
-            return instruments, quotes, reference_at
+            return instruments, quotes, reference
         finally:
             await client.close()
 
@@ -174,10 +173,12 @@ def perform_refresh(body: QuoteRefresh | SelectedQuoteRefresh, request: Request,
             if selected_items is not None:
                 instruments = selected_items
                 quotes = asyncio.run(fetch_selected_quotes(instruments))
-                reference_at = None
+                reference = None
             else:
                 assert isinstance(body, QuoteRefresh)
-                instruments, quotes, reference_at = asyncio.run(fetch_quotes(body.underlying))
+                instruments, quotes, reference = asyncio.run(fetch_quotes(body.underlying))
+            if reference is not None:
+                save_reference(db, reference)
             for instrument in instruments:
                 PaperEngine._persist_instrument(db, instrument)
             if quotes:
@@ -206,7 +207,7 @@ def perform_refresh(body: QuoteRefresh | SelectedQuoteRefresh, request: Request,
                 **scope,
                 "contracts": len(instruments),
                 "quotes": len(quotes),
-                "reference_at": reference_at.isoformat() if reference_at else None,
+                "reference_at": reference.timestamp.isoformat() if reference else None,
                 "missing_instrument_ids": sorted(
                     {item.id for item in instruments} - {q.instrument_id for q in quotes}
                 ),

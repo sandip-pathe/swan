@@ -89,7 +89,7 @@ async def test_quote_fetch_checks_provider_identity_and_preserves_old_times(
     else:
         instruments, quotes, reference_at = await api.fetch_quotes("NIFTY")
         assert instruments == [instrument] and quotes[0].timestamp == stamp
-        assert reference_at == stamp and quotes[0].last_price == 100
+        assert reference_at.timestamp == stamp and quotes[0].last_price == 100
     assert closed == [True]
     assert requests == [{"NSE": ["index-fixture"]}, {"NFO": [instrument.provider_token]}]
 
@@ -149,7 +149,18 @@ def test_explicit_after_hours_refresh_is_bounded_and_never_executes(
 
     async def fetched(underlying):
         calls.append(underlying)
-        return [instrument], [quote], stamp
+        return (
+            [instrument],
+            [quote],
+            api.IndexReference(
+                underlying="NIFTY",
+                exchange="NSE",
+                provider_token="fixture",
+                timestamp=stamp,
+                received_at=now,
+                last_price=25000,
+            ),
+        )
 
     monkeypatch.setattr(api, "fetch_quotes", fetched)
     app.dependency_overrides[account_identity] = lambda: identifier

@@ -24,6 +24,7 @@ from services.market.catalog import InstrumentCatalog
 from services.market.history import HistoryQuery
 from services.market.history_refresh import HistoryError, refresh_history
 from services.market.live_candles import LiveCandles
+from services.market.references import normalize_reference
 from services.market.settings import MarketSettings, ProviderError
 from services.market.stream import AngelOneStream, QuoteCache
 from services.market.subscriptions import add_display_contracts
@@ -134,16 +135,26 @@ class TradingRuntime:
                 spots: dict[str, Decimal] = {}
                 if requested:
                     rows = await self.client.quotes(requested)
+                    observations = []
                     for row in rows:
                         exchange = str(row.get("exchange", ""))
                         token = str(row.get("symbolToken", row.get("symboltoken", "")))
                         if token != references.get(exchange) or not row.get("exchFeedTime"):
                             continue
+                        observations.append(
+                            normalize_reference(
+                                row,
+                                "NIFTY" if exchange == "NSE" else "SENSEX",
+                                token,
+                                datetime.now(UTC),
+                            )
+                        )
                         stamp = provider_time(row["exchFeedTime"])
                         age = (datetime.now(UTC) - stamp).total_seconds()
                         price = provider_decimal(row.get("ltp"))
                         if price and price > 0 and 0 <= age <= 10:
                             spots["NIFTY" if exchange == "NSE" else "SENSEX"] = price
+                    await asyncio.to_thread(self.store.publish_references, observations)
                 if not spots and not pinned:
                     raise ProviderError("FRESH_INDEX_REFERENCE_REQUIRED")
                 selected = self.catalog.select(

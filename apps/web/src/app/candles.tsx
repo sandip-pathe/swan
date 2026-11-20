@@ -9,7 +9,8 @@ import { AVERAGE_PERIODS, CHART_PREFERENCES_KEY, DEFAULT_CHART_PREFERENCES, pars
 import type { AverageKind } from "@/lib/chart-data";
 import InstrumentDetails from "./instrument-details";
 import InstrumentDepth from "./instrument-depth";
-import type { MarketQuote, QuoteStatistics } from "@/lib/market";
+import UnderlyingContext from "./underlying-context";
+import type { MarketQuote, QuoteStatistics, ReferenceContext } from "@/lib/market";
 
 type Request = (path: string, method?: string, signal?: AbortSignal, body?: unknown) => Promise<unknown>;
 export type ChartContract = { id: string; underlying: string; strike: string; option_type: string; expiry: string; lot_size: number; exchange?: string; tick_size?: string };
@@ -135,7 +136,7 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
   </>;
 }
 
-export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain", quote = null, statistics, quoteError, quoteMaxAge = 10, quoteBusy = false, onRefreshQuote }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string; quote?: MarketQuote | null; statistics?: QuoteStatistics; quoteError?: string | null; quoteMaxAge?: number; quoteBusy?: boolean; onRefreshQuote?: () => void }) {
+export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain", quote = null, statistics, quoteError, reference, quoteMaxAge = 10, quoteBusy = false, onRefreshQuote }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string; quote?: MarketQuote | null; statistics?: QuoteStatistics; quoteError?: string | null; reference?: ReferenceContext; quoteMaxAge?: number; quoteBusy?: boolean; onRefreshQuote?: () => void }) {
   const today = istDate(new Date());
   const maximum = instrument.expiry < today ? instrument.expiry : today;
   const initial = quoteDate ? istDate(new Date(quoteDate)) : maximum;
@@ -203,6 +204,7 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
   return <section className="panel contract-chart" aria-label="Contract chart">
     <button className="text-button chart-back" onClick={onBack}><span aria-hidden="true">←</span>{backLabel}</button>
     <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{headerPrice == null ? "—" : money(headerPrice)}</strong><span>{headerCaption}</span></div></div>
+    <UnderlyingContext underlying={instrument.underlying} reference={reference} maxAge={quoteMaxAge} error={!!quoteError} />
     {quoteError && <p className="notice error" role="alert">{quoteError} Saved quotes may be out of date.</p>}
     {onRefreshQuote && <button className="secondary quote-refresh" disabled={quoteBusy} onClick={onRefreshQuote}><Icon name="refresh" />{quoteBusy ? "Refreshing price?" : "Refresh price"}</button>}
     <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "depth"} onClick={() => setSurface("depth")}>Depth</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button></div>

@@ -9,3 +9,8 @@ export type MarketQuote = {
   iv?: string | null; iv_unit?: string | null; metrics_timestamp?: string | null; metrics_source?: string | null;
 };
 export type QuoteStatistics = { change: string | null; change_pct: string | null; spread: string | null; spread_bps: string | null };
+
+export type ReferenceContext = {
+  quote: { underlying: string; last_price: string; previous_close?: string | null; timestamp: string; received_at: string; source: string } | null;
+  change: string | null; change_pct: string | null; atm_strike: string | null; atm_status: string;
+};

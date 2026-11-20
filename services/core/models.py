@@ -67,6 +67,15 @@ class DisplaySelection(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class UnderlyingReference(Base):
+    """Replaceable display reference; never an executable option quote."""
+
+    __tablename__ = "underlying_references"
+    underlying: Mapped[str] = mapped_column(primary_key=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class SnapshotRecord(Base):
     __tablename__ = "market_snapshots"
     id: Mapped[UUID] = mapped_column(primary_key=True)

@@ -22,6 +22,7 @@ from services.core.models import (
 )
 from services.market.catalog import InstrumentCatalog
 from services.market.display import quote_statistics
+from services.market.references import reference_context
 from services.market.settings import ProviderError
 from services.paper.engine import ConflictError, PaperEngine
 from services.worker.models import LatestMarketQuote
@@ -186,6 +187,9 @@ def selected(db: Session, identifier: str) -> dict:
         raise HTTPException(404, "INSTRUMENT_NOT_SAVED")
     quote = db.get(LatestMarketQuote, identifier)
     return {
+        "reference": reference_context(
+            db, record.payload["underlying"], date.fromisoformat(record.payload["expiry"])
+        ),
         "instrument": record.payload,
         "quote": quote.payload if quote else None,
         "statistics": quote_statistics(Quote.model_validate(quote.payload) if quote else None),

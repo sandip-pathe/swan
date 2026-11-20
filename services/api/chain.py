@@ -13,6 +13,7 @@ from services.api.auth import account_identity
 from services.api.instruments import owner
 from services.core.contracts import IST
 from services.core.models import InstrumentRecord
+from services.market.references import reference_context
 from services.worker.models import LatestMarketQuote
 
 router = APIRouter()
@@ -84,6 +85,9 @@ def chain(
             ),
         )
         return {
+            "reference": reference_context(
+                db, underlying, date.fromisoformat(chosen) if chosen else None
+            ),
             "sort": sort,
             "as_of": now.isoformat(),
             "underlying": underlying,
