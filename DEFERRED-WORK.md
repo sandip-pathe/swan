@@ -29,7 +29,7 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome, with saved stage-check results for new runs; accepted strategies now link to owned risk decisions and entry orders; richer evidence remains planned | Complete richer source/age drill-down and remaining downstream evidence gaps; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
-| D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. Immutable model/strategy binding, monetary cost and historical usage views remain planned | Record future exact model/strategy versions and failed/incomplete-call usage; add historical views and defensible pricing/billing attribution. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
+| D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. New runs also record requested/reported model names and local strategy/prompt/schema fingerprints. Immutable provider revision guarantees, monetary cost and historical usage views remain open | Record/pin stable provider revisions where supported, capture failed/incomplete-call usage and review the reproducibility boundary; add historical views and defensible pricing/billing attribution. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D20 | M8 integrated recovery/security/load and bounded actual-market acceptance | Planned/evidence-blocked: slice suites pass; milestone-wide acceptance is not complete | Execute the integrated matrix and retain findings/closures, including concurrency, restart, stale data, ownership, load and private PWA behavior | [master plan](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
@@ -80,9 +80,10 @@ D17 remains open. The allowance display reads current settings, which may differ
 from a running worker, and groups calls by the IST date of reservation. Reported
 usage is counted only for a unique owner-linked saved output with a valid token
 total; duplicate, missing, invalid, failed and in-flight usage stays unknown.
-Provider failures can consume tokens without a saved valid output. No monetary
-cost, provider billing reconciliation, immutable historical model/strategy version,
-or historical day selector is implemented. This slice does not change the budget
+Provider failures can consume tokens without a saved valid output. No monetary cost, provider billing reconciliation, immutable provider-weight
+identity, full reproducible application/environment bundle, or historical day
+selector is implemented. New requested/reported model names and local-rule
+fingerprints are recorded as described in checkpoint 71. This slice does not change the budget
 guard or return reserved allowance after failures. See [checkpoint 66](./__workspace/66-analysis-allowance-and-recorded-usage.md).
 
 ## Daily-report limits carried forward
@@ -95,6 +96,17 @@ counts above 2,000 source records are explicitly unavailable; only the newest 20
 fills are listed while financial totals include all dated fills. Larger paginated
 report drill-down remains under D15. Reconciliation failures or undated fills
 suppress financial totals until the underlying records are resolved, not guessed.
+
+[Checkpoint 71](./__workspace/71-recorded-model-and-rule-versions.md) binds new
+reservations to evaluation/context IDs and records the requested model plus prompt
+and response-schema SHA-256 fingerprints before HTTP. Valid completed outputs save
+the provider-reported model when present; missing/duplicate/mismatched responses
+remain unavailable. The context records the local strategy label and loaded
+pipeline-source fingerprint. This is not a full dependency/build snapshot or proof
+of immutable provider weights. Old runs are not backfilled from current settings.
+The display is bounded to 20 requests; excess/ambiguous responses are marked
+incomplete. Monetary cost, complete failed-call usage, pagination/index/load review
+and historical usage remain D17/D20. No live API request was used for this slice.
 
 ## Current exclusions, not delayed promises
 

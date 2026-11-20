@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
+from services.agents.provenance import fingerprint, name
 from services.agents.settings import AgentSettings
 from services.core.contracts import IST
 from services.core.models import AuditEvent
@@ -22,7 +23,7 @@ class StructuredProvider:
     def __init__(self, engine: Engine, account_id: UUID, settings: AgentSettings):
         self.engine, self.account_id, self.settings = engine, account_id, settings
 
-    def reserve(self, role: str, tokens: int) -> UUID:
+    def reserve(self, role: str, tokens: int, metadata: dict | None = None) -> UUID:
         now = datetime.now(UTC)
         day = now.astimezone(IST).date()
         with Session(self.engine) as db, db.begin():
@@ -44,7 +45,12 @@ class StructuredProvider:
                 account_id=self.account_id,
                 kind="AI_RESERVATION",
                 timestamp=now,
-                details={"role": role, "tokens": tokens, "model": self.settings.openai_model},
+                details={
+                    "role": role,
+                    "tokens": tokens,
+                    "model": metadata["model"] if metadata else self.settings.openai_model,
+                    "request": metadata,
+                },
             )
             db.add(event)
             db.flush()
@@ -68,12 +74,21 @@ class StructuredProvider:
         if len(payload) > 160000:
             raise ProviderError("AI_CONTEXT_TOO_LARGE")
         schema = output.model_json_schema()
+        requested_model = self.settings.openai_model
+        metadata = {
+            "evaluation_id": context.get("evaluation_id"),
+            "context_id": context.get("context_id"),
+            "model": requested_model,
+            "prompt_sha256": fingerprint(instructions),
+            "schema_sha256": fingerprint(schema),
+        }
         reservation = await asyncio.to_thread(
             self.reserve,
             role,
             len((payload + instructions + json.dumps(schema)).encode())
             + self.settings.swan_ai_max_output_tokens
             + 4096,
+            metadata,
         )
         try:
             async with httpx.AsyncClient(
@@ -88,7 +103,7 @@ class StructuredProvider:
                         + self.settings.openai_api_key.get_secret_value(),
                     },
                     json={
-                        "model": self.settings.openai_model,
+                        "model": requested_model,
                         "store": False,
                         "instructions": instructions,
                         "input": payload,
@@ -129,6 +144,7 @@ class StructuredProvider:
                     "evaluation_id": context.get("evaluation_id"),
                     "role": role,
                     "response_id": body.get("id"),
+                    "reported_model": name(body.get("model")),
                     "usage": body.get("usage"),
                     "output": value.model_dump(mode="json"),
                 },

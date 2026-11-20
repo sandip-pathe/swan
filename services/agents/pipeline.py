@@ -1,6 +1,8 @@
 import asyncio
+import hashlib
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import Engine
@@ -14,6 +16,9 @@ from services.agents.settings import AgentSettings
 from services.core.contracts import ExchangeSession, Instrument, Quote, RiskConfig, StrategyEnvelope
 from services.core.models import AuditEvent
 from services.market.settings import ProviderError
+
+STRATEGY_VERSION = "agents-v1"
+PIPELINE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
 class AgentPipeline:
@@ -43,6 +48,10 @@ class AgentPipeline:
                 raise ProviderError("AI_NO_MARKET_EVIDENCE")
             context = {
                 "as_of": datetime.now(UTC).isoformat(),
+                "implementation": {
+                    "strategy_version": STRATEGY_VERSION,
+                    "pipeline_sha256": PIPELINE_SHA256,
+                },
                 "evaluation_id": str(evaluation_id) if evaluation_id else None,
                 "session": session.model_dump(mode="json"),
                 "risk": config.model_dump(mode="json"),
@@ -103,7 +112,7 @@ class AgentPipeline:
                     raise ProviderError("AI_STRATEGY_EXPIRED")
                 return StrategyEnvelope.model_validate(
                     {
-                        "version": "agents-v1",
+                        "version": STRATEGY_VERSION,
                         "instrument_ids": (instrument.id,),
                         "action": proposal.action,
                         "issued_at": issued,

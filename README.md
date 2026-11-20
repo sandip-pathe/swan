@@ -24,6 +24,11 @@ Evaluation history also follows accepted strategies through recorded risk decisi
 to entry orders and actual filled quantities. Open an order timeline for events and
 related exits. Acceptance, risk approval, order submission and fills remain separate.
 
+Open **Models and rules** inside evaluation history for recorded requested/provider
+model names and the strategy rules used by each new request. Local rule fingerprints
+are saved for audit; they do not guarantee an immutable provider model. Missing
+metadata stays unavailable, including on older runs.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.
