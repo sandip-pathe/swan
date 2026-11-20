@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { MarketQuote, QuoteStatistics } from "@/lib/market";
 import type { ChartContract } from "./candles";
 import Icon from "./icons";
 import type { WatchState } from "./watchlist";
 
 type Contract = ChartContract & { tick_size: string };
-export type SelectedContract = { instrument: ChartContract; quote: { timestamp: string } | null };
+export type SelectedContract = { instrument: ChartContract; quote: MarketQuote | null; statistics?: QuoteStatistics };
 type Results = { rows: Contract[]; expiries: string[]; next_offset: number | null; catalog_at: string | null; stale: boolean };
 type Request = (path: string, method?: string, signal?: AbortSignal, body?: unknown) => Promise<unknown>;
 

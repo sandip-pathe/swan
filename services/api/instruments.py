@@ -12,9 +12,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
-from services.core.contracts import IST, Instrument
+from services.core.contracts import IST, Instrument, Quote
 from services.core.models import Account, AuditEvent, InstrumentRecord, ListedInstrument
 from services.market.catalog import InstrumentCatalog
+from services.market.display import quote_statistics
 from services.market.settings import ProviderError
 from services.paper.engine import ConflictError, PaperEngine
 from services.worker.models import LatestMarketQuote
@@ -178,7 +179,13 @@ def selected(db: Session, identifier: str) -> dict:
     if record is None:
         raise HTTPException(404, "INSTRUMENT_NOT_SAVED")
     quote = db.get(LatestMarketQuote, identifier)
-    return {"instrument": record.payload, "quote": quote.payload if quote else None}
+    return {
+        "instrument": record.payload,
+        "quote": quote.payload if quote else None,
+        "statistics": quote_statistics(Quote.model_validate(quote.payload) if quote else None),
+        "as_of": datetime.now(UTC).isoformat(),
+        "provider_called": False,
+    }
 
 
 @router.get("/api/market/instruments/selected")

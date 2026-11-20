@@ -5,7 +5,7 @@ from decimal import Decimal
 from io import StringIO
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity, settings
 from services.api.candles import router as candle_router
+from services.api.chain import router as chain_router
 from services.api.history import router as history_router
 from services.api.instruments import router as instrument_router
 from services.api.market import router as market_router
@@ -41,7 +42,7 @@ from services.market.diagnostics import evidence_context
 from services.market.readiness import readiness
 from services.paper.accounting import ACTIVE, reservations, restricted_proceeds
 from services.paper.qualification import qualification_context
-from services.worker.models import EvaluationSlot, LatestMarketQuote, RuntimeControl
+from services.worker.models import EvaluationSlot, RuntimeControl
 
 
 @asynccontextmanager
@@ -61,6 +62,7 @@ app.include_router(paper_control_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(candle_router)
+app.include_router(chain_router)
 app.include_router(market_router)
 app.include_router(instrument_router)
 app.include_router(watchlist_router)
@@ -259,34 +261,6 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
             "decisions": [row(value) for value in decisions],
             "evaluations": [row(value) for value in evaluations],
             "events": [row(value) for value in events],
-        }
-
-
-@app.get("/api/chain")
-def chain(
-    request: Request,
-    underlying: str = Query("NIFTY", pattern="^(NIFTY|SENSEX)$"),
-    offset: int = Query(0, ge=0, le=10000),
-    identifier: UUID = Depends(account_identity),
-):
-    with Session(request.app.state.engine) as db:
-        require_account(db, identifier)
-        records = db.execute(
-            select(InstrumentRecord, LatestMarketQuote)
-            .join(LatestMarketQuote, LatestMarketQuote.instrument_id == InstrumentRecord.id)
-            .where(InstrumentRecord.payload["underlying"].as_string() == underlying)
-            .order_by(InstrumentRecord.id)
-            .offset(offset)
-            .limit(101)
-        ).all()
-        return {
-            "as_of": datetime.now(UTC).isoformat(),
-            "underlying": underlying,
-            "next_offset": offset + 100 if len(records) > 100 else None,
-            "rows": [
-                {"instrument": item.payload, "quote": quote.payload}
-                for item, quote in records[:100]
-            ],
         }
 
 

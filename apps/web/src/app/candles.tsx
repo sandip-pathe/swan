@@ -5,9 +5,11 @@ import type { IChartApi, ISeriesApi, SeriesDefinition, UTCTimestamp } from "ligh
 import { money } from "@/lib/paper";
 import { contiguous, ema20, resample, type Candles, type Point, type Timeframe } from "@/lib/chart-data";
 import Icon from "./icons";
+import InstrumentDetails from "./instrument-details";
+import type { MarketQuote, QuoteStatistics } from "@/lib/market";
 
 type Request = (path: string, method?: string, signal?: AbortSignal, body?: unknown) => Promise<unknown>;
-export type ChartContract = { id: string; underlying: string; strike: string; option_type: string; expiry: string; lot_size: number };
+export type ChartContract = { id: string; underlying: string; strike: string; option_type: string; expiry: string; lot_size: number; exchange?: string; tick_size?: string };
 const istDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 const stamp = (value: string) => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 const timestamp = (value: string) => Math.floor(Date.parse(value) / 1000) as UTCTimestamp;
@@ -96,11 +98,12 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma }: { data: Candl
   </>;
 }
 
-export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain" }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string }) {
+export default function ContractChart({ instrument, quoteDate, request, onBack, marketLabel, backLabel = "Option chain", quote = null, statistics, quoteError, quoteMaxAge = 10 }: { instrument: ChartContract; quoteDate?: string; request: Request; onBack: () => void; marketLabel: string; backLabel?: string; quote?: MarketQuote | null; statistics?: QuoteStatistics; quoteError?: string | null; quoteMaxAge?: number }) {
   const today = istDate(new Date());
   const maximum = instrument.expiry < today ? instrument.expiry : today;
   const initial = quoteDate ? istDate(new Date(quoteDate)) : maximum;
   const [date, setDate] = useState(initial > maximum ? maximum : initial);
+  const [surface, setSurface] = useState("chart");
   const [minutes, setMinutes] = useState<Timeframe>(1);
   const [mode, setMode] = useState<"candles" | "line">("candles");
   const [showEma, setShowEma] = useState(false);
@@ -147,9 +150,17 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
   }
   const view = useMemo(() => data ? resample(data, minutes) : null, [data, minutes]);
   const latest = view?.bars.at(-1);
+  const headerPrice = quote?.last_price ?? latest?.close;
+  const headerCaption = quote?.last_price != null
+    ? `Last traded · ${new Date(quote.timestamp).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} IST`
+    : latest ? `${stamp(latest.opens_at)} IST · candle close` : "No saved price";
   return <section className="panel contract-chart" aria-label="Contract chart">
     <button className="text-button chart-back" onClick={onBack}><span aria-hidden="true">←</span>{backLabel}</button>
-    <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{latest ? money(latest.close) : "—"}</strong><span>{latest ? `${stamp(latest.opens_at)} IST · candle close` : "No candle price"}</span></div></div>
+    <div className="contract-chart-heading"><div><h2>{instrument.underlying} {instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</h2><p>{instrument.expiry} expiry · Lot {instrument.lot_size}</p></div><div className="chart-last"><strong>{headerPrice == null ? "—" : money(headerPrice)}</strong><span>{headerCaption}</span></div></div>
+    {quoteError && <p className="notice error" role="alert">{quoteError} Saved quotes may be out of date.</p>}
+    <div className="instrument-tabs" role="group" aria-label="Instrument view"><button className="secondary" aria-pressed={surface === "chart"} onClick={() => setSurface("chart")}>Chart</button><button className="secondary" aria-pressed={surface === "details"} onClick={() => setSurface("details")}>Details</button></div>
+    {surface === "details" && <InstrumentDetails instrument={instrument} quote={quote} statistics={statistics} maxAge={quoteMaxAge} error={quoteError} />}
+    <div hidden={surface !== "chart"}>
     <div className="chart-controls"><label><span className="sr-only">Session</span><input aria-label="Chart session" type="date" value={date} max={maximum} disabled={busy} onChange={event => { if (event.target.value) { setDate(event.target.value); setData(null); setUpdated(null); setMessage(null); } }} /></label><button className="secondary" disabled={busy || !canRefresh} onClick={refreshHistory}><Icon name="refresh" />{busy ? "Loading…" : "Get candles"}</button></div>
     <div className="chart-options"><div className="timeframes" role="group" aria-label="Chart timeframe">{([1, 5, 15] as Timeframe[]).map(value => <button key={value} className="secondary" aria-pressed={minutes === value} onClick={() => setMinutes(value)}>{value}m</button>)}</div><label className="chart-view"><span className="sr-only">Chart style</span><select aria-label="Chart style" value={mode} onChange={event => setMode(event.target.value as "candles" | "line")}><option value="candles">Candles</option><option value="line">Line</option></select></label></div>
     <p className="chart-status">{marketLabel} · {date}{updated ? ` · Checked ${stamp(updated)} IST` : ""}</p>
@@ -159,6 +170,7 @@ export default function ContractChart({ instrument, quoteDate, request, onBack, 
     {minutes > 1 && <p className="chart-method">{minutes}m candles combine saved 1m candles, aligned to verified trading hours. Missing minutes leave a gap.</p>}
     {showEma && <details className="chart-explainer"><summary>About EMA 20</summary><p className="chart-method">The dashed amber line averages completed candle closes. It needs 20 consecutive candles and restarts each session or after a gap. Forming candles are excluded. Calculation: start with a 20-candle average, then give each new close a weight of 2/21.</p></details>}
     {!!view?.bars.length && <details className="candle-data"><summary>Candle data · latest 20 candles</summary>{view.bars.slice(-20).reverse().map(bar => <article key={bar.opens_at}><strong>{stamp(bar.opens_at)} IST</strong><span>{bar.state === "provisional" ? "Forming" : "Elapsed"} · {bar.source === "observed_ltp_snapshots" ? "Observed prices" : bar.source === "derived_mixed" ? "Combined observed prices" : bar.source === "derived_broker_history" ? "Combined broker history" : "Broker history"}</span><dl>{([ ["Open", bar.open], ["High", bar.high], ["Low", bar.low], ["Close", bar.close], ["Volume", bar.volume?.toLocaleString("en-IN") ?? "Unavailable"] ]).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></article>)}</details>}
+    </div>
     <p className="chart-attribution">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView Lightweight Charts™</a> · Copyright © 2025 TradingView, Inc.</p>
   </section>;
 }
