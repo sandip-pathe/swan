@@ -48,7 +48,7 @@ class AgentPipeline:
                 "quotes": [row.model_dump(mode="json") for row in selected],
                 "headlines": [row.model_dump(mode="json") for row in headlines],
             }
-            await asyncio.to_thread(self.persist_context, context)
+            context["context_id"] = str(await asyncio.to_thread(self.persist_context, context))
             analysis = await self.provider.generate("analysis", context, Analysis)
             self.check_citations(analysis.evidence_ids, evidence)
             if not set(analysis.news_ids) <= {row.id for row in headlines}:
@@ -107,16 +107,17 @@ class AgentPipeline:
                 }
             )
 
-    def persist_context(self, context: dict) -> None:
+    def persist_context(self, context: dict) -> UUID:
         with Session(self.provider.engine) as db, db.begin():
-            db.add(
-                AuditEvent(
-                    account_id=self.provider.account_id,
-                    kind="AI_CONTEXT",
-                    timestamp=datetime.now(UTC),
-                    details=context,
-                )
+            event = AuditEvent(
+                account_id=self.provider.account_id,
+                kind="AI_CONTEXT",
+                timestamp=datetime.now(UTC),
+                details=context,
             )
+            db.add(event)
+            db.flush()
+            return event.id
 
     @staticmethod
     def check_citations(identifiers: list[str], evidence: dict[str, Quote]) -> None:

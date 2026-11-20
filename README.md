@@ -8,6 +8,10 @@ Account activity includes today's analysis allowance: conservative reservations,
 remaining allowance, recorded token-usage coverage and historical reservation model
 names. Missing usage stays unknown. This view does not estimate monetary billing.
 
+On model activity, open **Evidence used** to inspect cited historical prices and
+analysis headlines. New outputs have explicit saved-context links; older records
+without those links show unavailable. Recorded evidence does not enable trading.
+
 Implementation continuity: [RESUME.md](./RESUME.md). All skipped, held and remaining
 accepted work is tracked in [DEFERRED-WORK.md](./DEFERRED-WORK.md), with reasons and
 closure requirements for the final review.

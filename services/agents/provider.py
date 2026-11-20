@@ -125,6 +125,7 @@ class StructuredProvider:
                 self.persist_output,
                 {
                     "reservation_id": str(reservation),
+                    "context_id": context.get("context_id"),
                     "role": role,
                     "response_id": body.get("id"),
                     "usage": body.get("usage"),

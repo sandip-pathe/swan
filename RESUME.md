@@ -1,8 +1,8 @@
-Latest slice: Account activity analysis allowance. Read
-`__workspace/66-analysis-allowance-and-recorded-usage.md` first. D17 is partially
-delivered; exact version binding, historical usage and monetary cost remain open.
-Next appropriate slice: D16 owned evidence/citation drill-down, preserving absent
-correlation rather than inferring links. Broker/live/manual acceptance stays skipped.
+Latest slice: explicit model-output context links and Evidence used on Account
+activity. Read `__workspace/67-linked-agent-evidence.md`. D16 is partially delivered;
+legacy links are unavailable, and evaluation/strategy/risk correlation remains open.
+Next slice: durable evaluation/run correlation before joining decisions and outputs.
+D17 version/billing/history limits and broker/live/manual skips remain in the ledger.
 
 Latest slice: daily report and deferred-work ledger. Read
 `__workspace/65-daily-report-and-deferred-ledger.md` first, then
@@ -44,7 +44,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 286 tests;
+and device-local chart preferences. The last full backend suite passed 289 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
