@@ -94,3 +94,14 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .chart-fill-row > span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .chart-trade-controls summary { padding-block: 12px; }
 @media (max-width: 480px) { .chart-trade-actions > button { flex: 1 1 auto; } }
+
+.agent-activity-list { list-style: none; padding: 0; margin: 20px 0; display: grid; gap: 16px; }
+.agent-activity-list h3 { margin: 4px 0 0; }
+.agent-activity-list .activity-stage { margin: 0; color: var(--muted); font-size: 12px; }
+.agent-activity-list time { display: block; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.agent-activity button, .agent-activity summary { min-height: 44px; }
+.agent-activity summary { padding-block: 12px; }
+.recorded-rationale { white-space: pre-wrap; }
+.activity-state.wait, .activity-state.blocked { background: #fff3df; color: #7d4c08; }
+.activity-state.failed { background: #fff0f1; color: #9c2637; }
+.activity-state.ready { background: #e7f5ef; color: #087154; }

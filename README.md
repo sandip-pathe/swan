@@ -183,3 +183,7 @@ depth and exit fees. See [portfolio valuation and P&L](__workspace/62-reconciled
 Contract charts show owned paper fills and current entry/stop/target levels, with
 a show/hide control and recorded-fill details. Historical dates show fills only.
 See [chart trade overlays](__workspace/63-owned-chart-trade-overlays.md).
+
+Account activity separates recorded model analysis/proposals/review, evaluation
+outcomes and deterministic risk checks, with explanations and actual order links.
+See [recorded agent activity](__workspace/64-recorded-agent-activity.md).

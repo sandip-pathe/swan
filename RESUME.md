@@ -32,7 +32,7 @@ quote refresh and expiring chart/watchlist feed interest are implemented. The us
 Actual open-market stream/reconnect verification remains pending.
 
 Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 276 tests;
+and device-local chart preferences. The last full backend suite passed 281 tests;
 thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
 separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
 passed. No real broker orders were placed. The original account has no paper
@@ -69,8 +69,10 @@ Per-order lifecycle, amendment, fill and fee history is implemented; read
 with explicit valuation freshness are implemented; read
 `__workspace/62-reconciled-portfolio-value-and-pnl.md`. Owned fill and current
 position/protection overlays on the contract chart are implemented; read
-`__workspace/63-owned-chart-trade-overlays.md`. Continue M7 with recorded agent
-activity and decision/risk/execution explanations, including WAIT and failures.
+`__workspace/63-owned-chart-trade-overlays.md`. The first M7 activity slice is
+implemented; read `__workspace/64-recorded-agent-activity.md`. Model stages, WAIT,
+review rejection, evaluation failures and deterministic risk/order outcomes are
+kept distinct. Next is a daily paper session report from recorded evidence.
 Calendar coverage currently ends 30 November 2026; extend it from official
 sources before testing later dates. Preserve all execution gates.
 
