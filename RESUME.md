@@ -1,9 +1,9 @@
-Latest slice: pending orders have distinct P/X chart markers; Portfolio reports
-closed-position statistics; Journal pages through all closed positions and streams
-the full CSV export. Read checkpoints 83–85. Next: historical equity and remaining
-account risk metrics. D11/D14/D15 remain partial. App is running locally on
-127.0.0.1:3000 and :8000 with the worker stopped for offline use. No tests/build
-checks or live/provider requests were run; entries remain disabled.
+Latest slice: Portfolio now shows daily loss use and remaining risk headroom after
+recorded reservations when valuation and the session baseline are current. It does
+not grant entry permission. Read `__workspace/86-daily-risk-headroom.md`. Next:
+historical equity and remaining exposure metrics. D14 remains partial. The local
+app stays on 127.0.0.1:3000 and :8000 with the worker stopped for offline use. No
+tests/build checks or live/provider requests were run; entries remain disabled.
 
 Latest slice: order and daily-report history paging. Read
 __workspace/79-order-and-report-history.md. Related position orders page beyond

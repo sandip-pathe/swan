@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
-from services.core.contracts import IST, Quote, money
+from services.core.contracts import IST, Quote, RiskConfig, money
 from services.core.models import Account, LedgerEntry, PaperFill, PaperOrder, PaperPosition
 from services.paper.accounting import reconcile_account
 from services.paper.portfolio import portfolio_snapshot
@@ -128,6 +128,22 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
             account.session_key == now.astimezone(IST).date()
             and account.session_opening_equity is not None
         )
+        risk_headroom = None
+        if valued and snapshot and session_current and account.session_opening_equity:
+            try:
+                risk_config = RiskConfig.model_validate(account.config)
+                loss_limit = money(account.session_opening_equity * risk_config.max_daily_loss_pct)
+                loss_used = max(Decimal(0), money(account.session_opening_equity - equity))
+                allocated = money(snapshot.state.reserved_risk)
+                risk_headroom = {
+                    "loss_limit": str(loss_limit),
+                    "loss_used": str(loss_used),
+                    "allocated_risk": str(allocated),
+                    "remaining": str(max(Decimal(0), money(loss_limit - loss_used - allocated))),
+                    "blocked": account.daily_blocked,
+                }
+            except ValueError:
+                risk_headroom = None
         return {
             "as_of": now.isoformat(),
             "status": status,
@@ -157,4 +173,5 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
             else None,
             "fees": str(money(fees)) if reconciled else None,
             "trade_statistics": trade_statistics,
+            "risk_headroom": risk_headroom,
         }
