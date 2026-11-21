@@ -6,7 +6,7 @@ import { usePaperRequest } from "./paper-action";
 import AgentEvidence from "./agent-evidence";
 import OrderHistory from "./order-history";
 
-type Execution = { state: string; next_after?: string | null; orders_truncated?: boolean; strategy?: { version: string; action: string; instrument: string | null; issued_at: string; expires_at: string; min_entry: string; max_entry: string; stop_loss: string; target: string }; decisions: { id: string; status: string; timestamp: string | null; summary: string; orders: { id: string; side: string; status: string; quantity: number; filled_quantity: number }[] }[] };
+type Execution = { state: string; next_after?: string | null; strategy?: { version: string; action: string; instrument: string | null; issued_at: string; expires_at: string; min_entry: string; max_entry: string; stop_loss: string; target: string }; decisions: { id: string; status: string; timestamp: string | null; summary: string; orders: { id: string; side: string; status: string; quantity: number; filled_quantity: number }[] }[] };
 type Run = { next_outputs_before?: string | null; next_checks_before?: string | null; versions?: { next_before?: string | null; outputs_incomplete?: boolean; truncated: boolean; rows: { id: string; stage: string; timestamp: string; requested_model: string | null; reported_model: string | null; strategy_version: string | null; rules_recorded: boolean }[] }; execution?: Execution; available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; checks_truncated?: boolean; checks?: { id: string; timestamp: string; stage: string; state: string; summary: string }[]; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
 const names: Record<string, string> = { analysis: "Analysis", proposal: "Proposal", review: "Review", strategy: "Strategy", unknown: "Recorded stage" };
 export default function AgentRun({ eventId }: { eventId: string }) {
@@ -42,7 +42,7 @@ export default function AgentRun({ eventId }: { eventId: string }) {
         if (!previous) return previous;
         if (kind === "decisions") {
           if (!result.execution) return previous;
-          return { ...previous, execution: { ...result.execution, decisions: [...(previous.execution?.decisions ?? []), ...result.execution.decisions.filter(row => !previous.execution?.decisions.some(old => old.id === row.id))], orders_truncated: previous.execution?.orders_truncated || result.execution.orders_truncated } };
+          return { ...previous, execution: { ...result.execution, decisions: [...(previous.execution?.decisions ?? []), ...result.execution.decisions.filter(row => !previous.execution?.decisions.some(old => old.id === row.id))] } };
         }
         if (kind === "versions") {
           if (!result.versions) return previous;
@@ -70,7 +70,6 @@ export default function AgentRun({ eventId }: { eventId: string }) {
         {data.execution.decisions.map(decision => <div className="execution-card" key={decision.id}><h4>{decision.status === "APPROVED" ? "Risk checks approved entry" : decision.status === "REJECTED" ? "Risk checks rejected entry" : "Risk result unavailable"}</h4><p>{decision.summary}</p>{decision.timestamp && <p className="muted">{time(decision.timestamp)} IST</p>}{!decision.orders.length ? <p>No linked entry order was found.</p> : decision.orders.map(order => <div key={order.id}><p>{words(order.side)} / {words(order.status)} / {order.filled_quantity} of {order.quantity} units filled</p><OrderHistory orderId={order.id} /></div>)}</div>)}
         {pageError === "decisions" && <p role="alert">More risk decisions could not be loaded. Your current results are still shown.</p>}
         {data.execution.next_after ? <button className="secondary" disabled={pageBusy != null} onClick={() => older("decisions")}>{pageBusy === "decisions" ? "Loading more decisions..." : pageError === "decisions" ? "Retry decisions" : "Load more decisions"}</button> : null}
-        {data.execution.orders_truncated && <p className="notice">Some linked orders are unavailable in this decision page.</p>}
       </>}
       <h4>Stage checks</h4>
       <p className="muted">These validate model responses. Trading permission and execution are separate.</p>

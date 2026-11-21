@@ -13,7 +13,7 @@ from services.paper.contracts import OrderRiskApproval
 
 
 def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None = None) -> dict:
-    unavailable = {"state": "unavailable", "decisions": [], "next_after": None, "orders_truncated": False}
+    unavailable = {"state": "unavailable", "decisions": [], "next_after": None}
     outcomes = list(
         db.scalars(
             select(AuditEvent)
@@ -66,11 +66,8 @@ def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None 
             select(PaperOrder)
             .where(PaperOrder.account_id == owner, PaperOrder.decision_id.in_(decision_ids))
             .order_by(PaperOrder.timestamp, PaperOrder.id)
-            .limit(101)
         )
     )
-    orders_more = len(orders) > 100
-    orders = orders[:100]
     quantities = dict(
         db.execute(
             select(PaperFill.order_id, func.sum(PaperFill.quantity))
@@ -154,5 +151,4 @@ def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None 
         },
         "decisions": rows,
         "next_after": str(records[-1].id) if more else None,
-        "orders_truncated": orders_more,
     }

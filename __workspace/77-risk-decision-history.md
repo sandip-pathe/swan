@@ -9,11 +9,11 @@ offers retry while retaining loaded rows, ignores stale responses after close,
 and reports the independent linked-order cap.
 
 This page limit prevents old risk-decision history from silently disappearing
-after the first 20 decisions. Orders linked to each page remain bounded to 100;
-overflow is explicitly surfaced. Individual order timelines already have their
-own cursor. D16/D20 remain open for making every order visible within dense
-decision pages, daily-report fill paging, richer source/age evidence, and broader
-query/load qualification. No decision result creates trading permission.
+after the first 20 decisions. Each decision can have at most one linked entry order by the database
+one-entry-per-decision constraint, so a 20-decision page can link at most 20 such
+orders. Individual order timelines have their own event cursor. Daily-report fill
+paging, richer source/age evidence, and broader query/load qualification remain
+separate follow-up items. No decision result creates trading permission.
 
 No broker, market, manual, or trading permission operation was performed.
 Implementation was not run through tests or type/build checks in this slice.

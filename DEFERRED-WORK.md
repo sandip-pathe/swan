@@ -28,7 +28,7 @@ Do not interpret these statuses as permission to log in, arm trading or weaken g
 | D13 | Bulk protected exits and broader modification scope (M6) | Planned: individual exit and wholly-unfilled manual price amendments exist; no bulk exit, quantity increase, expiry extension or filled-position amendment | Specify/review semantics and implement reservation/fill-race/unresolved outcomes; do not add cosmetic actions | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md), [owned controls](./__workspace/59-owned-paper-cancel-and-exit.md) |
 | D14 | Remaining risk/exposure metrics and trade statistics (M6) | Planned: portfolio/P&L and ledger funds exist; full daily loss/headroom, exposure analytics, win/loss/expectancy/profit factor/drawdown/slippage/holding-time reporting remains | Define all-time/session/sample/net-gross boundaries; reconcile to fills; undefined ratios stay unavailable | [portfolio](./__workspace/62-reconciled-portfolio-value-and-pnl.md), [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D15 | Historical equity/P&L snapshots, richer journal filters/exports and funding/reset decisions | Planned: cash ledger/closed-position CSV exist; no complete historical marked-equity series or reviewed funding/reset workflow | Persist/reconstruct only defensible snapshots, add scoped filters/exports; funding/reset must preserve ledger history | [M6 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
-| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: model outputs now carry explicit context links; Evidence used shows cited historical quotes and analysis headlines. Older unlinked outputs remain unavailable; evaluation IDs now connect new outputs to their owned evaluation slot and outcome, with saved stage-check results for new runs; accepted strategies now link to owned risk decisions and entry orders; richer evidence remains planned | Complete richer source/age drill-down and remaining downstream evidence gaps; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
+| D16 | Agent evidence/news citation drill-down and explicit evaluation/output correlation (M7) | Partially delivered: explicit context links, quote/headline age, evaluation IDs, stage checks, strategy/risk/order links, and cursor paging for outputs, checks, models and decisions are implemented. Older unlinked outputs remain unavailable; source-rights suitability and a few bounded report surfaces remain open | Review source rights/suitability and remaining downstream evidence gaps; preserve legacy gaps and do not infer missing outcomes | [activity](./__workspace/64-recorded-agent-activity.md) |
 | D17 | Model/strategy version and spending/budget visibility (M7) | Partially delivered: Account activity shows today's conservative reservations/remaining allowance, recorded usage coverage and reservation model names. New runs also record requested/reported model names and local strategy/prompt/schema fingerprints. Immutable provider revision guarantees, monetary cost and unavailable provider usage remain open; incomplete/invalid HTTP-200 response totals are now retained; historical day selection is implemented | Record/pin stable provider revisions where supported, resolve missing transport/error usage where defensible and review the reproducibility boundary; add defensible pricing/billing attribution and any needed historical configuration timeline. Existing missing usage stays unknown, never zero or inferred from reservations | [agent runtime](./services/agents/README.md), [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
 | D18 | News suitability, permission and delay acceptance | Evidence-blocked: attribution/reader exist; free feed is delayed by 12 hours and coverage acceptance is incomplete | Confirm rights/coverage and intended use; preserve publication/retrieval/delay fields and do not present delayed headlines as breaking news | [agent news](./services/agents/README.md) |
 | D19 | Strategy research and performance validation (M7) | Planned: versioned hypotheses, option selection/invalidation rules and out-of-sample fee-aware research are not qualified performance | Research with permitted data and declared assumptions/sample size; candle history cannot establish depth fills; no new strategy is enabled by examples | [M7 scope](./__workspace/37-complete-system-and-broker-workspace-plan.md) |
@@ -69,8 +69,10 @@ accepted evaluation envelope to risk records by exact strategy ID, then to entry
 orders by decision ID. Recorded fill quantities come from actual fills; existing
 order timelines provide events and related exits. No acceptance root, invalid roots
 or duplicate outcome records are unavailable, never guessed. No decision/order
-found is distinct from rejection or a fill. Risk decisions are capped at 20 and
-orders at 100 with truncation; full pagination/index/load review stays D16/D20.
+found is distinct from rejection or a fill. Risk decisions were initially capped at 20; checkpoint 77 adds decision paging.
+At most one entry order can link to each decision by database constraint, so a
+20-decision page cannot exceed 20 linked entry orders. Broader pagination/index/load
+review stays D16/D20.
 Pre-admission control denials that never persisted a DecisionRecord have no linked
 risk result; richer risk evidence and explicit denial events remain under D16.
 
@@ -176,10 +178,15 @@ or build checks; no live/provider action was performed.
 Checkpoint 79 (see __workspace/79-order-and-report-history.md) adds separate
 cursor pages for related position orders and daily-report fills. Both cursor scopes
 are checked; full-day report totals remain unchanged while fills append. Pages are
-separate snapshots, so refresh to see late corrections. D16/D20 retain the 100-order
-cap within dense decision pages, bounded report activity rows and integrated
-query/load qualification. This slice was not run through tests/build checks; no
+separate snapshots, so refresh to see late corrections. D16/D20 retain bounded report activity rows and integrated query/load
+qualification. This slice was not run through tests/build checks; no
 live or permission operation was performed.
+
+Checkpoint 80 resolves a previously misstated linked-order cap. The one-entry-per-
+decision database constraint means each 20-decision page links at most 20 entry
+orders; the artificial 100-row query limit and warning were removed. No order
+records were dropped by that limit in supported schema state. Daily report activity
+row limits and integrated qualification remain open.
 
 ## Current exclusions, not delayed promises
 
