@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,6 +25,7 @@ from services.api.chart_trades import router as chart_trades_router
 from services.api.daily_report import router as daily_report_router
 from services.api.history import router as history_router
 from services.api.instruments import router as instrument_router
+from services.api.journal import router as journal_router
 from services.api.manual_orders import router as manual_orders_router
 from services.api.manual_plans import router as plans_router
 from services.api.market import router as market_router
@@ -90,6 +91,7 @@ app.include_router(preview_router)
 app.include_router(plans_router)
 app.include_router(manual_orders_router)
 app.include_router(instrument_router)
+app.include_router(journal_router)
 app.include_router(watchlist_router)
 app.add_middleware(
     CORSMiddleware,
@@ -147,14 +149,6 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
                 select(PaperPosition).where(
                     PaperPosition.account_id == identifier, PaperPosition.closed_at.is_(None)
                 )
-            )
-        )
-        journal = list(
-            db.scalars(
-                select(PaperPosition)
-                .where(PaperPosition.account_id == identifier, PaperPosition.closed_at.is_not(None))
-                .order_by(PaperPosition.closed_at.desc(), PaperPosition.id)
-                .limit(50)
             )
         )
         orders = list(
@@ -222,13 +216,13 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
         )
         reserved_cash, pending_risk, _ = reservations(db, identifier)
         restricted_cash = restricted_proceeds(db, identifier)
-        instrument_ids = {value.instrument_id for value in [*positions, *journal]}
+        instrument_ids = {value.instrument_id for value in positions}
         instrument_ids.update(value.instrument_id for value in [*orders, *active_orders])
         instrument_ids.update(order.instrument_id for _, order in fills)
         instruments = list(
             db.scalars(select(InstrumentRecord).where(InstrumentRecord.id.in_(instrument_ids)))
         )
-        linked_positions = {p.id: p for p in [*positions, *journal]}
+        linked_positions = {p.id: p for p in positions}
         position_ids = {o.position_id for o in [*orders, *active_orders] if o.position_id}
         for held in db.scalars(
             select(PaperPosition).where(
@@ -340,7 +334,6 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
             },
             "runtime": row(control) if control else None,
             "positions": [position_view(value) for value in positions],
-            "journal": [position_view(value) for value in journal],
             "orders": [order_view(value) for value in orders],
             "active_orders": [order_view(value) for value in active_orders],
             "order_summary": {
@@ -498,44 +491,38 @@ def update_risk(body: RiskUpdate, request: Request, identifier: UUID = Depends(a
 
 @app.get("/api/reports/journal.csv")
 def journal_report(request: Request, identifier: UUID = Depends(account_identity)):
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(
-        [
-            "Position ID",
-            "Instrument",
-            "Quantity",
-            "Entry INR",
-            "Opened UTC",
-            "Closed UTC",
-            "Realized P&L INR",
-        ]
-    )
-    with Session(request.app.state.engine) as db:
-        require_account(db, identifier)
-        positions = db.scalars(
-            select(PaperPosition)
-            .where(PaperPosition.account_id == identifier, PaperPosition.closed_at.is_not(None))
-            .order_by(PaperPosition.closed_at.desc())
-            .limit(10000)
-        )
-        for position in positions:
-            symbol = position.instrument_id
-            if symbol.lstrip().startswith(("=", "+", "-", "@")):
-                symbol = "'" + symbol
-            writer.writerow(
-                [
-                    str(position.id),
-                    symbol,
-                    position.quantity,
-                    str(position.average_price),
-                    position.opened_at.isoformat(),
-                    position.closed_at.isoformat() if position.closed_at else "",
-                    str(position.realized_pnl),
-                ]
-            )
-    return Response(
-        output.getvalue(),
+    def rows():
+        with Session(request.app.state.engine) as db:
+            require_account(db, identifier)
+            yield "Position ID,Instrument,Quantity,Entry INR,Opened UTC,Closed UTC,Realized P&L INR\r\n"
+            positions = db.scalars(
+                select(PaperPosition)
+                .where(
+                    PaperPosition.account_id == identifier,
+                    PaperPosition.closed_at.is_not(None),
+                )
+                .order_by(PaperPosition.closed_at.desc(), PaperPosition.id.desc())
+            ).yield_per(500)
+            for position in positions:
+                symbol = position.instrument_id
+                if symbol.lstrip().startswith(("=", "+", "-", "@")):
+                    symbol = "'" + symbol
+                output = StringIO()
+                csv.writer(output).writerow(
+                    [
+                        str(position.id),
+                        symbol,
+                        position.quantity,
+                        str(position.average_price),
+                        position.opened_at.isoformat(),
+                        position.closed_at.isoformat() if position.closed_at else "",
+                        str(position.realized_pnl),
+                    ]
+                )
+                yield output.getvalue()
+
+    return StreamingResponse(
+        rows(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="swan-paper-journal.csv"'},
     )

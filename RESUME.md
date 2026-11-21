@@ -1,10 +1,9 @@
-Latest slice: pending orders have distinct P/X markers on the contract chart, and
-the portfolio now reports reconciled closed-position win/loss, expectancy, profit
-factor, realized-only drawdown and holding time. Read checkpoints
-`__workspace/83-pending-order-chart-markers.md` and
-`__workspace/84-closed-trade-statistics.md`. Next: journal paging/historical equity
-and remaining account risk metrics. D11/D14 remain partial. No tests/build checks
-or live/provider requests were run; entries remain disabled.
+Latest slice: pending orders have distinct P/X chart markers; Portfolio reports
+closed-position statistics; Journal pages through all closed positions and streams
+the full CSV export. Read checkpoints 83–85. Next: historical equity and remaining
+account risk metrics. D11/D14/D15 remain partial. App is running locally on
+127.0.0.1:3000 and :8000 with the worker stopped for offline use. No tests/build
+checks or live/provider requests were run; entries remain disabled.
 
 Latest slice: order and daily-report history paging. Read
 __workspace/79-order-and-report-history.md. Related position orders page beyond
