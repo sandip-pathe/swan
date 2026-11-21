@@ -1,9 +1,10 @@
-Latest slice: daily paper reports now aggregate all recorded decision activity
-using ascending 500-row batches, instead of dropping totals after 2,000 records.
-Read `__workspace/82-complete-report-activity.md`. D16 still has legacy evidence
-and source-rights gaps; D20 load qualification remains. Next, continue the grouped
-M7 evidence/report finish work. No tests/build checks or live/provider requests
-were run; entries remain disabled.
+Latest slice: pending orders have distinct P/X markers on the contract chart, and
+the portfolio now reports reconciled closed-position win/loss, expectancy, profit
+factor, realized-only drawdown and holding time. Read checkpoints
+`__workspace/83-pending-order-chart-markers.md` and
+`__workspace/84-closed-trade-statistics.md`. Next: journal paging/historical equity
+and remaining account risk metrics. D11/D14 remain partial. No tests/build checks
+or live/provider requests were run; entries remain disabled.
 
 Latest slice: order and daily-report history paging. Read
 __workspace/79-order-and-report-history.md. Related position orders page beyond

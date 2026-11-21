@@ -64,6 +64,20 @@ def chart_trades(
             if current_day
             else []
         )
+        pending_orders = list(
+            db.scalars(
+                select(PaperOrder)
+                .where(
+                    PaperOrder.account_id == owner,
+                    PaperOrder.instrument_id == instrument_id,
+                    PaperOrder.timestamp >= start,
+                    PaperOrder.timestamp < end,
+                    PaperOrder.status.in_(ACTIVE),
+                )
+                .order_by(PaperOrder.timestamp.desc(), PaperOrder.id.desc())
+                .limit(201)
+            )
+        )
         positions_truncated = len(positions) > 20
         positions = positions[:20]
         exits = (
@@ -91,6 +105,21 @@ def chart_trades(
             "fills_truncated": len(fills) > 200,
             "positions_truncated": positions_truncated,
             "exits_truncated": len(exits) > 100,
+            "pending_orders_truncated": len(pending_orders) > 200,
+            "pending_orders": [
+                {
+                    "id": str(order.id),
+                    "position_id": str(order.position_id) if order.position_id else None,
+                    "side": order.side,
+                    "status": order.status,
+                    "order_type": order.order_type,
+                    "quantity_remaining": order.quantity - order.filled_quantity,
+                    "timestamp": order.timestamp.isoformat(),
+                    "trigger_price": str(order.trigger_price) if order.trigger_price is not None else None,
+                    "limit_price": str(order.limit_price) if order.limit_price is not None else None,
+                }
+                for order in pending_orders[:200]
+            ],
             "fills": [
                 {
                     "id": str(fill.id),

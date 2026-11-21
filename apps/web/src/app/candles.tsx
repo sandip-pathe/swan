@@ -6,7 +6,7 @@ import { money } from "@/lib/paper";
 import { contiguous, movingAverage, rsi14, resample, type Candles, type Point, type Timeframe } from "@/lib/chart-data";
 import Icon from "./icons";
 import { ChartTradeControls, useChartTrades } from "./chart-trades";
-import { tradeMarkers, type ChartTrades, type TradePosition } from "@/lib/chart-trades";
+import { pendingOrderMarkers, tradeMarkers, type ChartTrades, type TradePosition } from "@/lib/chart-trades";
 import { AVERAGE_PERIODS, CHART_PREFERENCES_KEY, DEFAULT_CHART_PREFERENCES, parseChartPreferences } from "@/lib/chart-preferences";
 import type { AverageKind } from "@/lib/chart-data";
 import InstrumentDetails from "./instrument-details";
@@ -104,7 +104,10 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
     if (!ready || !carrier.current || !markers.current) return;
     for (const line of tradeLines.current) carrier.current.removePriceLine(line);
     tradeLines.current = [];
-    markers.current.setMarkers(showTrades && trades ? tradeMarkers(data, minutes, trades.fills).map(fill => ({ id: fill.id, time: fill.time as UTCTimestamp, position: "atPriceMiddle" as const, price: fill.priceValue, shape: fill.side === "BUY" ? "arrowUp" as const : "arrowDown" as const, color: fill.side === "BUY" ? "#2455e6" : "#cf3d4f", text: fill.side === "BUY" ? "B" : "S" })) : []);
+    markers.current.setMarkers(showTrades && trades ? [
+      ...tradeMarkers(data, minutes, trades.fills).map(fill => ({ id: fill.id, time: fill.time as UTCTimestamp, position: "atPriceMiddle" as const, price: fill.priceValue, shape: fill.side === "BUY" ? "arrowUp" as const : "arrowDown" as const, color: fill.side === "BUY" ? "#2455e6" : "#cf3d4f", text: fill.side === "BUY" ? "B" : "S" })),
+      ...pendingOrderMarkers(data, minutes, trades.pending_orders).map(order => ({ id: `pending-${order.id}`, time: order.time as UTCTimestamp, position: "atPriceMiddle" as const, price: order.priceValue, shape: "circle" as const, color: order.side === "BUY" ? "#c07808" : "#7650b5", text: order.side === "BUY" ? "P" : "X" })),
+    ] : []);
     if (showTrades && position) for (const [title, value, color, lineStyle] of [["Entry", position.average_price, "#2455e6", 2], ["Stop", position.stop_loss, "#cf3d4f", 3], ["Target", position.target, "#087f62", 2]] as const) {
       const price = Number(value);
       if (Number.isFinite(price) && price > 0) tradeLines.current.push(carrier.current.createPriceLine({ price, color, lineWidth: 1, lineStyle, axisLabelVisible: true, title }));

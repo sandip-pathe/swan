@@ -92,6 +92,9 @@ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}input,selec
 .chart-position-levels { background: var(--soft); border-radius: 10px; padding: 14px; margin-block: 12px; }
 .chart-fill-row { padding-block: 12px; border-top: 1px solid var(--border); }
 .chart-fill-row > span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.pending-chart-orders { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.pending-chart-orders li { display: grid; gap: 3px; border-top: 1px solid var(--border); padding: 9px 0; }
+.pending-chart-orders li span { font-size: 12px; color: var(--muted); }
 .chart-trade-controls summary { padding-block: 12px; }
 @media (max-width: 480px) { .chart-trade-actions > button { flex: 1 1 auto; } }
 

@@ -79,6 +79,49 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
             .join(PaperOrder, PaperOrder.id == PaperFill.order_id)
             .where(PaperOrder.account_id == owner)
         ) or Decimal(0)
+        trades = db.execute(
+            select(PaperPosition.opened_at, PaperPosition.closed_at, PaperPosition.realized_pnl)
+            .where(
+                PaperPosition.account_id == owner,
+                PaperPosition.closed_at.is_not(None),
+            )
+            .order_by(PaperPosition.closed_at, PaperPosition.id)
+        ).yield_per(500)
+        trade_count = wins = losses = 0
+        win_total = loss_total = net_total = cumulative = peak = max_drawdown = Decimal(0)
+        holding_seconds = 0.0
+        for opened_at, closed_at, pnl in trades:
+            if closed_at is None:
+                continue
+            value = pnl or Decimal(0)
+            trade_count += 1
+            net_total += value
+            cumulative += value
+            peak = max(peak, cumulative)
+            max_drawdown = max(max_drawdown, peak - cumulative)
+            if value > 0:
+                wins += 1
+                win_total += value
+            elif value < 0:
+                losses += 1
+                loss_total += value
+            holding_seconds += max(0.0, (closed_at - opened_at).total_seconds())
+        trade_statistics = {
+            "closed_positions": trade_count,
+            "win_rate": str((Decimal(wins) / trade_count).quantize(Decimal("0.0001")))
+            if trade_count
+            else None,
+            "average_win": str(money(win_total / wins)) if wins else None,
+            "average_loss": str(money(loss_total / losses)) if losses else None,
+            "expectancy": str(money(net_total / trade_count)) if trade_count else None,
+            "profit_factor": str((win_total / abs(loss_total)).quantize(Decimal("0.0001")))
+            if losses
+            else None,
+            "realized_drawdown": str(money(max_drawdown)) if trade_count else None,
+            "average_holding_seconds": round(holding_seconds / trade_count)
+            if trade_count
+            else None,
+        }
         equity = snapshot.state.equity if valued and snapshot else None
         total = money(equity - capital) if equity is not None and capital_records else None
         session_current = (
@@ -113,4 +156,5 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
             if session_current and account.session_key is not None
             else None,
             "fees": str(money(fees)) if reconciled else None,
+            "trade_statistics": trade_statistics,
         }
