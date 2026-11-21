@@ -31,9 +31,10 @@ checks once at the end; repeat only for new changes or unresolved failures. Keep
 DEFERRED-WORK.md as the canonical scope/evidence ledger. This grouping is not a
 claim that each batch takes one turn or that acceptance is already complete.
 
-1. Agent transparency: finish remaining risk/order/report history paging and richer
-   source/age evidence (D16); inventory attainable version/usage guarantees and
-   pricing attribution (D17). This slice completes model-request paging only.
+1. Agent transparency: risk-decision paging is delivered in checkpoint 77 and
+   richer citation ages in checkpoint 78. Remaining order/report history paging
+   and source/age acceptance (D16), plus version/usage guarantees and pricing
+   attribution (D17), remain open.
 2. Trading workflow and reporting: pending chart markers, permission/order-type
    lifecycle, bulk exits/modifications, risk/trade statistics, historical equity
    and journal/export requirements (D11-D15). Preserve reservation and fill-race
@@ -50,6 +51,6 @@ claim that each batch takes one turn or that acceptance is already complete.
    week paper observation period, reconciliation, incident handling and recovery
    handover (D21). Elapsed real observation cannot be replaced by automated tests.
 
-Next implementation batch: remaining owned history/evidence gaps under D16.
+Next implementation batch: bounded order and daily-report history paging under D16.
 No broker login/live refresh/arming is authorized by this plan. No milestone is
 closed merely because implementation tests pass.

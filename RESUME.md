@@ -1,3 +1,10 @@
+Latest slice: richer age context for cited evidence. Read
+__workspace/78-evidence-age-context.md. Evidence cards show quote and headline
+age relative to saved output time, plus quote receipt and headline retrieval lag.
+Zero delay is shown as a recorded value, not proof of actual feed delay. Next:
+bounded order/report history as one batch; source suitability, provider guarantees
+and actual-market acceptance remain in the ledger. Entries remain disabled.
+
 Latest slice: paginated risk-decision history. Read
 __workspace/77-risk-decision-history.md. Decision pages are account/strategy
 scoped and retain rows on retry. Orders within each page still have a visible
@@ -54,7 +61,7 @@ coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
 EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
 order-ticket integration still follow. Do not treat M3 as complete.
 
-Contract search is implemented at **Markets ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Search**, using a separately cached
+Contract search is implemented at **Markets ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Search**, using a separately cached
 supported instrument catalog and direct chart selection. See
 `__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
 implemented with Search stars, cached quotes and chart links; read

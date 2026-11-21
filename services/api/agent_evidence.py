@@ -1,5 +1,6 @@
 """Only explicitly linked, account-owned evidence; no time-based reconstruction."""
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -12,6 +13,12 @@ from services.core.contracts import Instrument, Quote
 from services.core.models import AuditEvent
 
 router = APIRouter()
+
+
+def age_seconds(reference: datetime, observation: datetime) -> int | None:
+    seconds = (reference - observation).total_seconds()
+    return int(seconds) if seconds >= 0 else None
+
 
 
 @router.get("/api/paper/agent-activity/{event_id}/evidence")
@@ -65,6 +72,8 @@ def evidence(event_id: UUID, request: Request, owner: UUID = Depends(account_ide
                         "received_at": q.received_at.isoformat(),
                         "source": q.source[:100],
                         "timestamp_basis": q.timestamp_basis,
+                        "age_at_output_seconds": age_seconds(event.timestamp, q.timestamp),
+                        "receipt_lag_seconds": age_seconds(q.received_at, q.timestamp),
                         "bid": str(q.bid) if q.bid is not None else None,
                         "ask": str(q.ask) if q.ask is not None else None,
                         "last_price": str(q.last_price) if q.last_price is not None else None,
@@ -82,6 +91,9 @@ def evidence(event_id: UUID, request: Request, owner: UUID = Depends(account_ide
                         "published_at": h.published_at.isoformat(),
                         "fetched_at": h.fetched_at.isoformat(),
                         "provider_delay_seconds": h.provider_delay_seconds,
+                        "published_age_at_output_seconds": age_seconds(event.timestamp, h.published_at),
+                        "retrieved_age_at_output_seconds": age_seconds(event.timestamp, h.fetched_at),
+                        "publication_to_retrieval_seconds": age_seconds(h.fetched_at, h.published_at),
                     }
             except (ValueError, TypeError):
                 continue

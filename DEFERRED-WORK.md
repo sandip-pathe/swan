@@ -166,6 +166,13 @@ daily-report fills and richer evidence remain D16, and integrated query/load
 qualification remains D20. This slice was not run through automated tests or
 build checks. No live or permission operation was performed.
 
+Checkpoint 78 (see __workspace/78-evidence-age-context.md) adds evidence age at
+saved output, quote receipt lag, headline retrieval lag and recorded provider-delay
+value to linked citation details. Negative intervals remain unavailable and no
+new citation is inferred. Source rights/suitability, old unlinked evidence and
+depth provenance remain open under D16/D18. This slice was not run through tests
+or build checks; no live/provider action was performed.
+
 ## Current exclusions, not delayed promises
 
 Real-money broker orders, public multi-user launch, broader asset classes,
