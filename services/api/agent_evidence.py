@@ -88,6 +88,8 @@ def evidence(event_id: UUID, request: Request, owner: UUID = Depends(account_ide
                         "id": h.id,
                         "title": h.title[:400],
                         "source": h.source[:100],
+                        "url": h.url,
+                        "provider_name": h.provider_name,
                         "published_at": h.published_at.isoformat(),
                         "fetched_at": h.fetched_at.isoformat(),
                         "provider_delay_seconds": h.provider_delay_seconds,

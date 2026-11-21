@@ -1,8 +1,9 @@
-Latest slice: removed the misleading linked-order cap. Database uniqueness allows at
-most one entry order per decision, so each 20-decision page links at most 20 orders.
-Read __workspace/80-decision-order-bound.md. The next batch is remaining bounded
-report activity and source suitability under D16/D18. Tests/build checks were not
-run; entries remain disabled.
+Latest slice: moved attributed agent headlines to NewsData.io's India-filtered
+Market endpoint and added publisher click-through plus NewsData attribution to
+cited evidence. The free source remains delayed and its use/content rights are
+not fully accepted; see `__workspace/81-india-news-feed.md` and D18. Next: continue
+the M7/D16 evidence gaps and bounded report activity. No provider request or
+tests/build checks were run; entries remain disabled.
 
 Latest slice: order and daily-report history paging. Read
 __workspace/79-order-and-report-history.md. Related position orders page beyond

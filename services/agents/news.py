@@ -38,6 +38,7 @@ class Headline(BaseModel):
     published_at: AwareDatetime
     fetched_at: AwareDatetime
     provider_delay_seconds: int = 0
+    provider_name: str | None = None
 
 
 class NewsReader:
@@ -98,9 +99,9 @@ class NewsReader:
                 content = bytearray()
                 async with client.stream(
                     "GET",
-                    "https://newsdata.io/api/1/latest",
+                    "https://newsdata.io/api/1/market",
                     headers={"X-ACCESS-KEY": self.api_key.get_secret_value()},
-                    params={"country": "in", "language": "en", "category": "business"},
+                    params={"country": "in", "language": "en"},
                 ) as response:
                     if response.status_code in {401, 403}:
                         raise ProviderError("NEWS_AUTH_OR_PLAN_REJECTED")
@@ -156,6 +157,7 @@ class NewsReader:
                         published_at=stamp,
                         fetched_at=now,
                         provider_delay_seconds=43200,
+                        provider_name="NewsData.io",
                     )
                 except (ValueError, KeyError, TypeError, AttributeError, OverflowError):
                     continue
