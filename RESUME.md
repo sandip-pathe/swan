@@ -1,9 +1,9 @@
-Latest slice: moved attributed agent headlines to NewsData.io's India-filtered
-Market endpoint and added publisher click-through plus NewsData attribution to
-cited evidence. The free source remains delayed and its use/content rights are
-not fully accepted; see `__workspace/81-india-news-feed.md` and D18. Next: continue
-the M7/D16 evidence gaps and bounded report activity. No provider request or
-tests/build checks were run; entries remain disabled.
+Latest slice: daily paper reports now aggregate all recorded decision activity
+using ascending 500-row batches, instead of dropping totals after 2,000 records.
+Read `__workspace/82-complete-report-activity.md`. D16 still has legacy evidence
+and source-rights gaps; D20 load qualification remains. Next, continue the grouped
+M7 evidence/report finish work. No tests/build checks or live/provider requests
+were run; entries remain disabled.
 
 Latest slice: order and daily-report history paging. Read
 __workspace/79-order-and-report-history.md. Related position orders page beyond

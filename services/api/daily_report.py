@@ -149,20 +149,12 @@ def daily_report(
             realized += realized_during(
                 entries[position.entry_order_id], exits[position.id], start, cutoff
             )
-        activity_rows = list(
-            db.scalars(
-                select(AuditEvent)
-                .where(
-                    AuditEvent.account_id == owner,
-                    AuditEvent.timestamp >= start,
-                    AuditEvent.timestamp < cutoff,
-                    AuditEvent.kind.in_(("AI_OUTPUT", "AGENT_EVALUATION")),
-                )
-                .order_by(AuditEvent.timestamp, AuditEvent.id)
-                .limit(2001)
-            )
+        activity_scope = (
+            AuditEvent.account_id == owner,
+            AuditEvent.timestamp >= start,
+            AuditEvent.timestamp < cutoff,
+            AuditEvent.kind.in_(("AI_OUTPUT", "AGENT_EVALUATION")),
         )
-        activity_complete = len(activity_rows) <= 2000
         activity = dict(
             proposals_wait=0,
             reviews_rejected=0,
@@ -170,8 +162,19 @@ def daily_report(
             strategies_accepted=0,
             unclassified=0,
         )
-        if activity_complete:
-            for event in activity_rows:
+        activity_cursor = None
+        while True:
+            activity_statement = select(AuditEvent).where(*activity_scope)
+            if activity_cursor:
+                activity_statement = activity_statement.where(
+                    tuple_(AuditEvent.timestamp, AuditEvent.id) > activity_cursor
+                )
+            activity_rows = list(
+                db.scalars(
+                    activity_statement.order_by(AuditEvent.timestamp, AuditEvent.id).limit(501)
+                )
+            )
+            for event in activity_rows[:500]:
                 try:
                     if event.kind == "AGENT_EVALUATION":
                         state, _, _ = evaluation(str(event.details.get("status", "")))
@@ -193,6 +196,10 @@ def daily_report(
                         ).approved
                 except (ValueError, TypeError, KeyError):
                     activity["unclassified"] += 1
+            if len(activity_rows) <= 500:
+                break
+            last = activity_rows[499]
+            activity_cursor = (last.timestamp, last.id)
         fill_statement = (
             select(PaperFill, PaperOrder, InstrumentRecord)
             .join(PaperOrder, PaperOrder.id == PaperFill.order_id)
@@ -241,8 +248,8 @@ def daily_report(
             "cash_movement": str(money(closing - opening)) if complete else None,
             "fees": str(money(fees)) if complete else None,
             "realized_pnl": str(money(realized)) if complete else None,
-            "activity": activity if activity_complete else None,
-            "activity_complete": activity_complete,
+            "activity": activity,
+            "activity_complete": True,
             "fills_truncated": fills_more,
             "next_fills_before": str(fills[-1][0].id) if fills_more else None,
             "fills": [
