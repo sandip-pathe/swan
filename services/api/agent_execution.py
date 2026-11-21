@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -11,8 +12,8 @@ from services.core.models import AuditEvent, DecisionRecord, InstrumentRecord, P
 from services.paper.contracts import OrderRiskApproval
 
 
-def execution(db: Session, owner: UUID, evaluation_id: UUID) -> dict:
-    unavailable = {"state": "unavailable", "decisions": [], "truncated": False}
+def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None = None) -> dict:
+    unavailable = {"state": "unavailable", "decisions": [], "next_after": None, "orders_truncated": False}
     outcomes = list(
         db.scalars(
             select(AuditEvent)
@@ -43,18 +44,22 @@ def execution(db: Session, owner: UUID, evaluation_id: UUID) -> dict:
             return unavailable
     except (ValueError, TypeError):
         return unavailable
-    records = list(
-        db.scalars(
-            select(DecisionRecord)
-            .where(
-                DecisionRecord.account_id == owner,
-                DecisionRecord.payload["strategy_id"].as_string() == str(envelope.id),
-            )
-            .order_by(DecisionRecord.id)
-            .limit(21)
-        )
+    statement = select(DecisionRecord).where(
+        DecisionRecord.account_id == owner,
+        DecisionRecord.payload["strategy_id"].as_string() == str(envelope.id),
     )
-    records, more = records[:20], len(records) > 20
+    if after:
+        cursor = db.get(DecisionRecord, after)
+        if (
+            cursor is None
+            or cursor.account_id != owner
+            or cursor.payload.get("strategy_id") != str(envelope.id)
+        ):
+            raise HTTPException(400, "RUN_CURSOR_INVALID")
+        statement = statement.where(DecisionRecord.id > cursor.id)
+    records = list(db.scalars(statement.order_by(DecisionRecord.id).limit(21)))
+    more = len(records) > 20
+    records = records[:20]
     decision_ids = [row.id for row in records]
     orders = list(
         db.scalars(
@@ -148,5 +153,6 @@ def execution(db: Session, owner: UUID, evaluation_id: UUID) -> dict:
             "target": str(envelope.target),
         },
         "decisions": rows,
-        "truncated": more or orders_more,
+        "next_after": str(records[-1].id) if more else None,
+        "orders_truncated": orders_more,
     }

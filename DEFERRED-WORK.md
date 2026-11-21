@@ -158,6 +158,14 @@ usage. The same checkpoint groups remaining delivery into five finish batches;
 these are work groups, not completed milestones or a time estimate. Live/phone/
 manual acceptance and the supervised observation period remain open as above.
 
+Checkpoint 77 (see __workspace/77-risk-decision-history.md) adds bounded cursor
+paging for linked risk decisions in evaluation history. Cursor ownership and
+accepted-strategy scope are checked; the UI appends/deduplicates and retains rows
+on retry. Orders per decision page remain capped at 100 with an explicit notice;
+daily-report fills and richer evidence remain D16, and integrated query/load
+qualification remains D20. This slice was not run through automated tests or
+build checks. No live or permission operation was performed.
+
 ## Current exclusions, not delayed promises
 
 Real-money broker orders, public multi-user launch, broader asset classes,

@@ -6,7 +6,7 @@ import { usePaperRequest } from "./paper-action";
 import AgentEvidence from "./agent-evidence";
 import OrderHistory from "./order-history";
 
-type Execution = { state: string; truncated: boolean; strategy?: { version: string; action: string; instrument: string | null; issued_at: string; expires_at: string; min_entry: string; max_entry: string; stop_loss: string; target: string }; decisions: { id: string; status: string; timestamp: string | null; summary: string; orders: { id: string; side: string; status: string; quantity: number; filled_quantity: number }[] }[] };
+type Execution = { state: string; next_after?: string | null; orders_truncated?: boolean; strategy?: { version: string; action: string; instrument: string | null; issued_at: string; expires_at: string; min_entry: string; max_entry: string; stop_loss: string; target: string }; decisions: { id: string; status: string; timestamp: string | null; summary: string; orders: { id: string; side: string; status: string; quantity: number; filled_quantity: number }[] }[] };
 type Run = { next_outputs_before?: string | null; next_checks_before?: string | null; versions?: { next_before?: string | null; outputs_incomplete?: boolean; truncated: boolean; rows: { id: string; stage: string; timestamp: string; requested_model: string | null; reported_model: string | null; strategy_version: string | null; rules_recorded: boolean }[] }; execution?: Execution; available: boolean; slot_at?: string; title?: string; summary?: string; truncated?: boolean; checks_truncated?: boolean; checks?: { id: string; timestamp: string; stage: string; state: string; summary: string }[]; rows?: { id: string; timestamp: string; stage: string; summary: string; rationale: string | null }[] };
 const names: Record<string, string> = { analysis: "Analysis", proposal: "Proposal", review: "Review", strategy: "Strategy", unknown: "Recorded stage" };
 export default function AgentRun({ eventId }: { eventId: string }) {
@@ -15,8 +15,8 @@ export default function AgentRun({ eventId }: { eventId: string }) {
   const [data, setData] = useState<Run | null>(null);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [pageBusy, setPageBusy] = useState<"outputs" | "checks" | "versions" | null>(null);
-  const [pageError, setPageError] = useState<"outputs" | "checks" | "versions" | null>(null);
+  const [pageBusy, setPageBusy] = useState<"outputs" | "checks" | "versions" | "decisions" | null>(null);
+  const [pageError, setPageError] = useState<"outputs" | "checks" | "versions" | "decisions" | null>(null);
   const generation = useRef(0);
   const pageController = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -28,17 +28,22 @@ export default function AgentRun({ eventId }: { eventId: string }) {
       .catch(() => { if (current === generation.current) setError(true); });
     return () => { generation.current++; controller.abort(); pageController.current?.abort(); };
   }, [open, request, eventId, retry]);
-  async function older(kind: "outputs" | "checks" | "versions") {
+  async function older(kind: "outputs" | "checks" | "versions" | "decisions") {
     if (!request || !data || pageBusy) return;
-    const before = kind === "outputs" ? data.next_outputs_before : kind === "checks" ? data.next_checks_before : data.versions?.next_before;
+    const before = kind === "outputs" ? data.next_outputs_before : kind === "checks" ? data.next_checks_before : kind === "versions" ? data.versions?.next_before : data.execution?.next_after;
     if (!before) return;
     const current = generation.current; const controller = new AbortController();
     pageController.current = controller; setPageBusy(kind); setPageError(null);
     try {
-      const result = await request(`/api/paper/agent-activity/${eventId}/run?${new URLSearchParams({ [`${kind}_before`]: before })}`, "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)])) as Run;
+      const cursorName = kind === "decisions" ? "decisions_after" : kind + "_before";
+      const result = await request(`/api/paper/agent-activity/${eventId}/run?${new URLSearchParams({ [cursorName]: before })}`, "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)])) as Run;
       if (!result.available) throw new Error("History unavailable");
       if (current === generation.current) setData(previous => {
         if (!previous) return previous;
+        if (kind === "decisions") {
+          if (!result.execution) return previous;
+          return { ...previous, execution: { ...result.execution, decisions: [...(previous.execution?.decisions ?? []), ...result.execution.decisions.filter(row => !previous.execution?.decisions.some(old => old.id === row.id))], orders_truncated: previous.execution?.orders_truncated || result.execution.orders_truncated } };
+        }
         if (kind === "versions") {
           if (!result.versions) return previous;
           return { ...previous, versions: { ...result.versions, outputs_incomplete: previous.versions?.outputs_incomplete || result.versions.outputs_incomplete, rows: [...(previous.versions?.rows ?? []), ...result.versions.rows.filter(row => !previous.versions?.rows.some(old => old.id === row.id))] } };
@@ -63,7 +68,9 @@ export default function AgentRun({ eventId }: { eventId: string }) {
         {data.execution.strategy && <><p className="recorded-rationale"><strong>{data.execution.strategy.instrument ?? "Contract details unavailable"}</strong></p><p>{words(data.execution.strategy.action)} / {data.execution.strategy.version}</p><dl className="execution-values"><div><dt>Entry range</dt><dd>{money(data.execution.strategy.min_entry)} - {money(data.execution.strategy.max_entry)}</dd></div><div><dt>Stop / target</dt><dd>{money(data.execution.strategy.stop_loss)} / {money(data.execution.strategy.target)}</dd></div></dl><p className="muted">Recorded validity: {time(data.execution.strategy.issued_at)} to {time(data.execution.strategy.expires_at)} IST. This historical strategy grants no current permission.</p></>}
         {!data.execution.decisions.length && <p>No linked risk decision was found. Strategy acceptance alone does not place an order.</p>}
         {data.execution.decisions.map(decision => <div className="execution-card" key={decision.id}><h4>{decision.status === "APPROVED" ? "Risk checks approved entry" : decision.status === "REJECTED" ? "Risk checks rejected entry" : "Risk result unavailable"}</h4><p>{decision.summary}</p>{decision.timestamp && <p className="muted">{time(decision.timestamp)} IST</p>}{!decision.orders.length ? <p>No linked entry order was found.</p> : decision.orders.map(order => <div key={order.id}><p>{words(order.side)} / {words(order.status)} / {order.filled_quantity} of {order.quantity} units filled</p><OrderHistory orderId={order.id} /></div>)}</div>)}
-        {data.execution.truncated && <p className="notice">Linked history exceeds the display limit. Some decisions or orders are not shown.</p>}
+        {pageError === "decisions" && <p role="alert">More risk decisions could not be loaded. Your current results are still shown.</p>}
+        {data.execution.next_after ? <button className="secondary" disabled={pageBusy != null} onClick={() => older("decisions")}>{pageBusy === "decisions" ? "Loading more decisions..." : pageError === "decisions" ? "Retry decisions" : "Load more decisions"}</button> : null}
+        {data.execution.orders_truncated && <p className="notice">Some linked orders are unavailable in this decision page.</p>}
       </>}
       <h4>Stage checks</h4>
       <p className="muted">These validate model responses. Trading permission and execution are separate.</p>

@@ -1,3 +1,10 @@
+Latest slice: paginated risk-decision history. Read
+__workspace/77-risk-decision-history.md. Decision pages are account/strategy
+scoped and retain rows on retry. Orders within each page still have a visible
+100-row cap; report fill paging and richer source/age evidence remain D16/D20.
+Next: complete agent evidence and bounded order/report history as one batch.
+No broker/live/manual acceptance; entries remain disabled.
+
 Latest slice: paginated model-request history and grouped finish path. Read
 `__workspace/76-model-history-and-finish-batches.md`. Models now page newest first
 with owner/run/kind cursors and independent retry/dedup/stale-close handling.
@@ -47,7 +54,7 @@ coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
 EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
 order-ticket integration still follow. Do not treat M3 as complete.
 
-Contract search is implemented at **Markets ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Search**, using a separately cached
+Contract search is implemented at **Markets ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Search**, using a separately cached
 supported instrument catalog and direct chart selection. See
 `__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
 implemented with Search stars, cached quotes and chart links; read
