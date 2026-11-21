@@ -173,6 +173,14 @@ new citation is inferred. Source rights/suitability, old unlinked evidence and
 depth provenance remain open under D16/D18. This slice was not run through tests
 or build checks; no live/provider action was performed.
 
+Checkpoint 79 (see __workspace/79-order-and-report-history.md) adds separate
+cursor pages for related position orders and daily-report fills. Both cursor scopes
+are checked; full-day report totals remain unchanged while fills append. Pages are
+separate snapshots, so refresh to see late corrections. D16/D20 retain the 100-order
+cap within dense decision pages, bounded report activity rows and integrated
+query/load qualification. This slice was not run through tests/build checks; no
+live or permission operation was performed.
+
 ## Current exclusions, not delayed promises
 
 Real-money broker orders, public multi-user launch, broader asset classes,

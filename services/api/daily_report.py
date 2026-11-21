@@ -6,7 +6,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, tuple_
 from sqlalchemy.orm import Session
 
 from services.agents.contracts import Proposal, Review
@@ -44,7 +44,9 @@ def realized_during(
 
 
 @router.get("/api/paper/daily-report")
-def daily_report(day: date, request: Request, owner: UUID = Depends(account_identity)):
+def daily_report(
+    day: date, request: Request, fills_before: UUID | None = None, owner: UUID = Depends(account_identity)
+):
     now = utc_now()
     today = now.astimezone(IST).date()
     if day > today:
@@ -191,16 +193,33 @@ def daily_report(day: date, request: Request, owner: UUID = Depends(account_iden
                         ).approved
                 except (ValueError, TypeError, KeyError):
                     activity["unclassified"] += 1
+        fill_statement = (
+            select(PaperFill, PaperOrder, InstrumentRecord)
+            .join(PaperOrder, PaperOrder.id == PaperFill.order_id)
+            .outerjoin(InstrumentRecord, InstrumentRecord.id == PaperOrder.instrument_id)
+            .where(*scope)
+        )
+        if fills_before:
+            cursor = db.get(PaperFill, fills_before)
+            cursor_order = db.get(PaperOrder, cursor.order_id) if cursor else None
+            if (
+                cursor is None
+                or cursor_order is None
+                or cursor_order.account_id != owner
+                or cursor.timestamp is None
+                or not start <= cursor.timestamp < cutoff
+            ):
+                raise HTTPException(400, "REPORT_CURSOR_INVALID")
+            fill_statement = fill_statement.where(
+                tuple_(PaperFill.timestamp, PaperFill.id) < (cursor.timestamp, cursor.id)
+            )
         fills = list(
             db.execute(
-                select(PaperFill, PaperOrder, InstrumentRecord)
-                .join(PaperOrder, PaperOrder.id == PaperFill.order_id)
-                .outerjoin(InstrumentRecord, InstrumentRecord.id == PaperOrder.instrument_id)
-                .where(*scope)
-                .order_by(PaperFill.timestamp.desc(), PaperFill.id.desc())
-                .limit(20)
+                fill_statement.order_by(PaperFill.timestamp.desc(), PaperFill.id.desc()).limit(21)
             )
         )
+        fills_more = len(fills) > 20
+        fills = fills[:20]
         return {
             "day": day.isoformat(),
             "as_of": now.isoformat(),
@@ -224,7 +243,8 @@ def daily_report(day: date, request: Request, owner: UUID = Depends(account_iden
             "realized_pnl": str(money(realized)) if complete else None,
             "activity": activity if activity_complete else None,
             "activity_complete": activity_complete,
-            "fills_truncated": fill_count > 20,
+            "fills_truncated": fills_more,
+            "next_fills_before": str(fills[-1][0].id) if fills_more else None,
             "fills": [
                 {
                     "id": str(fill.id),

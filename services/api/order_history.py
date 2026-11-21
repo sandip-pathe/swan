@@ -39,6 +39,7 @@ def history(
     order_id: UUID,
     request: Request,
     before: UUID | None = None,
+    related_before: UUID | None = None,
     limit: int = Query(30, ge=1, le=100),
     owner: UUID = Depends(account_identity),
 ):
@@ -99,25 +100,39 @@ def history(
                 )
             )
         )
-        related = (
-            list(
+        related_statement = None
+        if position:
+            related_statement = select(PaperOrder).where(
+                PaperOrder.account_id == owner,
+                PaperOrder.id != order.id,
+                or_(
+                    PaperOrder.id == position.entry_order_id,
+                    PaperOrder.position_id == position.id,
+                ),
+            )
+            if related_before:
+                cursor = db.get(PaperOrder, related_before)
+                if (
+                    cursor is None
+                    or cursor.account_id != owner
+                    or cursor.id == order.id
+                    or not (cursor.id == position.entry_order_id or cursor.position_id == position.id)
+                ):
+                    raise HTTPException(400, "PAPER_HISTORY_CURSOR_INVALID")
+                related_statement = related_statement.where(
+                    tuple_(PaperOrder.timestamp, PaperOrder.id) < (cursor.timestamp, cursor.id)
+                )
+            related = list(
                 db.scalars(
-                    select(PaperOrder)
-                    .where(
-                        PaperOrder.account_id == owner,
-                        PaperOrder.id != order.id,
-                        or_(
-                            PaperOrder.id == position.entry_order_id,
-                            PaperOrder.position_id == position.id,
-                        ),
-                    )
-                    .order_by(PaperOrder.timestamp.desc(), PaperOrder.id.desc())
-                    .limit(51)
+                    related_statement.order_by(PaperOrder.timestamp.desc(), PaperOrder.id.desc()).limit(51)
                 )
             )
-            if position
-            else []
-        )
+        else:
+            if related_before:
+                raise HTTPException(400, "PAPER_HISTORY_CURSOR_INVALID")
+            related = []
+        related_more = len(related) > 50
+        related = related[:50]
         entry = (
             db.get(PaperOrder, position.entry_order_id)
             if position
@@ -213,8 +228,9 @@ def history(
             }
             if position
             else None,
-            "related_orders": [order_view(value) for value in related[:50]],
-            "related_truncated": len(related) > 50,
+            "related_orders": [order_view(value) for value in related],
+            "related_truncated": related_more,
+            "related_next_before": str(related[-1].id) if related_more else None,
             "events": rows,
             "next_before": str(events[-1].id) if more else None,
         }
