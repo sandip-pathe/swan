@@ -86,7 +86,7 @@ export default function OrderPreview({ instrument, quote, request, visible }: { 
   }
   const amount = (value: string | null) => value == null ? "Unavailable" : money(value);
   return <div className="order-preview" aria-label="Paper order preview">
-    <div className="depth-heading"><h3>Plan a paper order</h3><span>Buy {instrument.option_type === "CALL" ? "CE" : "PE"} · Limit</span></div>
+    <div className="depth-heading"><h3>Manual paper order</h3><span>Buy {instrument.option_type === "CALL" ? "CE" : "PE"} · Limit</span></div>
     <p className="catalog-status">Intraday long option. Preview calculates costs and checks only; it does not place an order.</p>
     <form onSubmit={preview}>
       <fieldset disabled={busy || submissionLocked}><legend className="sr-only">Order inputs</legend>

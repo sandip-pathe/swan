@@ -1,6 +1,7 @@
 """Only explicitly linked, account-owned evidence; no time-based reconstruction."""
 
 from datetime import datetime
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -83,12 +84,18 @@ def evidence(event_id: UUID, request: Request, owner: UUID = Depends(account_ide
         for raw in (raw_news if isinstance(raw_news, list) else [])[:100]:
             try:
                 h = Headline.model_validate(raw)
+                parsed_url = urlsplit(h.url)
                 if h.id in news_ids and h.provider_delay_seconds >= 0:
                     headlines[h.id] = {
                         "id": h.id,
                         "title": h.title[:400],
                         "source": h.source[:100],
-                        "url": h.url,
+                        "url": (
+                            h.url
+                            if parsed_url.scheme.lower() in {"http", "https"}
+                            and parsed_url.netloc
+                            else None
+                        ),
                         "provider_name": h.provider_name,
                         "published_at": h.published_at.isoformat(),
                         "fetched_at": h.fetched_at.isoformat(),

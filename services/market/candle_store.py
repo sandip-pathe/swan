@@ -21,6 +21,9 @@ class CandleStore:
     def save(self, rows: list[dict]) -> None:
         if not rows:
             return
+        # Match quote publication's instrument-row lock order, regardless of
+        # the order in which independent stream packets arrived.
+        rows = sorted(rows, key=lambda row: (row["instrument"]["id"], row["stream_id"], row["opens_at"]))
         with Session(self.engine) as db, db.begin():
             for row in rows:
                 instrument = Instrument.model_validate(row["instrument"])

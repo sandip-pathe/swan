@@ -68,6 +68,7 @@ export type FeeSchedule = {
   effective_until?: string | null;
   reviewed?: boolean;
   account_pricing_verified?: boolean;
+  calculation_basis?: "documented" | "estimated";
   rules: Array<FeeRule>;
   notes: string;
 };
@@ -216,7 +217,7 @@ export type SourceEvidence = {
   url: string;
   checked_at: string;
   finding: string;
-  status: "documented" | "account_verified" | "unverified";
+  status: "documented" | "account_verified" | "assumed" | "unverified";
 };
 
 export type StrategyEnvelope = {
@@ -231,8 +232,9 @@ export type StrategyEnvelope = {
   min_entry: string;
   max_entry: string;
   stop_loss: string;
-  target: string;
+  target: string | null;
   max_holding_seconds?: number;
+  underlying_exit_policy?: UnderlyingExitPolicy | null;
   required_metrics?: Array<"oi" | "volume" | "iv" | "greeks">;
   invalidated?: boolean;
 };
@@ -250,4 +252,16 @@ export type TradeDecision = {
   stop_loss?: string | null;
   target?: string | null;
   strategy_id?: string | null;
+};
+
+export type UnderlyingExitPolicy = {
+  schema_version?: 1;
+  underlying: "NIFTY" | "SENSEX";
+  direction: "BULLISH" | "BEARISH";
+  invalidation: string;
+  target: string;
+  premium_stop_fraction?: string | null;
+  entry_lower?: string | null;
+  entry_upper?: string | null;
+  entry_deadline_only?: boolean;
 };

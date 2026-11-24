@@ -2,7 +2,7 @@ import type { Candles, Timeframe } from "./chart-data";
 
 export type TradeFill = { id: string; order_id: string; side: string; quantity: number; price: string; timestamp: string };
 export type PendingTradeOrder = { id: string; position_id: string | null; side: string; status: string; order_type: string; quantity_remaining: number; timestamp: string; trigger_price: string | null; limit_price: string | null };
-export type TradePosition = { id: string; entry_order_id: string; remaining_quantity: number; average_price: string; stop_loss: string; target: string; pending_exit: string | null; opened_at: string };
+export type TradePosition = { id: string; entry_order_id: string; remaining_quantity: number; average_price: string; stop_loss: string; target: string | null; pending_exit: string | null; opened_at: string };
 export type ChartTrades = { as_of: string; day: string; instrument_id: string; current_day: boolean; fills_truncated: boolean; positions_truncated: boolean; exits_truncated: boolean; pending_orders_truncated: boolean; pending_orders: PendingTradeOrder[]; fills: TradeFill[]; positions: TradePosition[]; exit_orders: { id: string; position_id: string; remaining_quantity: number; status: string; order_type: string; trigger_price: string | null; limit_price: string | null }[] };
 
 /** Never snap a trade across a gap or outside verified candle/session coverage. */

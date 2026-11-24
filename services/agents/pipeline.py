@@ -15,6 +15,7 @@ from services.agents.provider import StructuredProvider
 from services.agents.settings import AgentSettings
 from services.core.contracts import ExchangeSession, Instrument, Quote, RiskConfig, StrategyEnvelope
 from services.core.models import AuditEvent
+from services.core.setup import document
 from services.market.settings import ProviderError
 
 STRATEGY_VERSION = "agents-v1"
@@ -55,6 +56,27 @@ class AgentPipeline:
                 "evaluation_id": str(evaluation_id) if evaluation_id else None,
                 "session": session.model_dump(mode="json"),
                 "risk": config.model_dump(mode="json"),
+                "execution_model": document("execution")["document"],
+                "citation_rules": {
+                    "market_quote_ids": sorted(evidence),
+                    "news_ids": [row.id for row in headlines],
+                    "evidence_ids": "Quote IDs only. Never place news IDs in evidence_ids.",
+                },
+                "planning_semantics": {
+                    "quotes": "Historical observations for planning, not executable quotes.",
+                    "execution_freshness": (
+                        "The deterministic executor obtains fresh quotes and rechecks depth, "
+                        "prices, cash and risk at admission and fill. The two-second quote "
+                        "limit applies there, not to the duration of model reasoning. "
+                        "This does not make missing directional evidence sufficient."
+                    ),
+                    "quantity_mapping": (
+                        "Raw feed quantity_unit may be unknown. The reviewed execution_model "
+                        "records the mapping applied at execution, with its source evidence. "
+                        "Do not assume a mapping when it is unreviewed or absent."
+                    ),
+                    "authority": "A proposal grants no permission and reserves no funds.",
+                },
                 "instruments": [
                     instruments[row.instrument_id].model_dump(mode="json") for row in selected
                 ],

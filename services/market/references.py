@@ -1,10 +1,7 @@
 """Index display context, isolated from option execution and account state."""
 
 from datetime import UTC, date, datetime
-from decimal import Decimal
-from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import Numeric, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -12,19 +9,8 @@ from sqlalchemy.orm import Session
 from services.core.contracts import IST
 from services.core.models import ListedInstrument, UnderlyingReference
 from services.market.analysis import provider_price, provider_time
+from services.market.reference_contracts import IndexReference
 from services.market.settings import ProviderError
-
-
-class IndexReference(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    underlying: Literal["NIFTY", "SENSEX"]
-    exchange: Literal["NSE", "BSE"]
-    provider_token: str
-    timestamp: AwareDatetime
-    received_at: AwareDatetime
-    last_price: Decimal = Field(gt=0)
-    previous_close: Decimal | None = Field(default=None, gt=0)
-    source: str = "angelone-rest:full"
 
 
 def normalize_reference(row: dict, underlying: str, token: str, now: datetime) -> IndexReference:
@@ -53,6 +39,15 @@ def normalize_reference(row: dict, underlying: str, token: str, now: datetime) -
 
 
 def save_reference(db: Session, reference: IndexReference) -> None:
+    previous = db.get(UnderlyingReference, reference.underlying)
+    if previous is not None and reference.previous_close is None:
+        prior = IndexReference.model_validate(previous.payload)
+        if (
+            prior.timestamp.astimezone(IST).date() == reference.timestamp.astimezone(IST).date()
+            and prior.provider_token == reference.provider_token
+            and prior.exchange == reference.exchange
+        ):
+            reference = reference.model_copy(update={"previous_close": prior.previous_close})
     statement = insert(UnderlyingReference).values(
         underlying=reference.underlying,
         timestamp=reference.timestamp,

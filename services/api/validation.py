@@ -44,7 +44,9 @@ def start_validation(
     body: ValidationRequest, request: Request, identifier: UUID = Depends(account_identity)
 ):
     try:
-        return ValidationService(request.app.state.engine, identifier).start(
+        return ValidationService(
+            request.app.state.engine, identifier, clock=lambda: datetime.now(UTC)
+        ).start(
             body, datetime.now(UTC)
         )
     except (ValueError, OSError, ProviderError) as error:

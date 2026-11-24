@@ -13,6 +13,26 @@ from services.market.references import normalize_reference, reference_context, s
 from services.market.settings import ProviderError
 
 
+@pytest.mark.integration
+def test_stream_reference_publication_keeps_same_session_previous_close(db_engine):
+    from services.market.reference_contracts import IndexReference
+
+    now = datetime.now(UTC)
+    reference = IndexReference(underlying="NIFTY", exchange="NSE", provider_token="fixture",
+                               timestamp=now, received_at=now, last_price="100", previous_close="99")
+    with Session(db_engine) as db, db.begin():
+        save_reference(db, reference)
+    streamed = reference.model_copy(update={"timestamp": now + timedelta(seconds=1),
+                                            "received_at": now + timedelta(seconds=1),
+                                            "last_price": Decimal("101"), "previous_close": None,
+                                            "source": "angelone-websocket-v2:ltp"})
+    with Session(db_engine) as db, db.begin():
+        save_reference(db, streamed)
+    with Session(db_engine) as db:
+        saved = db.get(UnderlyingReference, "NIFTY").payload
+        assert saved["last_price"] == "101" and saved["previous_close"] == "99"
+
+
 @pytest.mark.parametrize("invalid", [None, "exchange", "token", "future", "zero"])
 def test_reference_normalization_preserves_exchange_time_and_checks_identity(invalid):
     now = datetime.now(UTC)

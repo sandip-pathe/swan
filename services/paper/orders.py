@@ -19,6 +19,7 @@ from services.core.contracts import (
     Quote,
     RiskConfig,
     StrategyEnvelope,
+    UnderlyingExitPolicy,
     money,
 )
 from services.core.execution import PaperExecutionConfig
@@ -975,6 +976,12 @@ class DurableOrderLedger:
                         risk_config.max_holding_seconds, protection.max_holding_seconds
                     ),
                     opened_at=now,
+                    underlying_exit_policy=(
+                        protection.underlying_exit_policy.model_dump(mode="json")
+                        if isinstance(protection, StrategyEnvelope)
+                        and protection.underlying_exit_policy is not None
+                        else None
+                    ),
                     config=risk_config.model_dump(mode="json"),
                     realized_pnl=Decimal(0),
                 )
@@ -982,6 +989,12 @@ class DurableOrderLedger:
                 db.flush()
             refresh_position(db, position)
             if order.side == "BUY":
+                if position.underlying_exit_policy is not None:
+                    exit_policy = UnderlyingExitPolicy.model_validate(position.underlying_exit_policy)
+                    if exit_policy.premium_stop_fraction is not None:
+                        position.stop_loss = exit_policy.premium_stop(
+                            position.average_price, instrument.tick_size
+                        )
                 position.planned_risk = prorated_risk(order, position.quantity)
             else:
                 entry_order = db.get(PaperOrder, position.entry_order_id)

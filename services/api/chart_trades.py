@@ -140,7 +140,7 @@ def chart_trades(
                     "remaining_quantity": p.quantity - p.closed_quantity,
                     "average_price": str(p.average_price),
                     "stop_loss": str(p.stop_loss),
-                    "target": str(p.target),
+                    "target": str(p.target) if p.target is not None else None,
                     "pending_exit": p.pending_exit,
                 }
                 for p in positions

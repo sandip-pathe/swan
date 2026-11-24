@@ -18,7 +18,7 @@ class SourceEvidence(Contract):
     url: HttpUrl
     checked_at: AwareDatetime
     finding: str = Field(min_length=1, max_length=2000)
-    status: Literal["documented", "account_verified", "unverified"]
+    status: Literal["documented", "account_verified", "assumed", "unverified"]
 
 
 class FeeRule(Contract):
@@ -64,6 +64,7 @@ class FeeSchedule(Contract):
     effective_until: date | None = None  # Inclusive; missing end is open-ended.
     reviewed: bool = False
     account_pricing_verified: bool = False
+    calculation_basis: Literal["documented", "estimated"] = "documented"
     rules: tuple[FeeRule, ...] = Field(min_length=1)
     notes: str = Field(min_length=1)
 
@@ -77,10 +78,20 @@ class FeeSchedule(Contract):
                 raise ValueError("Unique fee codes and earlier declared dependencies required")
             codes.add(rule.code)
         if self.reviewed:
-            if not REQUIRED_FEE_CODES <= codes or not self.account_pricing_verified:
+            if not REQUIRED_FEE_CODES <= codes or (
+                not self.account_pricing_verified and self.calculation_basis != "estimated"
+            ):
                 raise ValueError("Reviewed fees require all components and account pricing")
             if any(s.status == "unverified" for rule in self.rules for s in rule.sources):
                 raise ValueError("Reviewed fees cannot contain unverified evidence")
+            if self.calculation_basis == "documented" and any(
+                s.status == "assumed" for rule in self.rules for s in rule.sources
+            ):
+                raise ValueError("Assumed fee inputs require an estimated schedule")
+            if self.calculation_basis == "estimated" and not any(
+                s.status == "assumed" for rule in self.rules for s in rule.sources
+            ):
+                raise ValueError("Estimated schedules must disclose their assumptions")
         return self
 
     def applies(self, day: date) -> bool:
@@ -93,7 +104,7 @@ class FeeSchedule(Contract):
         problems = []
         if not self.reviewed:
             problems.append(self.exchange + "_FEE_SCHEDULE_NOT_REVIEWED")
-        if not self.account_pricing_verified:
+        if not self.account_pricing_verified and self.calculation_basis != "estimated":
             problems.append(self.exchange + "_ACCOUNT_PRICING_UNVERIFIED")
         codes = {rule.code for rule in self.rules}
         problems.extend(
@@ -143,12 +154,12 @@ class ExecutionPolicy(Contract):
         if (
             self.quantity_unit == "unknown"
             or not self.quantity_unit_sources
-            or any(s.status == "unverified" for s in self.quantity_unit_sources)
+            or any(s.status not in {"documented", "account_verified"} for s in self.quantity_unit_sources)
         ):
             problems.append("QUANTITY_UNIT_UNVERIFIED")
         if self.sale_proceeds_reuse == "same_session_verified" and (
             not self.sale_proceeds_sources
-            or any(s.status == "unverified" for s in self.sale_proceeds_sources)
+            or any(s.status not in {"documented", "account_verified"} for s in self.sale_proceeds_sources)
         ):
             problems.append("SALE_PROCEEDS_REUSE_UNVERIFIED")
         return problems

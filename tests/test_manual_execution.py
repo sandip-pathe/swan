@@ -222,6 +222,32 @@ def test_human_fill_rechecks_permission(human, change):
     assert_clean(d)
 
 
+@pytest.mark.parametrize("entry_pause", ["valuation", "session_stop"])
+def test_entry_only_pause_keeps_manual_position_protected(human, entry_pause):
+    from services.paper.session_stop import stop_session_entries
+
+    h, d = human, human.d
+    submit(h)
+    cycle(d, 300)
+    d.clock.now = d.scenario.now + timedelta(milliseconds=600)
+    if entry_pause == "session_stop":
+        stop_session_entries(d.engine, d.account, uuid4(), d.scenario.session, d.clock.now)
+        quote = observed(d, elapsed=600)
+    else:
+        quote = observed(d, elapsed=600, depth=1)
+    d.service.cycle({d.instrument.id: quote}, {"NFO": d.scenario.session}, healthy=True)
+    with Session(d.engine) as db:
+        assert not db.get(Account, d.account).enabled
+        position = db.scalar(select(PaperPosition))
+        assert position.closed_at is None
+        assert position.pending_exit is None
+        protective = db.scalar(select(PaperOrder).where(
+            PaperOrder.side == "SELL", PaperOrder.status == "OPEN",
+        ))
+        assert protective.reason == "PROTECTIVE_STOP"
+    assert_clean(d)
+
+
 def test_manual_pause_restart_drains_protection_and_not_ai_qualification(human):
     h, d = human, human.d
     submit(h)
@@ -365,6 +391,30 @@ def test_manual_protection_exits_without_ai_envelope(human, reason):
     assert_clean(d)
 
 
+def test_manual_protection_reads_clock_after_account_lock(human, monkeypatch):
+    from services.paper.engine import PaperEngine
+
+    h, d = human, human.d
+    submit(h)
+    cycle(d, 300)
+    read_account = PaperEngine._account
+
+    def account_after_wait(db, account_id):
+        account = read_account(db, account_id)
+        d.clock.now += timedelta(milliseconds=200)
+        db.get(RuntimeControl, account_id).heartbeat = d.clock.now
+        return account
+
+    monkeypatch.setattr(PaperEngine, "_account", staticmethod(account_after_wait))
+    positions, _, instruments = d.service._inventory()
+    d.service._protect_position(
+        positions[0], instruments, {d.instrument.id: observed(d)},
+        {"NFO": d.scenario.session}, True, None, False, {},
+    )
+    with Session(d.engine) as db:
+        assert db.get(PaperPosition, positions[0].id).pending_exit is None
+
+
 def test_accepted_manual_retry_survives_configuration_unavailability(human, monkeypatch):
     h = human
     first = submit(h)
@@ -375,8 +425,9 @@ def test_accepted_manual_retry_survives_configuration_unavailability(human, monk
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("packet_during_scope_read", [False, True])
 async def test_human_worker_enables_only_requested_source_without_agents(
-    human, monkeypatch, tmp_path
+    human, monkeypatch, tmp_path, packet_during_scope_read
 ):
     import asyncio
     from datetime import datetime
@@ -406,6 +457,19 @@ async def test_human_worker_enables_only_requested_source_without_agents(
     runtime.instruments = {d.instrument.id: d.instrument}
     runtime.cache.connected, runtime.cache.problem = True, None
     runtime.cache.quotes[d.instrument.id] = observed(d)
+    if packet_during_scope_read:
+        read_scope = runtime.validation.active_scope
+
+        def scope_with_new_packet(at):
+            nonlocal now
+            scope = read_scope(at)
+            now += timedelta(milliseconds=200)
+            runtime.cache.quotes[d.instrument.id] = observed(d).model_copy(
+                update={"timestamp": now, "received_at": now}
+            )
+            return scope
+
+        runtime.validation.active_scope = scope_with_new_packet
     runtime.last_candle_publication = runtime.last_publication = asyncio.get_running_loop().time()
     with Session(d.engine) as db, db.begin():
         db.get(Account, d.account).enabled = False

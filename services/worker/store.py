@@ -93,6 +93,8 @@ class RuntimeStore:
     def publish_quotes(self, instruments: dict[str, Instrument], quotes: list[Quote]) -> None:
         if not quotes:
             return
+        # All bulk publishers acquire shared instrument rows in the same order.
+        quotes = sorted(quotes, key=lambda quote: quote.instrument_id)
         with Session(self.engine) as db, db.begin():
             for quote in quotes:
                 PaperEngine._persist_instrument(db, instruments[quote.instrument_id])
@@ -239,6 +241,10 @@ class RuntimeStore:
 
     def update(self, **changes) -> None:
         with Session(self.engine) as db, db.begin():
+            # Admission captures its clock while holding this same account
+            # lock. Serialize heartbeat writes with it so a concurrent update
+            # cannot appear newer than that admission's observation time.
+            PaperEngine._account(db, self.account_id)
             control = db.scalar(
                 select(RuntimeControl)
                 .where(RuntimeControl.account_id == self.account_id)
@@ -326,7 +332,7 @@ class RuntimeStore:
             if existing:
                 return None
             evidence = []
-            for quote in quotes:
+            for quote in sorted(quotes, key=lambda quote: quote.instrument_id):
                 PaperEngine._persist_instrument(db, instruments[quote.instrument_id])
                 PaperEngine._persist_quote(db, quote)
                 evidence.append(str(quote.id))
@@ -361,6 +367,12 @@ class RuntimeStore:
             slot = db.get(EvaluationSlot, identifier)
             if control is None or slot is None or slot.account_id != self.account_id:
                 raise ValueError("Unknown evaluation")
+            preserve_orb = bool(
+                control.active_envelope
+                and control.active_envelope.get("version", "").startswith("S01-NIFTY-ORB-PAPER:")
+            )
+            if preserve_orb:
+                status, envelope = "SUPERSEDED_BY_ORB_PLAN", None
             if (
                 envelope is not None
                 and slot.validation_id is not None
@@ -401,7 +413,7 @@ class RuntimeStore:
                 ):
                     status, envelope = "INVALIDATED_DURING_ANALYSIS", None
             slot.status = status
-            if control.stream_generation == generation:
+            if control.stream_generation == generation and not preserve_orb:
                 control.active_envelope = envelope.model_dump(mode="json") if envelope else None
                 control.attempted_envelope_id = None
             db.add(

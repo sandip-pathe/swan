@@ -132,56 +132,64 @@ def session_facts(db: Session, account: Account, row: PaperValidation, binding: 
     ):
         return facts
     strategy = db.get(StrategyRecord, UUID(decision.payload["strategy_id"]))
-    slots = list(
-        db.scalars(
-            select(EvaluationSlot).where(
-                EvaluationSlot.account_id == account.id,
-                EvaluationSlot.validation_id == row.id,
-                EvaluationSlot.status == "STRATEGY_APPROVED",
-            )
-        )
-    )
-    if strategy is None or strategy.account_id != account.id or not slots:
+    if strategy is None or strategy.account_id != account.id:
         return facts
     envelope = StrategyEnvelope.model_validate(strategy.payload)
-    if not any(set(map(str, envelope.evidence_ids)) <= set(slot.evidence_ids) for slot in slots):
-        return facts
-    evaluations = list(
-        db.scalars(
-            select(AuditEvent).where(
-                AuditEvent.account_id == account.id,
-                AuditEvent.kind == "AGENT_EVALUATION",
-                AuditEvent.timestamp >= row.started_at,
-                AuditEvent.timestamp <= row.stopped_at,
+    if envelope.version.startswith("S01-NIFTY-ORB-PAPER:"):
+        from services.paper.orb_qualification import verified_orb_review
+
+        if not verified_orb_review(db, account, row, envelope, buy):
+            return facts
+    else:
+        slots = list(
+            db.scalars(
+                select(EvaluationSlot).where(
+                    EvaluationSlot.account_id == account.id,
+                    EvaluationSlot.validation_id == row.id,
+                    EvaluationSlot.status == "STRATEGY_APPROVED",
+                )
             )
         )
-    )
-    if not any(
-        a.details.get("evaluation_id") in {str(slot.id) for slot in slots}
-        and (a.details.get("envelope") or {}).get("id") == str(envelope.id)
-        for a in evaluations
-    ):
-        return facts
-    outputs = list(
-        db.scalars(
-            select(AuditEvent).where(
-                AuditEvent.account_id == account.id,
-                AuditEvent.kind == "AI_OUTPUT",
-                AuditEvent.timestamp >= row.started_at,
-                AuditEvent.timestamp <= row.stopped_at,
+        if not slots:
+            return facts
+        if not any(set(map(str, envelope.evidence_ids)) <= set(slot.evidence_ids) for slot in slots):
+            return facts
+        evaluations = list(
+            db.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.account_id == account.id,
+                    AuditEvent.kind == "AGENT_EVALUATION",
+                    AuditEvent.timestamp >= row.started_at,
+                    AuditEvent.timestamp <= row.stopped_at,
+                )
             )
         )
-    )
-    reviews = [
-        a
-        for a in outputs
-        if a.details.get("role") == "review"
-        and a.details.get("response_id")
-        and a.details.get("output", {}).get("approved") is True
-        and set(map(str, envelope.evidence_ids)) <= set(a.details["output"].get("evidence_ids", []))
-    ]
-    if not reviews:
-        return facts
+        if not any(
+            a.details.get("evaluation_id") in {str(slot.id) for slot in slots}
+            and (a.details.get("envelope") or {}).get("id") == str(envelope.id)
+            for a in evaluations
+        ):
+            return facts
+        outputs = list(
+            db.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.account_id == account.id,
+                    AuditEvent.kind == "AI_OUTPUT",
+                    AuditEvent.timestamp >= row.started_at,
+                    AuditEvent.timestamp <= row.stopped_at,
+                )
+            )
+        )
+        reviews = [
+            a
+            for a in outputs
+            if a.details.get("role") == "review"
+            and a.details.get("response_id")
+            and a.details.get("output", {}).get("approved") is True
+            and set(map(str, envelope.evidence_ids)) <= set(a.details["output"].get("evidence_ids", []))
+        ]
+        if not reviews:
+            return facts
     # Decision observations establish actual market provenance even for an unfilled cancellation.
     for identifier in envelope.evidence_ids:
         snapshot = db.get(SnapshotRecord, identifier)
@@ -245,8 +253,8 @@ def session_facts(db: Session, account: Account, row: PaperValidation, binding: 
             o.side == "SELL" and o.order_type == "STOP_MARKET" and o.position_id for o in orders
         ):
             checks.append("protective_order")
-        for code, reason in (("stop_exit", "STOP_LOSS"), ("target_exit", "TARGET")):
-            if any(o.reason == reason and o.filled_quantity > 0 for o in orders):
+        for code, reasons in (("stop_exit", {"STOP_LOSS"}), ("target_exit", {"TARGET", "UNDERLYING_TARGET"})):
+            if any(o.reason in reasons and o.filled_quantity > 0 for o in orders):
                 checks.append(code)
     if row.stop_reason == "USER_STOP" and not bought and buy.status == "CANCELLED":
         checks.append("pause_cancel")
@@ -429,6 +437,10 @@ def entry_permission(
     instrument: Instrument | None = None,
     entry_source: str = "AI",
 ) -> EntryPermission:
+    from services.paper.session_stop import session_entry_stopped
+
+    if session_entry_stopped(db, account.id, now):
+        raise ValueError("USER_SESSION_ENTRY_STOP")
     control = db.scalar(
         select(RuntimeControl).where(RuntimeControl.account_id == account.id).with_for_update()
     )

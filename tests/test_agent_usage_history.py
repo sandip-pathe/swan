@@ -43,7 +43,7 @@ def test_historical_allowance_is_recorded_and_late_response_follows_request_day(
     result = get(d, stamp.astimezone(IST).date().isoformat()).json()
     assert result["day_ended"] and result["policy_source"] == "recorded"
     assert result["policy"] == {"model": None, "daily_allowance": 1000}
-    assert result["reserved_allowance"] == 300 and result["remaining_allowance"] == 700
+    assert result["reserved_allowance"] == 300 and result["remaining_allowance"] == 825
     assert result["reservation_count"] == 2 and result["reported_tokens"] == 75
     assert result["reported_calls"] == 1 and result["unknown_calls"] == 1
     assert result["models"] == [{"model": "old-model", "reservations": 2}]

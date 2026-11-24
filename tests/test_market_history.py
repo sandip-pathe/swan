@@ -173,6 +173,56 @@ async def test_candle_client_uses_allowlisted_read_only_route_and_normalizes(sce
         await client.close()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "Access denied because of exceeding access rate",
+        "Too many requests",
+        {"status": False, "errorcode": "AB1021", "message": "private"},
+    ],
+)
+async def test_history_403_throttling_does_not_report_invalid_login(monkeypatch, payload):
+    client = AngelOneClient(MarketSettings(_env_file=None))
+    await client.http.aclose()
+    calls = []
+
+    def response(request):
+        calls.append(request)
+        if isinstance(payload, dict):
+            return httpx.Response(403, json=payload)
+        return httpx.Response(403, text=payload)
+
+    client.http = httpx.AsyncClient(
+        base_url="https://apiconnect.angelone.in", transport=httpx.MockTransport(response)
+    )
+    monkeypatch.setattr(client, "_headers", lambda saved: {})
+    try:
+        with pytest.raises(ProviderError, match="^PROVIDER_RATE_LIMITED$"):
+            await client._post(CANDLES, {})
+        assert len(calls) == 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_history_403_without_throttle_evidence_still_requires_auth(monkeypatch):
+    from services.market.settings import AuthenticationRequired
+
+    client = AngelOneClient(MarketSettings(_env_file=None))
+    await client.http.aclose()
+    client.http = httpx.AsyncClient(
+        base_url="https://apiconnect.angelone.in",
+        transport=httpx.MockTransport(lambda request: httpx.Response(403, text="private")),
+    )
+    monkeypatch.setattr(client, "_headers", lambda saved: {})
+    try:
+        with pytest.raises(AuthenticationRequired, match="^BROKER_AUTH_REJECTED$"):
+            await client._post(CANDLES, {})
+    finally:
+        await client.close()
+
+
 @pytest.mark.integration
 def test_history_api_explicit_refresh_cached_read_ownership_throttle_and_no_execution(
     paper,

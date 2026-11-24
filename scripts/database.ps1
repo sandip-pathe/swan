@@ -45,17 +45,19 @@ if ($LASTEXITCODE -ne 0) {
 if (-not (Test-Path -LiteralPath $envFile)) { throw 'Database environment configuration is missing.' }
 $databaseLine = Get-Content -LiteralPath $envFile | Where-Object { $_ -like 'DATABASE_URL=*' } | Select-Object -First 1
 $connection = [Uri]($databaseLine.Substring('DATABASE_URL='.Length).Replace('postgresql+psycopg://', 'postgresql://'))
+$databasePort = $connection.Port
+if ($databasePort -lt 1 -or $databasePort -gt 65535) { throw 'DATABASE_URL requires an explicit valid port.' }
 $oldPassword = $env:PGPASSWORD
 try {
     $env:PGPASSWORD = [Uri]::UnescapeDataString(($connection.UserInfo -split ':', 2)[1])
     $psql = Join-Path $workspaceRoot '.tools\pgsql\bin\psql.exe'
-    $exists = & $psql -h 127.0.0.1 -p 54329 -U swan -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'swan_trade'" -v ON_ERROR_STOP=1
+    $exists = & $psql -h 127.0.0.1 -p $databasePort -U swan -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'swan_trade'" -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'Database connection failed.' }
     if (($exists -join '').Trim() -ne '1') {
-        & (Join-Path $workspaceRoot '.tools\pgsql\bin\createdb.exe') -h 127.0.0.1 -p 54329 -U swan swan_trade
+        & (Join-Path $workspaceRoot '.tools\pgsql\bin\createdb.exe') -h 127.0.0.1 -p $databasePort -U swan swan_trade
         if ($LASTEXITCODE -ne 0) { throw 'Database creation failed.' }
     }
-    & $psql -h 127.0.0.1 -p 54329 -U swan -d swan_trade -tAc 'SELECT current_database()' -v ON_ERROR_STOP=1
+    & $psql -h 127.0.0.1 -p $databasePort -U swan -d swan_trade -tAc 'SELECT current_database()' -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'Database verification failed.' }
 } finally { $env:PGPASSWORD = $oldPassword }
-Write-Output 'PostgreSQL is ready on 127.0.0.1:54329. Credentials remain in the ignored root .env.'
+Write-Output "PostgreSQL is ready on 127.0.0.1:$databasePort. Credentials remain in the ignored root .env."

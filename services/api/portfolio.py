@@ -1,5 +1,6 @@
 """Read-only portfolio display, sharing execution's conservative valuation model."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -10,8 +11,15 @@ from sqlalchemy.orm import Session
 
 from services.api.auth import account_identity
 from services.core.contracts import IST, Quote, RiskConfig, money
-from services.core.models import Account, LedgerEntry, PaperFill, PaperOrder, PaperPosition
-from services.paper.accounting import reconcile_account
+from services.core.models import (
+    Account,
+    InstrumentRecord,
+    LedgerEntry,
+    PaperFill,
+    PaperOrder,
+    PaperPosition,
+)
+from services.paper.accounting import ACTIVE, reconcile_account
 from services.paper.portfolio import portfolio_snapshot
 from services.worker.models import LatestMarketQuote
 
@@ -20,6 +28,19 @@ router = APIRouter()
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+@dataclass
+class ExposureBucket:
+    instrument_id: str
+    open_quantity: int = 0
+    entry_cost_basis: Decimal = Decimal(0)
+    planned_stop_risk: Decimal = Decimal(0)
+    pending_quantity: int = 0
+    pending_limit_notional: Decimal = Decimal(0)
+    pending_limit_orders: int = 0
+    pending_order_count: int = 0
+    pending_reserved_risk: Decimal = Decimal(0)
 
 
 @router.get("/api/paper/portfolio")
@@ -74,6 +95,71 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
                 PaperPosition.account_id == owner
             )
         ) or Decimal(0)
+        # Keep cost-basis exposure explicitly separate from the liquidation
+        # estimate above. It remains useful when quotes are stale, but it must
+        # never be presented as current market value.
+        open_positions = list(
+            db.scalars(
+                select(PaperPosition)
+                .where(PaperPosition.account_id == owner, PaperPosition.closed_at.is_(None))
+                .order_by(PaperPosition.instrument_id, PaperPosition.opened_at, PaperPosition.id)
+            )
+        )
+        pending_entries = list(
+            db.scalars(
+                select(PaperOrder)
+                .where(
+                    PaperOrder.account_id == owner,
+                    PaperOrder.side == "BUY",
+                    PaperOrder.status.in_(ACTIVE),
+                )
+                .order_by(PaperOrder.instrument_id, PaperOrder.timestamp, PaperOrder.id)
+            )
+        )
+        exposure_by_instrument: dict[str, ExposureBucket] = {}
+        for position in open_positions:
+            remaining = position.quantity - position.closed_quantity
+            if remaining <= 0:
+                continue
+            item = exposure_by_instrument.setdefault(
+                position.instrument_id, ExposureBucket(position.instrument_id)
+            )
+            item.open_quantity += remaining
+            item.entry_cost_basis += money(position.average_price * remaining)
+            item.planned_stop_risk += money(position.planned_risk)
+        for order in pending_entries:
+            remaining = order.quantity - order.filled_quantity
+            if remaining <= 0:
+                continue
+            item = exposure_by_instrument.setdefault(
+                order.instrument_id, ExposureBucket(order.instrument_id)
+            )
+            item.pending_quantity += remaining
+            item.pending_order_count += 1
+            item.pending_reserved_risk += money(order.reserved_risk)
+            if order.limit_price is not None:
+                item.pending_limit_notional += money(order.limit_price * remaining)
+                item.pending_limit_orders += 1
+        exposure = None
+        if reconciled:
+            exposure = [
+                {
+                    "instrument_id": item.instrument_id,
+                    "open_quantity": item.open_quantity,
+                    "entry_cost_basis": str(money(item.entry_cost_basis)),
+                    "planned_stop_risk": str(money(item.planned_stop_risk)),
+                    "pending_quantity": item.pending_quantity,
+                    "pending_limit_notional": (
+                        str(money(item.pending_limit_notional))
+                        if item.pending_limit_orders == item.pending_order_count
+                        else None
+                    ),
+                    "pending_order_count": item.pending_order_count,
+                    "pending_limit_orders": item.pending_limit_orders,
+                    "pending_reserved_risk": str(money(item.pending_reserved_risk)),
+                }
+                for item in sorted(exposure_by_instrument.values(), key=lambda row: row.instrument_id)
+            ]
         fees = db.scalar(
             select(func.coalesce(func.sum(PaperFill.fees), 0))
             .join(PaperOrder, PaperOrder.id == PaperFill.order_id)
@@ -124,16 +210,23 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
         }
         equity = snapshot.state.equity if valued and snapshot else None
         total = money(equity - capital) if equity is not None and capital_records else None
+        session_opening_equity = account.session_opening_equity
         session_current = (
             account.session_key == now.astimezone(IST).date()
-            and account.session_opening_equity is not None
+            and session_opening_equity is not None
         )
         risk_headroom = None
-        if valued and snapshot and session_current and account.session_opening_equity:
+        if (
+            valued
+            and snapshot
+            and session_current
+            and session_opening_equity is not None
+        ):
             try:
                 risk_config = RiskConfig.model_validate(account.config)
-                loss_limit = money(account.session_opening_equity * risk_config.max_daily_loss_pct)
-                loss_used = max(Decimal(0), money(account.session_opening_equity - equity))
+                assert equity is not None
+                loss_limit = money(session_opening_equity * risk_config.max_daily_loss_pct)
+                loss_used = max(Decimal(0), money(session_opening_equity - equity))
                 allocated = money(snapshot.state.reserved_risk)
                 risk_headroom = {
                     "loss_limit": str(loss_limit),
@@ -144,6 +237,21 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
                 }
             except ValueError:
                 risk_headroom = None
+        fee_bases = set()
+        for execution, instrument in db.execute(
+            select(PaperOrder.execution_config, InstrumentRecord.payload)
+            .join(InstrumentRecord, InstrumentRecord.id == PaperOrder.instrument_id)
+            .where(PaperOrder.account_id == owner, PaperOrder.filled_quantity > 0)
+        ):
+            if not isinstance(execution, dict) or not execution:
+                fee_bases.add("legacy")
+                continue
+            if not isinstance(instrument, dict):
+                fee_bases.add("unknown")
+                continue
+            for schedule in execution.get("fee_schedules", []):
+                if schedule.get("exchange") == instrument.get("exchange"):
+                    fee_bases.add(schedule.get("calculation_basis", "documented"))
         return {
             "as_of": now.isoformat(),
             "status": status,
@@ -165,13 +273,17 @@ def portfolio(request: Request, owner: UUID = Depends(account_identity)):
             "realized_pnl": str(money(realized)) if reconciled else None,
             "unrealized_pnl": str(money(total - realized)) if total is not None else None,
             "total_pnl": str(total) if total is not None else None,
-            "session_pnl": str(money(equity - account.session_opening_equity))
-            if equity is not None and session_current and account.session_opening_equity is not None
+            "session_pnl": str(money(equity - session_opening_equity))
+            if equity is not None and session_current and session_opening_equity is not None
             else None,
             "session_date": account.session_key.isoformat()
             if session_current and account.session_key is not None
             else None,
             "fees": str(money(fees)) if reconciled else None,
+            "fee_basis": next(iter(fee_bases)) if len(fee_bases) == 1 else (
+                "mixed" if fee_bases else "no_fills"
+            ),
             "trade_statistics": trade_statistics,
             "risk_headroom": risk_headroom,
+            "exposure": exposure,
         }

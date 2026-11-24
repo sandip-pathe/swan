@@ -33,7 +33,9 @@ from services.paper.engine import PaperEngine
 from services.paper.qualification import QualificationService
 from services.paper.validation import ValidationService
 from services.risk.engine import quote_problem
+from services.strategies.orb_admission import latest_orb_candidate, stage_orb_candidate
 from services.worker.store import RuntimeStore
+from services.worker.strategy_watch import watch_index
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,7 @@ class TradingRuntime:
             raise ValueError("Worker modes are mutually exclusive")
         self.validation_only = validation_only
         self.validation = ValidationService(engine, account_id)
+        self.validation.clock = lambda: datetime.now(UTC)
         self.qualification = QualificationService(engine, account_id)
         self.paper = PaperEngine(engine, clock=lambda: datetime.now(UTC))
         self.execution = PaperCoordinator(engine, account_id)
@@ -206,75 +209,21 @@ class TradingRuntime:
         if self.current_session(datetime.now(UTC)):
             await self.analysis.refresh_greeks(self.client, list(self.instruments.values()))
 
+    async def refresh_strategy_evidence(self) -> None:
+        # Acquisition and quant assessment run in code. Only emitted setup
+        # changes enqueue bounded model work in the existing durable consumer.
+        result = await asyncio.to_thread(
+            watch_index, self.engine, self.account_id, datetime.now(UTC), self.calendar
+        )
+        if result["status"] == "UNAVAILABLE":
+            logger.warning("Strategy evidence unavailable: %s", result.get("reason"))
+
     async def evaluation_slot(self) -> None:
-        if self.observe_only:
-            return
-        now = datetime.now(UTC)
-        autonomy = (
-            await asyncio.to_thread(self.qualification.scope, now)
-            if not self.validation_only
-            else None
-        )
-        if not self.validation_only and autonomy is None:
-            return
-        scope = (
-            await asyncio.to_thread(self.validation.active_scope, now)
-            if self.validation_only
-            else None
-        )
-        if self.validation_only and (
-            scope is None or scope["entry_used"] or scope.get("entry_source") == "HUMAN"
-        ):
-            return
-        allowed = (
-            {scope["instrument_id"]}
-            if scope
-            else {s["instrument_id"] for s in autonomy["instruments"]}
-            if autonomy
-            else set()
-        )
-        session = self.current_session(now, scope["exchange"] if scope else None)
-        if session is None:
-            return
-        config = (await asyncio.to_thread(self.store.state))["config"]
-        quotes = [
-            quote
-            for item in self.instruments.values()
-            if item.id in allowed
-            if (quote := self.analysis.observed_quote(item, now)) is not None
-            and quote_problem(quote, now, config.quote_max_age_seconds) is None
-        ]
-        index = int((now - session.opens_at).total_seconds()) // 180
-        slot = session.opens_at + timedelta(seconds=index * 180)
-        instruments = {key: item for key, item in self.instruments.items() if key in allowed}
-        generation = self.cache.generation
-        identifier = await asyncio.to_thread(
-            self.store.save_evaluation, session, slot, instruments, quotes, now
-        )
-        if identifier is None:
-            return
-        envelope = None
-        try:
-            if not self.cache.connected or not quotes:
-                raise ProviderError("AI_NO_FRESH_STREAM")
-            if self.agents is None:
-                return
-            envelope = await self.agents.evaluate(instruments, quotes, session, config, identifier)
-            status = "STRATEGY_APPROVED" if envelope else "AGENT_WAIT_OR_REJECT"
-            if generation != self.cache.generation or not self.cache.connected:
-                envelope, status = None, "INVALIDATED_DURING_ANALYSIS"
-        except ProviderError as error:
-            status = str(error)
-        except (ValueError, TimeoutError):
-            status = "AI_INVALID_OR_TIMED_OUT"
-        await asyncio.to_thread(
-            self.store.finish_evaluation,
-            identifier,
-            status,
-            generation,
-            envelope,
-            datetime.now(UTC),
-        )
+        """Generic snapshot research has no automatic execution ownership.
+
+        Kept as a no-op for callers preparing older worker modes. Deterministic
+        index events now drive the durable predefined-strategy consumer.
+        """
 
     async def fallback_exits(self, positions: list[Instrument]) -> None:
         if not positions or asyncio.get_running_loop().time() - self.last_fallback < 5:
@@ -304,6 +253,7 @@ class TradingRuntime:
             and self.published_ids.get(item.id) != quote.id
         ]
         await asyncio.to_thread(self.store.publish_quotes, instruments, latest)
+        await asyncio.to_thread(self.store.publish_references, list(self.cache.references.values()))
         self.published_ids.update({quote.instrument_id: quote.id for quote in latest})
 
     async def publish_candles(self) -> None:
@@ -374,6 +324,7 @@ class TradingRuntime:
                     dict(self.cache.quotes),
                     sessions,
                     self.cache.connected and self.cache.problem is None,
+                    dict(self.cache.references),
                 )
             except ValueError:
                 await self.problem("DURABLE_EXECUTION_RECONCILIATION_REQUIRED")
@@ -402,8 +353,8 @@ class TradingRuntime:
         if self.publication_task and self.publication_task.done():
             try:
                 self.publication_task.result()
-            except Exception:
-                raise RuntimeError("MARKET_PERSISTENCE_FAILED") from None
+            except Exception as error:
+                raise RuntimeError("MARKET_PERSISTENCE_FAILED") from error
         if clock - self.last_publication >= 1 and (
             self.publication_task is None or self.publication_task.done()
         ):
@@ -422,7 +373,12 @@ class TradingRuntime:
                     self.fallback_task = asyncio.create_task(self.fallback_exits(positions))
             session = state["session"]
             await asyncio.to_thread(
-                self.paper.monitor, self.account_id, dict(self.cache.quotes), session, now
+                self.paper.monitor,
+                self.account_id,
+                dict(self.cache.quotes),
+                session,
+                now,
+                references=dict(self.cache.references),
             )
         session = self.current_session(now)
         if session is not None and state.get("session_key") != session.key:
@@ -486,6 +442,8 @@ class TradingRuntime:
             if autonomy
             else set()
         )
+        # Stream packets can arrive while the scope reads await database locks.
+        now = datetime.now(UTC)
         session = self.current_session(now, scope["exchange"] if scope else None)
         if session is None:
             await self.problem("NO_VERIFIED_OPEN_SESSION")
@@ -516,9 +474,36 @@ class TradingRuntime:
             return
         # Any gap invalidates an old envelope before a new entry can be proposed.
         envelope = state["envelope"]
+        if not envelope and self.catalog is not None:
+            reference = self.cache.references.get("NIFTY")
+            candidate_id = await asyncio.to_thread(
+                latest_orb_candidate, self.engine, self.account_id, session
+            )
+            if candidate_id is not None and reference is not None:
+                try:
+                    prepared = await asyncio.to_thread(
+                        stage_orb_candidate, self.engine, self.account_id, candidate_id,
+                        instruments=list(self.catalog.instruments.values()),
+                        quotes=dict(self.cache.quotes), reference=reference,
+                        session=session, now=now,
+                    )
+                except ValueError as error:
+                    await asyncio.to_thread(
+                        self.store.update, status="AWAITING_AGENT", problem=str(error)
+                    )
+                    return
+                envelope = prepared.envelope
         if envelope and (
             envelope.invalidated or not envelope.issued_at <= now < envelope.expires_at
         ):
+            if (
+                positions and not envelope.invalidated
+                and envelope.underlying_exit_policy is not None
+                and envelope.underlying_exit_policy.entry_deadline_only
+            ):
+                # Entry expiry is not the holding limit. The independent watchdog
+                # still enforces the persisted stop, underlying exits and max hold.
+                return
             await asyncio.to_thread(
                 self.store.update,
                 active_envelope=None,
@@ -538,6 +523,26 @@ class TradingRuntime:
             for identifier in envelope.instrument_ids
             if identifier in self.instruments and identifier in allowed
         ]
+        policy = envelope.underlying_exit_policy
+        if (
+            not positions and policy is not None
+            and policy.entry_lower is not None and policy.entry_upper is not None
+        ):
+            reference = self.cache.references.get(policy.underlying)
+            valid = (
+                reference is not None
+                and 0 <= (now - reference.timestamp).total_seconds() <= config.quote_max_age_seconds
+                and 0 <= (now - reference.received_at).total_seconds() <= config.quote_max_age_seconds
+            )
+            if valid and reference is not None:
+                valid = (
+                    policy.entry_lower < reference.last_price <= policy.entry_upper
+                    if policy.direction == "BULLISH"
+                    else policy.entry_lower <= reference.last_price < policy.entry_upper
+                )
+            if not valid:
+                await self.problem("ORB_UNDERLYING_PREDICATE_FAILED")
+                return
         if not eligible or any(
             quote_problem(self.cache.quotes.get(item.id), now, config.quote_max_age_seconds)
             for item in eligible
@@ -617,7 +622,6 @@ class TradingRuntime:
                 ("universe", self.refresh_universe, 180),
                 ("display", self.refresh_display_subscriptions, 15),
                 ("metrics", self.refresh_metrics, 60),
-                ("evaluation", self.evaluation_slot, 180),
             ):
                 self.scheduler.add_job(
                     function,
@@ -628,6 +632,17 @@ class TradingRuntime:
                     coalesce=True,
                     misfire_grace_time=15,
                 )
+            self.scheduler.add_job(
+                self.refresh_strategy_evidence,
+                "cron",
+                minute="*",
+                second=5,
+                timezone=IST,
+                id="strategy-evidence",
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=15,
+            )
             self.scheduler.start()
             while not self.stopping.is_set():
                 try:

@@ -1,4 +1,90 @@
 {
+  "$defs": {
+    "UnderlyingExitPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "BULLISH",
+            "BEARISH"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "entry_deadline_only": {
+          "default": false,
+          "title": "Entry Deadline Only",
+          "type": "boolean"
+        },
+        "entry_lower": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry Lower"
+        },
+        "entry_upper": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry Upper"
+        },
+        "invalidation": {
+          "title": "Invalidation",
+          "type": "string"
+        },
+        "premium_stop_fraction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Premium Stop Fraction"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "underlying": {
+          "enum": [
+            "NIFTY",
+            "SENSEX"
+          ],
+          "title": "Underlying",
+          "type": "string"
+        }
+      },
+      "required": [
+        "underlying",
+        "direction",
+        "invalidation",
+        "target"
+      ],
+      "title": "UnderlyingExitPolicy",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
   "properties": {
     "action": {
@@ -88,8 +174,26 @@
       "type": "string"
     },
     "target": {
-      "title": "Target",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Target"
+    },
+    "underlying_exit_policy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnderlyingExitPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "version": {
       "minLength": 1,

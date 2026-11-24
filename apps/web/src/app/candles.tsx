@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IChartApi, ISeriesApi, SeriesDefinition, UTCTimestamp, IPriceLine, ISeriesMarkersPluginApi, Time } from "lightweight-charts";
 import { money } from "@/lib/paper";
-import { contiguous, movingAverage, rsi14, resample, type Candles, type Point, type Timeframe } from "@/lib/chart-data";
+import { contiguous, movingAverage, rsi14, resample, sessionVwap, doubleEma, type Candles, type Point, type Timeframe } from "@/lib/chart-data";
 import Icon from "./icons";
 import { ChartTradeControls, useChartTrades } from "./chart-trades";
 import { pendingOrderMarkers, tradeMarkers, type ChartTrades, type TradePosition } from "@/lib/chart-trades";
@@ -32,6 +32,12 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
   const lineDefinition = useRef<SeriesDefinition<"Line"> | null>(null);
   const lines = useRef<ISeriesApi<"Line">[]>([]);
   const averages = useRef<ISeriesApi<"Line">[]>([]);
+  const vwapLines = useRef<ISeriesApi<"Line">[]>([]);
+  const demaLines = useRef<ISeriesApi<"Line">[]>([]);
+  const [showVwap, setShowVwap] = useState(true);
+  const [showDema, setShowDema] = useState(true);
+  const vwap = useMemo(() => sessionVwap(data, minutes), [data, minutes]);
+  const dema = useMemo(() => doubleEma(data, minutes), [data, minutes]);
   const ema = useMemo(() => movingAverage(data, minutes, averageKind, averagePeriod), [data, minutes, averageKind, averagePeriod]);
   const rsi = useMemo(() => rsi14(data, minutes), [data, minutes]);
   const rsiSeries = useRef<ISeriesApi<"Line">[]>([]);
@@ -97,8 +103,10 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
     }
     syncLines(lines.current, contiguous(data.bars.map(bar => ({ time: timestamp(bar.opens_at), value: Number(bar.close) })), minutes), "#2455e6", mode === "line");
     syncLines(averages.current, showEma ? contiguous(ema, minutes) : [], "#9a5b09", showEma, true);
+    syncLines(vwapLines.current, showVwap ? contiguous(vwap, minutes) : [], "#2455e6", showVwap);
+    syncLines(demaLines.current, showDema ? contiguous(dema, minutes) : [], "#087f62", showDema);
     if (!fitted.current && data.bars.length) { chart.current?.timeScale().fitContent(); fitted.current = true; }
-  }, [data, ready, mode, showEma, ema, minutes]);
+  }, [data, ready, mode, showEma, ema, minutes, showVwap, showDema, vwap, dema]);
 
   useEffect(() => {
     if (!ready || !carrier.current || !markers.current) return;
@@ -151,6 +159,8 @@ function PriceChart({ data, minutes, mode, showEma, onToggleEma, averageKind, av
     if (scale && range) { const middle = (range.from + range.to) / 2; const half = (range.to - range.from) * factor / 2; scale.setVisibleLogicalRange({ from: middle - half, to: middle + half }); }
   };
   return <>
+    <div className="button-row"><button className="secondary" aria-pressed={showVwap} onClick={() => setShowVwap(value => !value)}>VWAP HLC3 {showVwap ? "On" : "Off"}</button><button className="secondary" aria-pressed={showDema} onClick={() => setShowDema(value => !value)}>DEMA 9 {showDema ? "On" : "Off"}</button><span className="muted">Last plotted VWAP {vwap.length ? vwap.at(-1)!.value.toFixed(2) : "unavailable: needs session volume and complete bars"} / last plotted DEMA {dema.length ? dema.at(-1)!.value.toFixed(2) : "warming up: needs 17 completed bars"}</span></div>
+    <p className="muted">Indicators use completed candles. DEMA restarts after gaps and at each session; broker history or seeding may differ. Neither line is an automatic stop or exit.</p>
     <div className="candle-readout" aria-label="Selected candle details"><span>{bar ? `${stamp(bar.opens_at)} IST` : "Select a candle"}</span><dl>{([ ["O", "open"], ["H", "high"], ["L", "low"], ["C", "close"] ] as const).map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{bar ? Number(bar[key]).toFixed(2) : "—"}</dd></div>)}</dl><small>Vol {bar?.volume?.toLocaleString("en-IN") ?? "unavailable"}{showEma ? ` · ${averageLabel} ${average == null ? `unavailable — needs ${averagePeriod} completed candles after each gap` : average.toFixed(2)}` : ""}</small></div>
     <div className={`candle-canvas${showRsi ? " with-rsi" : ""}`} ref={host} role="img" aria-label={`${minutes}-minute ${mode === "candles" ? "candlestick" : "line"} price chart. Equivalent values are available in Candle data below.`} />
     {showRsi && <p className="rsi-readout" aria-label="RSI readout">RSI 14 <strong>{rsiValue == null ? "Unavailable" : rsiValue.toFixed(2)}</strong><span>{rsiValue == null ? "Needs 15 consecutive completed candles after each gap." : "Lower pane · Reference levels 30 / 70"}</span></p>}

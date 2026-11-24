@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$(realpath "$0")")/../.."
+exec docker compose --env-file hosting/oracle/deploy.env -f hosting/oracle/compose.yaml "$@"

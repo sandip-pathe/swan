@@ -128,6 +128,143 @@ class MarketHistoryBatch(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class IndexHistoryBatch(Base):
+    """Immutable underlying-index history response, separate from option records."""
+
+    __tablename__ = "index_history_batches"
+    __table_args__ = (
+        Index("index_history_session_received", "underlying", "exchange", "session_key", "received_at"),
+    )
+    snapshot_id: Mapped[str] = mapped_column(primary_key=True)
+    underlying: Mapped[str] = mapped_column()
+    exchange: Mapped[str] = mapped_column()
+    session_key: Mapped[date] = mapped_column()
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    source: Mapped[str] = mapped_column()
+    response_sha256: Mapped[str] = mapped_column()
+    provider_request: Mapped[dict[str, Any]] = mapped_column(JSON)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class StrategyAssessmentRecord(Base):
+    """Immutable deterministic assessment linked to its exact market snapshot."""
+
+    __tablename__ = "strategy_assessments"
+    __table_args__ = (
+        UniqueConstraint("snapshot_id", "strategy_id", "version", name="one_assessment_per_snapshot_version"),
+        Index("strategy_assessment_session_asof", "session_key", "as_of"),
+    )
+    id: Mapped[str] = mapped_column(primary_key=True)
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("index_history_batches.snapshot_id"))
+    strategy_id: Mapped[str] = mapped_column()
+    version: Mapped[str] = mapped_column()
+    definition_fingerprint: Mapped[str] = mapped_column()
+    session_key: Mapped[date] = mapped_column()
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column()
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class StrategyWatcherEvent(Base):
+    """Idempotent ORB watcher delivery and its candidate/no-candidate reason."""
+
+    __tablename__ = "strategy_watcher_events"
+    __table_args__ = (
+        Index("strategy_watcher_session_time", "session_key", "created_at"),
+    )
+    event_key: Mapped[str] = mapped_column(primary_key=True)
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("index_history_batches.snapshot_id"))
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("strategy_assessments.id"))
+    session_key: Mapped[date] = mapped_column()
+    event_kind: Mapped[str] = mapped_column()
+    state_fingerprint: Mapped[str] = mapped_column()
+    emitted: Mapped[bool] = mapped_column()
+    reason: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class StrategyPlanDraftRecord(Base):
+    """Immutable research-only plan draft linked to one deterministic assessment."""
+
+    __tablename__ = "strategy_plan_drafts"
+    __table_args__ = (Index("strategy_plan_session_asof", "session_key", "as_of"),)
+    assessment_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_assessments.id"), primary_key=True
+    )
+    plan_id: Mapped[str] = mapped_column(unique=True)
+    strategy_id: Mapped[str] = mapped_column()
+    version: Mapped[str] = mapped_column()
+    session_key: Mapped[date] = mapped_column()
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    outcome: Mapped[str] = mapped_column()
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class StrategyPaperPlanCandidateRecord(Base):
+    """Immutable reviewed paper-plan candidate; blocked until a later admission flow."""
+
+    __tablename__ = "strategy_paper_plan_candidates"
+    __table_args__ = (
+        UniqueConstraint("source_plan_id", "review_artifact_id", name="one_reviewed_plan_candidate"),
+        Index("strategy_paper_candidate_created", "created_at"),
+    )
+    candidate_id: Mapped[str] = mapped_column(primary_key=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("strategy_assessments.id"))
+    source_plan_id: Mapped[str] = mapped_column(ForeignKey("strategy_plan_drafts.plan_id"))
+    review_assignment_id: Mapped[UUID] = mapped_column(ForeignKey("agent_assignments.id"))
+    review_artifact_id: Mapped[UUID] = mapped_column(ForeignKey("agent_artifacts.id"))
+    status: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class StrategyResearchCandidateRecord(Base):
+    """Immutable inactive research proposal."""
+
+    __tablename__ = "strategy_research_candidates"
+    __table_args__ = (
+        UniqueConstraint("strategy_id", "version", name="one_research_candidate_version"),
+        Index("strategy_candidate_created", "created_at"),
+    )
+    candidate_id: Mapped[str] = mapped_column(primary_key=True)
+    strategy_id: Mapped[str] = mapped_column()
+    version: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class AgentAssignment(Base):
+    """Durable bounded reasoning assignment; never an execution instruction."""
+
+    __tablename__ = "agent_assignments"
+    __table_args__ = (
+        UniqueConstraint("account_id", "request_key", name="one_agent_assignment_per_request"),
+        Index("agent_assignment_account_created", "account_id", "created_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
+    request_key: Mapped[str] = mapped_column()
+    kind: Mapped[str] = mapped_column()
+    state: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    input_refs: Mapped[dict[str, Any]] = mapped_column(JSON)
+    outcome: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+
+
+class AgentArtifact(Base):
+    """Immutable analyst, reviewer, research, and final outcome artifacts."""
+
+    __tablename__ = "agent_artifacts"
+    __table_args__ = (Index("agent_artifact_assignment_created", "assignment_id", "created_at"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    assignment_id: Mapped[UUID] = mapped_column(ForeignKey("agent_assignments.id"), index=True)
+    kind: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class LiveCandleSegment(Base):
     __tablename__ = "live_candle_segments"
     __table_args__ = (
@@ -359,13 +496,14 @@ class PaperPosition(Base):
     average_price: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     entry_fees: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     stop_loss: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    target: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    target: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     planned_risk: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     max_holding_seconds: Mapped[int]
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     realized_pnl: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
     pending_exit: Mapped[str | None]
+    underlying_exit_policy: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     config: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 

@@ -148,3 +148,21 @@ test('marker ordering is deterministic and invalid fill prices do not enter the 
   const output=tradeMarkers(input,1,[fill('z','SELL'),fill('x','BUY','NaN'),fill('a','BUY'),fill('b','HOLD')]);
   assert.deepEqual(output.map(row=>row.id),['a','z']);
 });
+const { sessionVwap, doubleEma } = require('./chart-data.ts');
+test('VWAP and DEMA match weighted HLC3 and SMA-seeded linear reference values', () => {
+  const input = data(20);
+  input.bars.forEach((bar, i) => { bar.low = String(i + 1); });
+  assert.equal(sessionVwap(input, 1).at(-1).value, 11.5);
+  const dema = doubleEma(input, 1);
+  assert.equal(dema.length, 4);
+  assert.equal(dema.at(-1).value, 21);
+  input.bars[0].volume = null;
+  assert.deepEqual(sessionVwap(input, 1), []);
+  assert.equal(doubleEma(input, 1).length, 4);
+});
+test('VWAP never restarts after a missing opening bar and DEMA warms up again after a gap', () => {
+  const input = data(40);
+  input.bars.splice(10, 1);
+  assert.equal(sessionVwap(input, 1).length, 10);
+  assert.equal(doubleEma(input, 1)[0].time, Date.parse(iso(27)) / 1000);
+});

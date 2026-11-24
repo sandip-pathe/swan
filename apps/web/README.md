@@ -1,19 +1,56 @@
 # SWAN Trade frontend
 
-Firebase browser sign-in foundation. No protected portfolio or trading API exists yet. Signing in does not grant trading authorization; the backend must verify Firebase tokens and enforce the configured UID allowlist before exposing protected data or commands.
+Next.js app for the single-user, paper-only SWAN workspace. Vercel serves this
+frontend; the API, PostgreSQL and market worker run separately on the Oracle VM.
+The API must be reachable over HTTPS and configured with the exact Vercel origin
+before authenticated workspace data can load. Keep paper entries paused until the
+backend's existing qualification and arm gates are satisfied.
 
-## Local setup
+## Deploy with Vercel's web UI
 
-The workspace provides Node.js 24 LTS; activate it using the root setup instructions. Dependencies are installed and locked. In this directory run `npm.cmd ci`, `npm.cmd run typecheck`, `npm.cmd run build`, then `npm.cmd run dev`. Production build and type checking passed during setup. Live Firebase sign-in remains to be checked in the browser.
+1. Import the `sandip-pathe/swan` GitHub repository in Vercel.
+2. Set **Root Directory** to `apps/web` and keep **Include files outside the root
+   directory** disabled. This app uses only its own package and lock files.
+3. Confirm **Framework Preset** is Next.js. Use `npm run build` as the build
+   command; leave the install command and output directory at their defaults.
+   Vercel detects `package-lock.json` and runs the corresponding npm install.
+4. Add the following variables under Project Settings → Environment Variables.
+   Copy the Firebase browser configuration from Firebase Console → Project
+   settings → Your apps → Web app. Set them for Production and Preview only when
+   those deployments should connect to the same single-user backend.
 
-Local Firebase web configuration has been extracted from the supplied root `firebase.config` into ignored `.env.local`. `.env.example` lists the expected names. These `NEXT_PUBLIC_` values are browser configuration, not backend service-account credentials; never place private keys here.
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`
+   - `NEXT_PUBLIC_API_BASE_URL` — the backend's HTTPS origin, such as
+     `https://api.example.com`, with no path suffix.
 
-In Firebase Console, enable Authentication → Sign-in method → Google, configure the support email, and authorize the exact development/production domains in Authentication settings. Check `localhost` explicitly rather than assuming it is authorized. Run the app at `http://localhost:3000` for development and verify sign-in, refresh/session restoration and sign-out. Firebase web config alone does not confirm provider enablement.
+5. Deploy, then add the assigned Vercel production domain under Firebase
+   Authentication → Settings → Authorized domains. Enable only the sign-in
+   providers you use and keep public account creation disabled.
+6. Set `SWAN_WEB_ORIGINS` on the backend to a JSON array containing the exact
+   production origin, such as `["https://swan.example.com"]`. Add the exact
+   Vercel preview origin only if you intend to use previews with the live
+   single-user backend. Keep backend owner bootstrap disabled and bind the
+   authorized Firebase UID explicitly to the existing paper account.
+7. Redeploy after changing environment variables. Check sign-in, API health,
+   saved records and chat only after HTTPS, Firebase UID binding, database
+   restore and API CORS settings are ready.
 
-Official references: [Google sign-in](https://firebase.google.com/docs/auth/web/google-signin), [backend ID-token verification](https://firebase.google.com/docs/auth/admin/verify-id-tokens).
+Do not add database URLs, broker credentials or sessions, Firebase Admin keys,
+OpenAI keys, or other server secrets to Vercel. `NEXT_PUBLIC_*` values are
+embedded in browser JavaScript and must contain only browser-safe configuration.
+The Firebase web API key is not an authorization control; backend UID checks are.
 
-## Email and password sign-in
+## Local development
 
-The login page also accepts existing Firebase email/password accounts. Enable Authentication → Sign-in method → Email/Password in Firebase Console, then add your account under Authentication → Users → Add user. Do not send the password through chat or put it in project configuration. Public registration is not provided. Passwords are passed only to Firebase's sign-in SDK and the password field is cleared after each attempt. Backend UID authorization still applies when protected APIs are implemented.
+Copy `.env.example` to `.env.local`, fill in the Firebase web app values and leave
+`NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`. The local file is ignored by
+Git. Install with `npm ci`, then use `npm run dev`. `npm run typecheck` and
+`npm run build` are available for local checks.
 
-Reference: [Firebase password authentication](https://firebase.google.com/docs/auth/web/password-auth).
+Firebase browser configuration can be copied from Firebase Console → Project
+settings → Your apps → Web app. Do not copy service-account JSON into this app.

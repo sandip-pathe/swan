@@ -1,5 +1,6 @@
 """Bounded paper-only leases. A stopped lease never grants autonomous qualification."""
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
@@ -231,12 +232,14 @@ def settle(db: Session, account: Account, lease: PaperValidation, now: datetime)
 
 
 class ValidationService:
-    def __init__(self, engine: Engine, account_id: UUID):
+    def __init__(self, engine: Engine, account_id: UUID, clock: Callable[[], datetime] | None = None):
         self.engine, self.account_id = engine, account_id
+        self.clock = clock
 
     def start(self, request: ValidationRequest, now: datetime) -> dict:
         with Session(self.engine) as db, db.begin():
             account = PaperEngine._account(db, self.account_id)
+            now = self.clock() if self.clock else now
             previous = db.get(PaperValidation, request.request_id)
             if previous:
                 if previous.account_id != account.id or {
@@ -390,6 +393,7 @@ class ValidationService:
     def tick(self, now: datetime, *, force_reason: str | None = None) -> dict | None:
         with Session(self.engine) as db, db.begin():
             account = PaperEngine._account(db, self.account_id)
+            now = self.clock() if self.clock else now
             lease = current(db, account.id)
             if lease is None:
                 return None
@@ -423,6 +427,7 @@ class ValidationService:
     def active_scope(self, now: datetime) -> dict | None:
         with Session(self.engine) as db, db.begin():
             account = PaperEngine._account(db, self.account_id)
+            now = self.clock() if self.clock else now
             lease = current(db, account.id)
             if lease is None or problem(db, account, lease, now):
                 return None

@@ -1,3 +1,4 @@
+import asyncio
 import csv
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from services.agents.watcher_worker import watcher_assignment_worker
 from services.api.agent_activity import router as agent_activity_router
 from services.api.agent_evidence import router as agent_evidence_router
 from services.api.agent_run import router as agent_run_router
@@ -22,8 +24,12 @@ from services.api.auth import account_identity, settings
 from services.api.candles import router as candle_router
 from services.api.chain import router as chain_router
 from services.api.chart_trades import router as chart_trades_router
+from services.api.chat import router as chat_router
+from services.api.chat_control import router as chat_control_router
 from services.api.daily_report import router as daily_report_router
 from services.api.history import router as history_router
+from services.api.index_history import router as index_history_router
+from services.api.indicators import router as indicators_router
 from services.api.instruments import router as instrument_router
 from services.api.journal import router as journal_router
 from services.api.manual_orders import router as manual_orders_router
@@ -35,6 +41,7 @@ from services.api.paper_actions import router as paper_actions_router
 from services.api.paper_control import router as paper_control_router
 from services.api.portfolio import router as portfolio_router
 from services.api.setup import router as setup_router
+from services.api.strategy_records import router as strategy_records_router
 from services.api.validation import router as validation_router
 from services.api.watchlist import router as watchlist_router
 from services.core.contracts import RiskConfig
@@ -56,6 +63,7 @@ from services.market.diagnostics import evidence_context
 from services.market.readiness import readiness
 from services.paper.accounting import ACTIVE, LEGACY, reservations, restricted_proceeds
 from services.paper.qualification import qualification_context
+from services.paper.session_stop import session_entry_stopped
 from services.worker.models import EvaluationSlot, RuntimeControl
 
 
@@ -64,14 +72,31 @@ async def lifespan(app: FastAPI):
     app.state.engine = make_engine(
         connect_args={"options": "-clock_timeout=5000 -cstatement_timeout=15000"}
     )
-    yield
-    app.state.engine.dispose()
+    stop_watcher = asyncio.Event()
+    watcher_task = asyncio.create_task(
+        watcher_assignment_worker(app.state.engine, stop_watcher),
+        name="orb-watcher-assignment-consumer",
+    )
+    try:
+        yield
+    finally:
+        stop_watcher.set()
+        watcher_task.cancel()
+        try:
+            await watcher_task
+        except asyncio.CancelledError:
+            pass
+        app.state.engine.dispose()
 
 
 app = FastAPI(
     title="SWAN Trade", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 )
 app.include_router(setup_router)
+app.include_router(strategy_records_router)
+app.include_router(chat_control_router)
+app.include_router(chat_router)
+app.include_router(indicators_router)
 app.include_router(paper_control_router)
 app.include_router(paper_actions_router)
 app.include_router(order_history_router)
@@ -84,6 +109,7 @@ app.include_router(agent_run_router)
 app.include_router(agent_evidence_router)
 app.include_router(validation_router)
 app.include_router(history_router)
+app.include_router(index_history_router)
 app.include_router(candle_router)
 app.include_router(chain_router)
 app.include_router(market_router)
@@ -324,7 +350,10 @@ def workspace(request: Request, identifier: UUID = Depends(account_identity)):
                 **evidence_context(db, identifier),
                 qualification=qualification_context(db, account, datetime.now(UTC)),
             ),
-            "account": row(account),
+            "account": {
+                **row(account),
+                "session_entry_stopped": session_entry_stopped(db, identifier, datetime.now(UTC)),
+            },
             "funds": {
                 "cash": str(account.cash),
                 "reserved_cash": str(reserved_cash),

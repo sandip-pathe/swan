@@ -103,6 +103,37 @@ class Quote(Contract):
         return self
 
 
+class UnderlyingExitPolicy(Contract):
+    underlying: Literal["NIFTY", "SENSEX"]
+    direction: Literal["BULLISH", "BEARISH"]
+    invalidation: Price
+    target: Price
+    premium_stop_fraction: Annotated[Decimal, Field(gt=0, lt=1)] | None = None
+    entry_lower: Price | None = None
+    entry_upper: Price | None = None
+    entry_deadline_only: bool = False
+
+    def premium_stop(self, average_price: Decimal, tick_size: Decimal) -> Decimal:
+        if self.premium_stop_fraction is None:
+            raise ValueError("No fill-relative premium stop configured")
+        return (average_price * (1 - self.premium_stop_fraction) / tick_size).to_integral_value(
+            rounding=ROUND_CEILING
+        ) * tick_size
+
+    @model_validator(mode="after")
+    def valid_levels(self) -> Self:
+        if (self.entry_lower is None) != (self.entry_upper is None):
+            raise ValueError("Underlying entry bounds must be supplied together")
+        if self.entry_lower is not None and self.entry_upper is not None:
+            if self.entry_lower >= self.entry_upper:
+                raise ValueError("Underlying entry bounds must be ordered")
+        if self.direction == "BULLISH" and self.invalidation >= self.target:
+            raise ValueError("Bullish invalidation must be below target")
+        if self.direction == "BEARISH" and self.invalidation <= self.target:
+            raise ValueError("Bearish invalidation must be above target")
+        return self
+
+
 class ExchangeSession(Contract):
     key: date
     opens_at: AwareDatetime
@@ -176,14 +207,20 @@ class StrategyEnvelope(Contract):
     min_entry: Price
     max_entry: Price
     stop_loss: Price
-    target: Price
+    target: Price | None
     max_holding_seconds: PositiveInt = 300
+    underlying_exit_policy: UnderlyingExitPolicy | None = None
     required_metrics: tuple[Literal["oi", "volume", "iv", "greeks"], ...] = ("oi", "volume")
     invalidated: bool = False
 
     @model_validator(mode="after")
     def valid_envelope(self) -> Self:
-        if not self.stop_loss < self.min_entry <= self.max_entry < self.target:
+        if not self.stop_loss < self.min_entry <= self.max_entry:
+            raise ValueError("Envelope must satisfy stop < entry range < target")
+        if self.target is None:
+            if self.underlying_exit_policy is None:
+                raise ValueError("Missing premium target requires an underlying exit policy")
+        elif self.max_entry >= self.target:
             raise ValueError("Envelope must satisfy stop < entry range < target")
         if not timedelta(0) < self.expires_at - self.issued_at <= timedelta(seconds=180):
             raise ValueError("Envelope lifetime must be positive and no longer than 180 seconds")
@@ -205,17 +242,19 @@ class TradeDecision(Contract):
 
     @model_validator(mode="after")
     def valid_proposal(self) -> Self:
-        fields = (self.instrument_id, self.entry, self.stop_loss, self.target, self.strategy_id)
+        fields = (self.instrument_id, self.entry, self.stop_loss, self.strategy_id)
         if self.expires_at <= self.timestamp:
             raise ValueError("Decision must have a positive lifetime")
         if self.action == "WAIT":
-            if any(field is not None for field in fields):
+            if any(field is not None for field in (*fields, self.target)):
                 raise ValueError("WAIT cannot contain execution fields")
         else:
             if any(field is None for field in fields) or not self.snapshot_ids:
                 raise ValueError(
                     "Entry proposals require instrument, prices, strategy and evidence"
                 )
-            if not self.stop_loss < self.entry < self.target:  # type: ignore[operator]
+            if not self.stop_loss < self.entry:  # type: ignore[operator]
+                raise ValueError("Long option proposal must satisfy stop < entry < target")
+            if self.target is not None and self.entry >= self.target:  # type: ignore[operator]
                 raise ValueError("Long option proposal must satisfy stop < entry < target")
         return self

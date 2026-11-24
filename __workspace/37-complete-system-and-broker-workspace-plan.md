@@ -1,10 +1,15 @@
 # SWAN: complete paper system and broker-style workspace
 
-Prepared 18 November 2026, Asia/Kolkata. Planning only. No implementation, configuration changes, provider diagnostics, worker-mode changes or trading authorized by this document itself.
+Prepared 18 November 2026, Asia/Kolkata. This is the detailed feature and
+acceptance blueprint, not a live status tracker. Current status is maintained in
+the root [project work list](../DEFERRED-WORK.md). The accepted [current product
+requirements](./11-current-product-requirements.md) and [decisions](./09-decisions-and-dependencies.md)
+supersede older scope details. They make source-grounded chat the primary user
+surface; that is the next product build item (D23).
 
-Implementation began following the owner's subsequent instruction. M1 inventory, source review and actionable evidence checklist are delivered in [audit 38](./38-m1-baseline-and-evidence-audit.md); the configuration-clearance gate remains open for external fee/depth evidence. [Inventory 39](./39-broker-feature-data-inventory.md) separates existing code, provider declarations and missing broker-workspace features. Current implementation progress is recorded below.
-
-M2 lifecycle implementation is recorded in [milestone 40](./40-m2-qualification-worker-controls.md): server-derived qualification, explicit scoped paper arms, revocation, permission checks and authenticated local worker preparation. This is an implementation milestone, not a claim that actual-market qualification passed. M3 quote/history APIs, after-hours provider reads, observed aggregation and recovery are implemented; see checkpoints [41](./41-m3-market-data-foundation.md), [42](./42-after-hours-market-data.md) and [43](./43-live-candles-and-mobile-chart.md). Mobile contract charts now include derived timeframes, candle/line views and EMA in [44](./44-chart-timeframes-and-ema.md). Actual open-market/reconnect acceptance remains unfinished.
+Implementation evidence from milestones 38–87 remains in the linked checkpoint
+notes. Configuration clearance and actual-market acceptance are separate from
+software implementation; consult the work list for the user's current holds.
 
 ## Target and scope
 
@@ -114,7 +119,20 @@ Acceptance: every displayed account total reconciles to authoritative ledger rec
 
 Expose actual evaluation inputs, evidence age, permitted news context, model/strategy version, review outcome, typed proposal, deterministic risk result and execution outcome as a linked timeline. Distinguish legitimate WAIT/rejection from provider failure, exhausted budget or absent data. Implement/verify end-of-session summaries with reconciled figures, incidents and unresolved checks.
 
-Strategy research track: begin with a small versioned set of explicitly defined hypotheses, such as underlying trend/pullback or range breakout, with a defined option-selection rule, entry predicate, invalidation, holding limit and exit conditions. Mean-reversion is a separate hypothesis with separate regime rules. Do not enable new strategies just because examples are listed here. Continue to require liquidity, spread, freshness, risk and session eligibility; no forced trade to satisfy a demo.
+The accepted current product requirements also make a source-grounded user chat
+the primary app surface. Persist conversations and let chat retrieve relevant
+workspace records through scoped read tools, preserving source, timestamp,
+freshness and unavailable states. The only initial control is an audited,
+idempotent “stop trading today” command. Chat cannot place/alter orders, change
+risk or strategy, access provider credentials, or affect worker monitoring.
+
+Strategy research track: define the existing predefined strategies and their
+versioned evidence, option-selection rule, entry predicate, invalidation, holding
+limit and exits. When none fit, agents may research and propose a new versioned
+strategy with supporting evidence and evaluation; proposal alone cannot promote
+it to execution. Do not enable a strategy merely because it is newly generated.
+Continue to require liquidity, spread, freshness, risk and session eligibility;
+no forced trade to satisfy a demo.
 
 Separate research from execution qualification. Evaluate strategies on permitted historical data with fees, spread/slippage assumptions and out-of-sample splits where appropriate. Candle-only history cannot validate depth-based fills, and insufficient expired-option history limits conclusions. Any deterministic historical research harness is isolated from production; it is proposed new scope requiring its own specification. Compare paper outcomes against a baseline and report uncertainty/sample size. AI may propose and explain; it cannot override risk gates or declare itself profitable.
 
@@ -146,9 +164,13 @@ Deliver a small end-to-end slice before broadening: search one actual contract �
 
 ## Scheduling and completion tracking
 
-M1–M2 are the critical readiness path. M3–M4 can be designed alongside them. M5 depends on data contracts; M6 depends on those contracts and the manual-intent design. M7 reporting can reuse existing agent/ledger evidence. M8 integrates completed slices, then M9 supplies longitudinal evidence.
-
-The earlier estimate of one-to-two working days concerned remaining readiness investigation/testing under favorable conditions. It does not cover this expanded broker-style workspace. Re-estimate after M1 and the chart/data proof of concept. Treat this as a multi-week staged project, plus the observation period; provider entitlements, unavailable evidence and market-session opportunities can extend it. Track milestones with demonstrated acceptance rather than a percentage based on file counts. No implementation starts as part of this planning request.
+The active product build is D23: make source-grounded chat the primary mobile
+surface over the existing market, account and agent records. Then specify and
+deliver the accepted strategy lifecycle as a separate increment. Additional
+analytics and order types stay behind that path. Market access, provider evidence,
+qualification and supervised observation remain separately held work; consult
+the root [status ledger](../DEFERRED-WORK.md) before attempting them. Do not use
+this historical milestone sequence as a claim of current completion.
 
 ## Reference sources
 

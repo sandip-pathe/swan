@@ -13,7 +13,9 @@ from services.paper.contracts import OrderRiskApproval
 
 
 def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None = None) -> dict:
-    unavailable = {"state": "unavailable", "decisions": [], "next_after": None}
+    unavailable: dict[str, object] = {
+        "state": "unavailable", "decisions": [], "next_after": None, "truncated": False
+    }
     outcomes = list(
         db.scalars(
             select(AuditEvent)
@@ -147,8 +149,9 @@ def execution(db: Session, owner: UUID, evaluation_id: UUID, after: UUID | None 
             "min_entry": str(envelope.min_entry),
             "max_entry": str(envelope.max_entry),
             "stop_loss": str(envelope.stop_loss),
-            "target": str(envelope.target),
+            "target": str(envelope.target) if envelope.target is not None else None,
         },
         "decisions": rows,
         "next_after": str(records[-1].id) if more else None,
+        "truncated": more,
     }

@@ -2,7 +2,8 @@
 
 18 November 2026: `local.cmd start` now manages a hidden **observation-only** worker for
 the enrolled local owner. It reports `OBSERVATION_ONLY` and a genuine heartbeat while
-keeping entries and agent generation disabled. It continues existing-position protection
+keeping entries disabled. A deterministic minute-aligned ORB evidence producer can enqueue bounded
+read-only model work through the API durable consumer during its window. It continues existing-position protection
 when usable data is available; a heartbeat does not prove feed health or executable exits.
 `local.cmd stop` stops this managed process. Check `.local/run/worker.stderr.log` if no
 owner is enrolled or a different worker already holds the account lock.

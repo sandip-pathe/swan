@@ -108,6 +108,8 @@ def entry_problem(
         return reject("STRATEGY_MISMATCH")
     if decision.stop_loss != envelope.stop_loss or decision.target != envelope.target:
         return reject("STRATEGY_PRICE_MISMATCH")
+    if envelope.target is None and envelope.underlying_exit_policy is None:
+        return reject("MISSING_EXIT_POLICY")
     if instrument.id != quote.instrument_id or instrument.id != decision.instrument_id:
         return reject("INSTRUMENT_MISMATCH")
     if instrument.option_type != ("CALL" if decision.action == "BUY_CALL" else "PUT"):
@@ -166,7 +168,9 @@ def evaluate_risk(
         return reject("ENTRY_PREDICATE_FAILED")
     if decision.entry is None or not envelope.min_entry <= decision.entry <= envelope.max_entry:
         return reject("ENTRY_PREDICATE_FAILED")
-    if not envelope.stop_loss < entry < envelope.target:
+    if not envelope.stop_loss < entry or (
+        envelope.target is not None and entry >= envelope.target
+    ):
         return reject("INVALID_EXECUTABLE_PRICES")
     stop_exit = config.costs.price(envelope.stop_loss, instrument.tick_size, "SELL")
     if stop_exit <= 0:

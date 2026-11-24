@@ -9,7 +9,7 @@ import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Literal
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
@@ -20,6 +20,7 @@ from services.core.contracts import DepthLevel, Instrument, Quote
 from services.market.angelone import AngelOneClient
 from services.market.catalog import EXCHANGE_TYPES
 from services.market.evidence import identify_quote
+from services.market.reference_contracts import IndexReference
 from services.market.settings import AuthenticationRequired, ProviderError
 
 STREAM_URL = "wss://smartapisocket.angelone.in/smart-stream"
@@ -28,6 +29,7 @@ STREAM_URL = "wss://smartapisocket.angelone.in/smart-stream"
 class QuoteCache:
     def __init__(self):
         self.quotes: dict[str, Quote] = {}
+        self.references: dict[str, IndexReference] = {}
         self.connected = False
         self.generation = 0
         self.last_tick_monotonic: float | None = None
@@ -39,12 +41,25 @@ class QuoteCache:
 
     def invalidate(self, problem: str) -> None:
         self.quotes.clear()
+        self.references.clear()
         self.history.clear()
         self.rejected.clear()
         self.source_quotes.clear()
         self.connected = False
         self.generation += 1
         self.problem = problem
+        self.changed.set()
+
+    def update_reference(self, reference: IndexReference) -> None:
+        previous = self.references.get(reference.underlying)
+        if reference.timestamp > reference.received_at:
+            self.references.pop(reference.underlying, None)
+            self.changed.set()
+            return
+        if previous and previous.timestamp > reference.timestamp:
+            return
+        self.references[reference.underlying] = reference
+        self.last_tick_monotonic = time.monotonic()
         self.changed.set()
 
     def update(self, quote: Quote) -> None:
@@ -165,6 +180,39 @@ def decode_quote(
     )
 
 
+def decode_index_reference(
+    packet: bytes,
+    indexes: dict[
+        tuple[int, str], tuple[Literal["NIFTY", "SENSEX"], Literal["NSE", "BSE"]]
+    ],
+    received_at: datetime,
+) -> IndexReference | None:
+    """Decode the provider's 51-byte LTP packet for configured index tokens."""
+    if len(packet) < 51 or packet[0] != 1:
+        return None
+    token = packet[2:27].split(b"\0", 1)[0].decode("ascii")
+    identity = indexes.get((packet[1], token))
+    if identity is None:
+        return None
+    underlying, exchange = identity
+    milliseconds = struct.unpack_from("<q", packet, 35)[0]
+    paise = struct.unpack_from("<q", packet, 43)[0]
+    if milliseconds <= 0 or paise <= 0:
+        raise ProviderError("INVALID_INDEX_REFERENCE_PACKET")
+    timestamp = datetime.fromtimestamp(milliseconds // 1000, UTC) + timedelta(
+        milliseconds=milliseconds % 1000
+    )
+    return IndexReference(
+        underlying=underlying,
+        exchange=exchange,
+        provider_token=token,
+        timestamp=timestamp,
+        received_at=received_at,
+        last_price=Decimal(paise) / 100,
+        source="angelone-websocket-v2:ltp",
+    )
+
+
 class AngelOneStream:
     def __init__(
         self,
@@ -183,10 +231,27 @@ class AngelOneStream:
             (EXCHANGE_TYPES[item.exchange], item.provider_token): item for item in instruments
         }
         groups = defaultdict(list)
-        for exchange, token in lookup:
-            groups[exchange].append(token)
+        for exchange_type, token in lookup:
+            groups[exchange_type].append(token)
         tokens = [
             {"exchangeType": exchange, "tokens": values} for exchange, values in groups.items()
+        ]
+        index_lookup: dict[
+            tuple[int, str], tuple[Literal["NIFTY", "SENSEX"], Literal["NSE", "BSE"]]
+        ] = {}
+        nifty_token = self.client.settings.nifty_index_token
+        sensex_token = self.client.settings.sensex_index_token
+        if nifty_token:
+            index_lookup[(1, nifty_token)] = ("NIFTY", "NSE")
+        if sensex_token:
+            index_lookup[(3, sensex_token)] = ("SENSEX", "BSE")
+        index_tokens = [
+            {"exchangeType": market_type, "tokens": [token]}
+            for market_type, token in (
+                (1, nifty_token),
+                (3, sensex_token),
+            )
+            if token
         ]
         failures = 0
         while True:
@@ -210,15 +275,10 @@ class AngelOneStream:
                     ping_interval=None,
                 ) as websocket:
                     stream_id = uuid4()
-                    await websocket.send(
-                        json.dumps(
-                            {
-                                "correlationID": "swanquote1",
-                                "action": 1,
-                                "params": {"mode": 3, "tokenList": tokens},
-                            }
-                        )
-                    )
+                    if tokens:
+                        await websocket.send(json.dumps({"correlationID": "swanquote1", "action": 1, "params": {"mode": 3, "tokenList": tokens}}))
+                    if index_tokens:
+                        await websocket.send(json.dumps({"correlationID": "swanindex1", "action": 1, "params": {"mode": 1, "tokenList": index_tokens}}))
                     self.cache.connected = True
                     self.cache.problem = None
 
@@ -237,7 +297,13 @@ class AngelOneStream:
                                 continue
                             if not isinstance(packet, bytes):
                                 raise ProviderError("STREAM_SUBSCRIPTION_REJECTED")
-                            quote = decode_quote(packet, lookup, datetime.now(UTC), stream_id)
+                            received_at = datetime.now(UTC)
+                            reference = decode_index_reference(packet, index_lookup, received_at)
+                            if reference:
+                                self.cache.update_reference(reference)
+                                failures = 0
+                                continue
+                            quote = decode_quote(packet, lookup, received_at, stream_id)
                             if quote:
                                 if self.on_observation:
                                     self.on_observation(quote)

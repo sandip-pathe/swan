@@ -58,6 +58,7 @@ def journal(
         }
         rows = []
         for item in positions:
+            assert item.closed_at is not None  # Query is restricted to closed positions.
             rows.append(
                 {
                     "id": str(item.id),
@@ -67,7 +68,7 @@ def journal(
                     "remaining_quantity": item.quantity - item.closed_quantity,
                     "average_price": str(item.average_price),
                     "stop_loss": str(item.stop_loss),
-                    "target": str(item.target),
+                    "target": str(item.target) if item.target is not None else None,
                     "opened_at": item.opened_at.isoformat(),
                     "closed_at": item.closed_at.isoformat(),
                     "realized_pnl": str(item.realized_pnl)

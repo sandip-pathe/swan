@@ -87,10 +87,21 @@ class AngelOneClient:
                         raise ProviderError("PROVIDER_NETWORK_UNAVAILABLE") from None
                     continue
             if response.status_code in (401, 403):
+                # SmartAPI also uses 403 for throttling, including plain-text
+                # historical-endpoint responses. Do not misdiagnose a valid login.
+                if response.status_code == 403 and any(
+                    marker in response.text.lower()
+                    for marker in ("exceeding access rate", "too many requests")
+                ):
+                    raise ProviderError("PROVIDER_RATE_LIMITED")
                 try:
                     rejection = response.json()
                 except ValueError:
                     rejection = None
+                if response.status_code == 403 and isinstance(rejection, dict) and (
+                    rejection.get("errorcode") == "AB1021"
+                ):
+                    raise ProviderError("PROVIDER_RATE_LIMITED")
                 raise AuthenticationRequired(rejection_code(rejection, "BROKER_AUTH_REJECTED"))
             if response.status_code == 429 or response.status_code >= 500:
                 await asyncio.sleep(min(8, 2**attempt) + random.random())
@@ -164,6 +175,16 @@ class AngelOneClient:
             "received_at": received_at.isoformat(),
             "provider_request": body,
         }
+
+    async def index_candles(self, query):
+        """Read configured NIFTY/NSE index bars without option Instrument coercion."""
+        from services.market.index_history import normalize_index_bars
+
+        requested_at = datetime.now(UTC)
+        body = query.provider_body(self.settings, requested_at)
+        data = await self._post(CANDLES, body, await self.session())
+        received_at = datetime.now(UTC)
+        return normalize_index_bars(data, query, received_at, body)
 
     async def verify_session(self) -> None:
         """Read-only authentication check. Do not return or log profile personal data."""

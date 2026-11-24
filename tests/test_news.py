@@ -43,10 +43,10 @@ def test_newsdata_header_auth_freshness_attribution_and_cache(tmp_path, monkeypa
         assert "apikey" not in request.url.params
         assert "test-private-key" not in str(request.url)
         assert request.headers["X-ACCESS-KEY"] == "test-private-key"
+        assert request.url.path == "/api/1/market"
         assert dict(request.url.params) == {
             "country": "in",
             "language": "en",
-            "category": "business",
         }
         row = article()
         return httpx.Response(

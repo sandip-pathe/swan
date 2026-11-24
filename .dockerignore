@@ -1,0 +1,16 @@
+*
+!pyproject.toml
+!uv.lock
+!alembic.ini
+!services/
+!services/**
+!migrations/
+!migrations/**
+!config/
+!config/**
+!hosting/
+!hosting/oracle/
+!hosting/oracle/Dockerfile
+**/__pycache__
+**/*.pyc
+**/.env*

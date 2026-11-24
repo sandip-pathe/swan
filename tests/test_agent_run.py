@@ -65,6 +65,10 @@ def test_pipeline_carries_evaluation_id_through_all_saved_stages(durable):
 
     async def generate(role, context, model):
         assert context["evaluation_id"] == str(key)
+        assert context["citation_rules"]["market_quote_ids"] == [str(quote.id)]
+        assert context["citation_rules"]["news_ids"] == []
+        assert context["execution_model"]["version"]
+        assert "not executable" in context["planning_semantics"]["quotes"]
         if role == "analysis":
             value = Analysis(
                 outlook="UNCERTAIN",

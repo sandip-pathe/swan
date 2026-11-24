@@ -99,7 +99,7 @@ def evidence_requirements(config: PaperExecutionConfig, day: date) -> list[dict]
                     )
                 ),
             )
-        if not schedule.account_pricing_verified:
+        if not schedule.account_pricing_verified and schedule.calculation_basis != "estimated":
             add(
                 venue + "_ACCOUNT_PRICING_UNVERIFIED",
                 venue + " account pricing is unconfirmed",
@@ -161,5 +161,10 @@ def configuration_status(
         "final_connected_qa_complete": qualification_valid,
         "effective_date": day.isoformat(),
         "fee_schedule_versions": [s.version for s in config.fee_schedules if s.applies(day)],
+        "fee_estimates": [
+            {"exchange": s.exchange, "version": s.version, "notes": s.notes}
+            for s in config.fee_schedules
+            if s.applies(day) and s.calculation_basis == "estimated"
+        ],
         "blockers": [*problems, *([] if qualification_valid else ["FINAL_CONNECTED_QA_PENDING"])],
     }

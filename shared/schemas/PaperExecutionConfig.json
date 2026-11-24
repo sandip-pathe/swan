@@ -311,6 +311,15 @@
           "title": "Account Pricing Verified",
           "type": "boolean"
         },
+        "calculation_basis": {
+          "default": "documented",
+          "enum": [
+            "documented",
+            "estimated"
+          ],
+          "title": "Calculation Basis",
+          "type": "string"
+        },
         "effective_from": {
           "format": "date",
           "title": "Effective From",
@@ -407,6 +416,7 @@
           "enum": [
             "documented",
             "account_verified",
+            "assumed",
             "unverified"
           ],
           "title": "Status",

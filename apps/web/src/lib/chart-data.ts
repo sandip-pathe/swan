@@ -110,3 +110,36 @@ export function rsi14(data: Candles, minutes: Timeframe): Point[] {
   }
   return output;
 }
+
+/** Session HLC3 VWAP. A missing bar or unknown volume invalidates the remaining session. */
+export function sessionVwap(data: Candles, minutes: Timeframe): Point[] {
+  const out: Point[] = [];
+  const byTime = new Map(data.bars.map(bar => [Date.parse(bar.opens_at), bar]));
+  for (const session of data.sessions ?? []) {
+    if (!session.verified) continue;
+    let total = 0, volume = 0;
+    for (let t = Date.parse(session.opens_at); t + minutes * MINUTE <= Math.min(Date.parse(data.as_of), Date.parse(session.closes_at)); t += minutes * MINUTE) {
+      const bar = byTime.get(t);
+      if (!bar || bar.state === "provisional" || bar.volume == null) break;
+      total += (Number(bar.high) + Number(bar.low) + Number(bar.close)) / 3 * bar.volume;
+      volume += bar.volume;
+      if (volume > 0) out.push({ time: t / 1000, value: total / volume });
+    }
+  }
+  return out;
+}
+
+/** SMA-seeded DEMA. Matches the backend's 2*period-1 completed-bar warm-up. */
+export function doubleEma(data: Candles, minutes: Timeframe, period = 9): Point[] {
+  const first = movingAverage(data, minutes, "EMA", period), out: Point[] = [];
+  for (const run of contiguous(first, minutes)) {
+    if (run.length < period) continue;
+    let second = run.slice(0, period).reduce((sum, point) => sum + point.value, 0) / period;
+    out.push({ time: run[period - 1].time, value: 2 * run[period - 1].value - second });
+    for (let i = period; i < run.length; i++) {
+      second += 2 / (period + 1) * (run[i].value - second);
+      out.push({ time: run[i].time, value: 2 * run[i].value - second });
+    }
+  }
+  return out;
+}

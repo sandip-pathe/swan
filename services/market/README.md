@@ -40,6 +40,23 @@ Subscriptions select actual listed expiries 0–7 calendar days away, inclusive 
 - PCR is scoped to selected contracts within one underlying/expiry and requires fresh complete OI. It is not labeled full-exchange-chain PCR.
 - Short-window trends use actual observed midpoint quotes, with no generated historical points.
 
+### NIFTY index history and ORB assessments
+
+The authenticated `POST /api/market/index-history/refresh` is a deliberate,
+current-session refresh. It requests the bounded NIFTY/NSE one-minute prefix
+from the imported NFO session open through the earlier of the current completed
+minute and the ORB 11:00 cutoff. It stores the immutable provider response and
+the deterministic assessment against that exact snapshot. Refreshes are
+cooldown-limited; a later response or correction creates a new snapshot and
+never rewrites an earlier assessment. Missing intervals remain missing.
+
+`GET /api/market/index-history` reads cached bars for an aware as-of time and a
+single-session window without calling the provider. Availability is the local
+response receipt time. Finality means only that the minute had elapsed by that
+receipt; it is not provider-confirmed finality. The imported NFO session
+currently bounds this NIFTY path; actual NSE source/session coverage and
+configured provider access remain unaccepted until P6.
+
 ## Documentation evidence
 
 M3 foundation now retains optional LTP, session OHLC/previous close, average price and last-trade quantity in normalized quotes. REST trade time is retained where provided; WebSocket trade-time units are not assumed. These display fields never replace executable depth.

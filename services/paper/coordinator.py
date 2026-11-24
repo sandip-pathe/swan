@@ -16,6 +16,7 @@ from services.core.contracts import (
     RiskConfig,
     StrategyEnvelope,
     TradeDecision,
+    UnderlyingExitPolicy,
 )
 from services.core.execution import PaperExecutionConfig
 from services.core.models import (
@@ -28,6 +29,7 @@ from services.core.models import (
     PaperPosition,
     StrategyRecord,
 )
+from services.market.reference_contracts import IndexReference
 from services.paper.accounting import ACTIVE, LEGACY
 from services.paper.contracts import OrderRequest
 from services.paper.engine import PaperEngine
@@ -45,6 +47,9 @@ PRIORITY = {
     "PRE_CLOSE": 1,
     "STOP_LOSS": 2,
     "USER_EXIT": 2,
+    "UNDERLYING_INVALIDATION": 2,
+    "UNDERLYING_REFERENCE_UNAVAILABLE": 0,
+    "UNDERLYING_TARGET": 5,
     "STRATEGY_INVALIDATED": 3,
     "FEED_UNAVAILABLE": 3,
     "MANUAL_SESSION_STOPPED": 3,
@@ -280,11 +285,15 @@ class PaperCoordinator:
             return positions, orders, instruments
 
     def _protection(
-        self, quotes: dict[str, Quote], sessions: dict[str, ExchangeSession], healthy: bool
+        self,
+        quotes: dict[str, Quote],
+        sessions: dict[str, ExchangeSession],
+        healthy: bool,
+        references: dict[str, IndexReference] | None = None,
     ) -> None:
-        now = self.clock()
         with Session(self.engine) as db, db.begin():
             account = PaperEngine._account(db, self.account_id)
+            now = self.clock()
             snapshot = portfolio_snapshot(db, account, quotes, now)
             config = RiskConfig.model_validate(account.config)
             if not snapshot.state.reconciled:
@@ -326,7 +335,7 @@ class PaperCoordinator:
         for position in positions:
             try:
                 self._protect_position(
-                    position, instruments, quotes, sessions, healthy, active, blocked
+                    position, instruments, quotes, sessions, healthy, active, blocked, references or {}
                 )
             except ValueError:
                 self.incident(position.id, "PROTECTION_REJECTED")
@@ -340,10 +349,11 @@ class PaperCoordinator:
         healthy: bool,
         active: dict | None,
         blocked: bool,
+        references: dict[str, IndexReference],
     ) -> None:
-        now = self.clock()
         with Session(self.engine) as db, db.begin():
             account = PaperEngine._account(db, self.account_id)
+            now = self.clock()
             entry = db.get(PaperOrder, position.entry_order_id)
             if entry is None or entry.execution_version == LEGACY:
                 return
@@ -356,7 +366,12 @@ class PaperCoordinator:
                 if intent is None or intent.account_id != self.account_id:
                     raise ValueError("Held manual intent unavailable")
                 try:
-                    entry_permission(
+                    # An entry-only pause is not a holding termination. Keep
+                    # validating the original bounded lease, independently of
+                    # account.enabled and the chat's stop-new-entries command.
+                    from services.paper.validation import entry_lease
+
+                    lease = entry_lease(
                         db,
                         account,
                         now,
@@ -365,7 +380,7 @@ class PaperCoordinator:
                         entry.id,
                         entry_source="HUMAN",
                     )
-                    manual_stopped = not account.enabled
+                    manual_stopped = lease.id != entry.validation_id
                 except ValueError:
                     manual_stopped = True
             else:
@@ -392,7 +407,10 @@ class PaperCoordinator:
             or not active
             or active.get("id") != strategy_id
             or active.get("invalidated")
-            or now >= datetime.fromisoformat(active["expires_at"])
+            or (
+                now >= datetime.fromisoformat(active["expires_at"])
+                and not (position.underlying_exit_policy or {}).get("entry_deadline_only", False)
+            )
         ):
             candidates.append("STRATEGY_INVALIDATED")
         if now >= position.opened_at + timedelta(seconds=position.max_holding_seconds):
@@ -414,8 +432,35 @@ class PaperCoordinator:
         if fresh and quote is not None and quote.bid is not None:
             if quote.bid <= position.stop_loss:
                 candidates.append("STOP_LOSS")
-            elif quote.bid >= position.target:
+            elif position.target is not None and quote.bid >= position.target:
                 candidates.append("TARGET")
+        if position.underlying_exit_policy is not None:
+            try:
+                policy = UnderlyingExitPolicy.model_validate(position.underlying_exit_policy)
+                reference = references.get(instrument.underlying)
+                if (
+                    policy is None
+                    or policy.underlying != instrument.underlying
+                    or reference is None
+                    or reference.underlying != instrument.underlying
+                    or reference.timestamp > now
+                    or reference.received_at > now
+                    or (now - reference.timestamp).total_seconds() > risk.quote_max_age_seconds
+                    or (now - reference.received_at).total_seconds() > risk.quote_max_age_seconds
+                ):
+                    candidates.append("UNDERLYING_REFERENCE_UNAVAILABLE")
+                elif policy.direction == "BULLISH":
+                    if reference.last_price <= policy.invalidation:
+                        candidates.append("UNDERLYING_INVALIDATION")
+                    elif reference.last_price >= policy.target:
+                        candidates.append("UNDERLYING_TARGET")
+                else:
+                    if reference.last_price >= policy.invalidation:
+                        candidates.append("UNDERLYING_INVALIDATION")
+                    elif reference.last_price <= policy.target:
+                        candidates.append("UNDERLYING_TARGET")
+            except (ValueError, TypeError, KeyError):
+                candidates.append("UNDERLYING_REFERENCE_UNAVAILABLE")
         if reason:
             candidates.append(reason)
         reason = min(candidates, key=lambda value: PRIORITY.get(value, 0)) if candidates else None
@@ -509,13 +554,17 @@ class PaperCoordinator:
                 )
 
     def cycle(
-        self, quotes: dict[str, Quote], sessions: dict[str, ExchangeSession], healthy: bool
+        self,
+        quotes: dict[str, Quote],
+        sessions: dict[str, ExchangeSession],
+        healthy: bool,
+        references: dict[str, IndexReference] | None = None,
     ) -> None:
         held, pending, _ = self._inventory()
         if not held and not pending:
             return
         self.ledger.expire(self.account_id, self.clock())
-        self._protection(quotes, sessions, healthy)
+        self._protection(quotes, sessions, healthy, references)
         _, orders, instruments = self._inventory()
         # One bounded pass, protective sells before buys. Latest observations coalesce upstream.
         for order in sorted(orders, key=lambda o: (o.side != "SELL", o.accepted_at))[:32]:
@@ -525,7 +574,7 @@ class PaperCoordinator:
                     self.incident(order.position_id, "EXIT_QUOTE_UNAVAILABLE")
                 continue
             if order.side == "BUY":
-                self._protection(quotes, sessions, healthy)
+                self._protection(quotes, sessions, healthy, references)
             try:
                 result = self.matcher.match_order(
                     self.account_id, order.id, instruments[order.instrument_id], quote
@@ -545,7 +594,7 @@ class PaperCoordinator:
             }:
                 self.incident(order.position_id, "EXIT_PENDING:" + str(result.get("reason")))
             if result.get("matched_levels", 0):
-                self._protection(quotes, sessions, healthy)
+                self._protection(quotes, sessions, healthy, references)
         held, pending, _ = self._inventory()
         if not held and not pending:
             with Session(self.engine) as db, db.begin():

@@ -101,6 +101,7 @@ class NewsReader:
                     "GET",
                     "https://newsdata.io/api/1/market",
                     headers={"X-ACCESS-KEY": self.api_key.get_secret_value()},
+                    # Market already selects financial news; category is unsupported here.
                     params={"country": "in", "language": "en"},
                 ) as response:
                     if response.status_code in {401, 403}:

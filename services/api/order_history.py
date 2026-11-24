@@ -111,16 +111,20 @@ def history(
                 ),
             )
             if related_before:
-                cursor = db.get(PaperOrder, related_before)
+                related_cursor = db.get(PaperOrder, related_before)
                 if (
-                    cursor is None
-                    or cursor.account_id != owner
-                    or cursor.id == order.id
-                    or not (cursor.id == position.entry_order_id or cursor.position_id == position.id)
+                    related_cursor is None
+                    or related_cursor.account_id != owner
+                    or related_cursor.id == order.id
+                    or not (
+                        related_cursor.id == position.entry_order_id
+                        or related_cursor.position_id == position.id
+                    )
                 ):
                     raise HTTPException(400, "PAPER_HISTORY_CURSOR_INVALID")
                 related_statement = related_statement.where(
-                    tuple_(PaperOrder.timestamp, PaperOrder.id) < (cursor.timestamp, cursor.id)
+                    tuple_(PaperOrder.timestamp, PaperOrder.id)
+                    < (related_cursor.timestamp, related_cursor.id)
                 )
             related = list(
                 db.scalars(
@@ -220,7 +224,7 @@ def history(
                 "remaining_quantity": position.quantity - position.closed_quantity,
                 "closed": position.closed_at is not None,
                 "stop_loss": str(position.stop_loss),
-                "target": str(position.target),
+                "target": str(position.target) if position.target is not None else None,
                 "pending_exit": position.pending_exit,
                 "realized_pnl": str(position.realized_pnl)
                 if position.realized_pnl is not None

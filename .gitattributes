@@ -1,0 +1,5 @@
+hosting/oracle/swan text eol=lf
+hosting/oracle/*.sh text eol=lf
+hosting/oracle/Dockerfile text eol=lf
+hosting/oracle/Caddyfile text eol=lf
+hosting/oracle/*.yaml text eol=lf

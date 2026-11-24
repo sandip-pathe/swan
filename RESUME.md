@@ -1,215 +1,136 @@
-Latest slice: Portfolio now shows daily loss use and remaining risk headroom after
-recorded reservations when valuation and the session baseline are current. It does
-not grant entry permission. Read `__workspace/86-daily-risk-headroom.md`. Next:
-historical equity and remaining exposure metrics. D14 remains partial. The local
-app stays on 127.0.0.1:3000 and :8000 with the worker stopped for offline use. No
-tests/build checks or live/provider requests were run; entries remain disabled.
+# SWAN implementation checkpoint
 
-Latest slice: order and daily-report history paging. Read
-__workspace/79-order-and-report-history.md. Related position orders page beyond
-50; daily fills page beyond 20 while report totals remain full-day totals. Next:
-review the remaining bounded report activity and evidence/history limits under
-D16/D20. The database constraint proves a decision page can link at most 20 entry
-orders. Tests/build checks were not run for this slice. Entries remain disabled.
+## Oracle hosting preparation: 24 November 2026
 
-Latest slice: richer age context for cited evidence. Read
-__workspace/78-evidence-age-context.md. Evidence cards show quote and headline
-age relative to saved output time, plus quote receipt and headline retrieval lag.
-Zero delay is shown as a recorded value, not proof of actual feed delay. Next:
-bounded order/report history as one batch; source suitability, provider guarantees
-and actual-market acceptance remain in the ledger. Entries remain disabled.
+The user now has Oracle access, but confirmed the VM is not created. Region shown
+in the supplied console screenshot: India West (Mumbai). No cloud resource has
+been created or public deployment performed in this preparation.
 
-Latest slice: paginated risk-decision history. Read
-__workspace/77-risk-decision-history.md. Decision pages are account/strategy
-scoped and retain rows on retry. Orders within each page still have a visible
-initial 100-row cap was removed after confirming one linked entry order per decision;
-report fill paging and richer source/age evidence remain D16/D20.
-Next: complete agent evidence and bounded order/report history as one batch.
-No broker/live/manual acceptance; entries remain disabled.
+- Added hosting/oracle: non-root Python 3.13 image, PostgreSQL 17, single API,
+  observation worker, Caddy HTTPS, persistent database/session volumes, private
+  runtime templates, a backup command and deployment instructions. Existing
+  application architecture and paper permission gates are preserved.
+- Added allowlisted bundle/export scripts. Source archive is
+  `.local/release/swan-oracle-source.tar.gz`; secrets, SSH keys and database data
+  are excluded. A separate private PostgreSQL dump and manifest are under
+  `.local/release/swan-database-20261124T054904Z.*`. It contains one account, nine
+  orders and two closed positions. Export refused open exposure/active validation;
+  the restore catalog was readable. Repeat after stopping local writers for final
+  cutover; this snapshot alone does not prove a hosted restore.
+- Checks passed: Compose configuration validation, Bash syntax, Ruff and mypy on
+  packaging scripts, archive paths/hashes/secret-file exclusions/Python syntax/LF
+  validation, frozen dependency dry-runs for Linux arm64 and amd64, one Alembic head.
+- D26 remains open: no VM/IP/SSH/domain yet; Docker engine is unavailable locally,
+  so actual image build, Linux/ARM dependency execution, database restore, TLS,
+  Firebase/Vercel wiring, restart recovery and hosted market checks are unverified.
+  No new full application test run was needed for deployment-only files.
+- Next: create Always Free eligible Ubuntu VM (suggested A1 1 OCPU/6 GB if offered
+  within account allowance), save SSH key privately, obtain public IP and API
+  hostname. Follow hosting/oracle/README.md. Keep hosted entries paused until the
+  existing bounded paper controls admit them. Calendar coverage still ends Nov 30.
 
-Latest slice: paginated model-request history and grouped finish path. Read
-`__workspace/76-model-history-and-finish-batches.md`. Models now page newest first
-with owner/run/kind cursors and independent retry/dedup/stale-close handling.
-Response-metadata overflow has a separate warning. Next batch: remaining owned
-history/evidence gaps (D16), using larger related reviewable slices. Preserve the
-ledger, skipped live/manual acceptance and disabled entry gates.
 
-Latest slice: indexed evaluation-history queries. Read
-`__workspace/75-history-query-indexes.md`. Evaluation links and nested model-request
-links now have account/kind/link/time/UUID indexes. Disposable 30,000-row plan
-checks cover first/older pages and migration reversal. Next slice: model-version
-history pagination (D16/D17). Integrated recovery/load acceptance remains D20;
-broker/live/manual acceptance remains skipped and entries remain disabled.
+## Agent, chat and watcher checkpoint: 23 November 2026, afternoon
 
-Latest slice: paginated evaluation outputs and stage checks. Read
-`__workspace/74-paginated-evaluation-history.md`. Both lists load newest first,
-with independent owned cursors, append/dedup/retry and stale-close suppression.
-Next slice: history query indexes and bounded load verification (D20). Remaining
-version/risk/report pagination and billing gaps stay in DEFERRED-WORK.md.
-Broker/live/manual acceptance remains skipped; entries remain disabled.
+### Verification for this checkpoint
 
-Latest slice: daily report and deferred-work ledger. Read
-`__workspace/65-daily-report-and-deferred-ledger.md` first, then
-`DEFERRED-WORK.md`. Maintain stable ledger IDs for every skipped/held item.
-Continue M7 spending/model/version visibility (D17); do not restart M3 manual
-acceptance or broker login. M7 is not complete.
+427 backend tests passed (one existing Starlette/httpx deprecation warning),
+15 frontend tests passed, Ruff passed across services/tests, targeted mypy passed
+on 12 changed source modules, frontend typecheck/production build passed, and
+`git diff --check` passed. API/web listeners and managed observation worker are
+running. These checks do not close actual-market autonomous paper acceptance.
 
-# Resume SWAN on another laptop
+This checkpoint supersedes earlier statements that index acquisition is API-only,
+chat is limited to canned actions, or ORB qualification accepts generic records only.
 
-## Development checkpoint
+- A deterministic worker job checks NIFTY index evidence once per minute at second 5 IST during
+  the verified ORB window. The API refresh cooldown is 55 seconds. Shared history acquisition, completed-bar assessment,
+  watcher deduplication and durable assignments drive bounded model work. Generic
+  snapshot reasoning no longer competes for automatic execution ownership.
+- Free-text chat selects up to four named read-only tools for market, account,
+  strategy and indicator records. Answers retain context/source IDs and timestamps;
+  chat cannot create orders or change risk. The separate audited stop-new-entries
+  control remains. An authenticated UI test at 15:15 IST returned actual NIFTY
+  observations and correctly described the expired ORB trigger. Browser-local
+  history is bounded and is not cross-device storage.
+- Fixed daily AI allowance settlement: one valid provider usage receipt replaces
+  its conservative reservation; absent, inconsistent or duplicate receipts retain
+  the reservation. Actual usage above the estimate counts in full. No limit was
+  raised. The failing UI request had 240,290 estimated tokens reserved versus
+  58,323 settled tokens. A subsequent real UI answer passed after the fix.
+- Session HLC3 VWAP and SMA-seeded DEMA 9 are available on charts and through
+  read-only tools. Completed candles only; gaps/warmup and unavailable volume are
+  explicit. Chart inspection showed DEMA and unavailable VWAP for incomplete
+  history. These are context, not new strategy cards or automatic exit rules.
+- ORB admission now applies the reviewed depth-unit mapping before executable
+  quote checks. Qualification verifies the original ORB candidate, source bars and
+  owned analyst/reviewer provider records; it does not fabricate generic reviews
+  or grant qualification. Negative provenance tests remain fail-closed.
+- Stream index references now publish to the database regularly; missing previous
+  close in an LTP packet preserves the same-session previously observed close.
+- Real option-history refresh returned provider rate limiting. Current VWAP parity
+  and complete history acceptance remain open. No retry loop or fabricated volume.
+- No new paper order was placed. Nine total orders, flat account, no active
+  validation, qualification or arm; cash INR 99,766.55. Earlier round trips remain
+  manual. Today?s ORB window ended at 11:00 IST. Next actual acceptance requires a
+  fresh eligible setup and the existing bounded validation/qualification controls.
+- Private runtime evidence: `.local/run/chat-watcher-checkpoint-2026-11-23.json`,
+  `.local/run/indicator-history-check-2026-11-23.json` and the earlier paper ledger.
 
-Read `__workspace/37-complete-system-and-broker-workspace-plan.md`, then
-`__workspace/40-m2-qualification-worker-controls.md` and
-`__workspace/41-m3-market-data-foundation.md`.
 
-M1 audit/checklist and M2 qualification/explicit paper arming are implemented.
-M3 quote price retention and bounded historical candle refresh/cache APIs are
-implemented. On 19 November, renewed login verified NFO/BFO last-quote reads and
-one NFO request returned 376 actual one-minute candles, and one BFO request
-returned 16. See
-`__workspace/42-after-hours-market-data.md` for the explicit after-hours refresh
-API and connected evidence. Observed one-minute aggregation, persisted segments,
-bounded reconnect/restart history recovery and a mobile-first contract chart are
-implemented; read `__workspace/43-live-candles-and-mobile-chart.md` next. Remaining
-M3 work includes real open-market/reconnect verification and broader candle
-coverage. The chart now supports derived 1m/5m/15m bars, candle/line views and
-EMA 20; see `__workspace/44-chart-timeframes-and-ema.md`. Other studies and
-order-ticket integration still follow. Do not treat M3 as complete.
+## Current audit checkpoint: 23 November 2026
 
-Contract search is implemented at **Markets ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Search**, using a separately cached
-supported instrument catalog and direct chart selection. See
-`__workspace/45-contract-search.md`. An account-owned 50-contract watchlist is
-implemented with Search stars, cached quotes and chart links; read
-`__workspace/46-saved-watchlist.md`. Paired calls/puts, expiry/strike pagination
-and a chart-adjacent Details view are implemented; read
-`__workspace/47-instrument-details-and-paired-chain.md`, then
-`__workspace/48-selected-prices-and-display-subscriptions.md`. Exact selected
-quote refresh and expiring chart/watchlist feed interest are implemented. The user renewed broker login on 20 November and confirmed price refresh works.
-Actual open-market stream/reconnect verification remains pending.
+Read [the execution and agent audit](./EXECUTION-AND-AGENT-AUDIT-2026-11-23.md)
+and the latest entries in DEFERRED-WORK.md before continuing. They supersede
+older descriptions of the 10% participation policy and forced valuation exits.
 
-Read `__workspace/49-chart-studies-and-preferences.md` for configurable EMA/SMA
-and device-local chart preferences. The last full backend suite passed 343 tests;
-thirteen frontend calculation/preference/annotation tests pass. RSI 14 is implemented in a
-separate synchronized pane; read `__workspace/50-rsi-chart-pane.md`. Ruff, mypy, frontend type checking and production build
-passed. No real broker orders were placed. The original account has no paper
-orders/fills, no qualification and no arm. Its worker runs in observation mode.
-Fee/rounding evidence, BFO IPFT and depth quantity-unit verification remain open.
-The option chain now defaults to newest quote pairs first, with strike ordering
-available. Read `__workspace/51-quote-order-and-finish-path.md` for the fix and
-remaining delivery priorities.
-M3 manual/live acceptance was explicitly deferred at the user's request; continue
-implementation without marking that evidence complete. The contract Depth tab is
-implemented; read `__workspace/52-mobile-market-depth.md`.
-Underlying reference/ATM context is implemented; read
-`__workspace/53-underlying-reference-and-atm.md`. It populates from existing
-chain refresh/worker reference reads; no fresh live evidence is claimed.
-The manual BUY LIMIT preview is implemented in the contract Order tab; read
-`__workspace/54-manual-paper-order-preview.md`. It is read-only and cannot place
-orders or issue approvals. User-owned, idempotent saved paper plans are implemented; read
-`__workspace/55-durable-manual-paper-plans.md`. Actual manual order admission
-and fill/protection integration now exist as an internal, bounded HUMAN validation
-path; read `__workspace/57-manual-execution-lifecycle.md`. The authenticated
-submission API and mobile session/review/place flow are implemented; read
-`__workspace/58-mobile-manual-placement.md`. Placement remains gated by a bounded
-HUMAN session and fresh deterministic checks. This is not unrestricted manual
-trading or completion of M6. Read `__workspace/56-usable-depth-in-manual-preview.md` for shared
-depth-capacity checks used by both AI sizing and manual previews. A preview still
-does not create an approval or authorize an order.
-Owned entry cancellation and persistent position exit controls are implemented;
-read `__workspace/59-owned-paper-cancel-and-exit.md`. They preserve fill races,
-pause new entries on exit and use the existing watchdog for actual exit fills.
-Guarded amendments for wholly unfilled manual entries are implemented; read
-`__workspace/60-manual-order-amendments.md`. Quantity and expiry cannot increase.
-Per-order lifecycle, amendment, fill and fee history is implemented; read
-`__workspace/61-order-lifecycle-history.md`. Reconciled portfolio value and P&L
-with explicit valuation freshness are implemented; read
-`__workspace/62-reconciled-portfolio-value-and-pnl.md`. Owned fill and current
-position/protection overlays on the contract chart are implemented; read
-`__workspace/63-owned-chart-trade-overlays.md`. The first M7 activity slice is
-implemented; read `__workspace/64-recorded-agent-activity.md`. Model stages, WAIT,
-review rejection, evaluation failures and deterministic risk/order outcomes are
-kept distinct. Next is a daily paper session report from recorded evidence.
-Calendar coverage currently ends 30 November 2026; extend it from official
-sources before testing later dates. Preserve all execution gates.
+- Audited paper config `paper-displayed-depth-20261123-v2` now permits up to 100%
+  of observed depth. Freshness, risk, slippage, durable consumption and permission
+  gates remain. This models displayed capacity, not queue competition or guaranteed fills.
+- Fixed the manual protection bug that confused an entry-only pause with session
+  termination. Unavailable valuation and chat's stop-new-entries command preserve
+  existing protection. Explicit validation stop and expiry still drain positions.
+- Added execution-policy context, separate market/news citation lists, and clear
+  planning versus execution freshness semantics to the generic agent pipeline.
+  Citation validation was not weakened.
+- A real-provider read-only rerun passed analysis and proposal checks and returned
+  WAIT because snapshots lacked supported directional strategy evidence. Review
+  was not invoked after WAIT. Order count remained nine. Owner account had zero
+  durable ORB assignments and zero candidates. Both earlier round trips were manual.
+- Confirmed integration gaps: ORB index-history acquisition is explicit API work,
+  not scheduled worker production; generic proposals and ORB assessments need
+  explicit priority and execution ownership. The generic path lacks recent index
+  bars and deterministic strategy/tool results. D19/D25 retain these closure requirements.
+- Final verification: 406 backend tests passed, plus focused Ruff and targeted mypy.
+  Regression cases failed before the entry-pause fix and passed afterward. Actual
+  holding acceptance after this fix is still open; no new trade was submitted.
+- API and worker reloaded. Worker OBSERVATION, entries paused, account flat and
+  reconciled, cash INR 99,766.55. No active order, qualification or arm was created.
 
-## What GitHub contains
+Updated 23 November 2026 after actual-market manual paper tests.
 
-Application source, non-secret reviewed configuration, migration history,
-dependency lockfiles, tests and development plans. GitHub does not contain
-credentials, Firebase local configuration, broker sessions, database/account
-records, logs, installed tools or virtual environments. A clone alone does not
-restore the existing local wallet, diagnostic history or credentials.
+Read [the latest acceptance checkpoint](./MARKET-ACCEPTANCE-2026-11-23.md),
+[the delivery plan](./SWAN-DELIVERY-PLAN.md), and
+[the deferred-work ledger](./DEFERRED-WORK.md).
 
-## Windows setup
+Two NFO manual paper positions of 65 units each completed buy/sell round trips
+against real provider depth. Both closed through protection after insufficient
+liquidation-valuation depth paused entries. Account flat and reconciled. Cash and
+equity INR 99,766.55, net P&L INR -233.45, estimated fees INR 168.45. All validations
+stopped and orders terminal. Evidence is retained privately in
+`.local/run/paper-round-trip-final-2026-11-23.json`.
 
-```powershell
-git clone https://github.com/sandip-pathe/swan.git
-cd swan
-```
+The worker is back in OBSERVATION and entries are paused. API and web run locally. On 23 November at 18:52 IST the API, web and observation
+worker were restarted; API health confirmed PostgreSQL connectivity. No production
+host is configured. SmartAPI login sessions expire at midnight, so broker access
+requires a fresh login on each trading day. No real-money broker order, autonomous qualification or arm was issued.
+404 backend tests, focused Ruff and targeted mypy passed after runtime deadlock
+and clock fixes. The existing frontend verification passed in the preceding slice.
 
-The supplied launch scripts currently target Windows. Install Git, Python 3.13,
-Node.js 24, uv and the Microsoft Visual C++ runtime. Supply PostgreSQL 17 Windows
-runtime files under `.tools/pgsql/bin` (including `pg_ctl.exe`, `initdb.exe`,
-`psql.exe`, `createdb.exe`, `postgres.exe` and their required libraries/share
-files). Use official distributions. Installed Python/Node/uv must be on PATH;
-`scripts/activate.ps1` also supports workspace-local tool locations. See
-`__workspace/16-environment-setup.md` for the original environment and its Windows
-application-control constraints; its old Git-installation status is historical.
-
-For a **fresh empty development database**, run `database.cmd start` before
-creating root `.env`. It generates a random database password and writes the
-local connection URL. Do not pre-create `.env` from the example: the database
-initializer deliberately refuses that ambiguous case. Then append the required
-settings from `.env.example`, preserving the generated `DATABASE_URL`.
-
-In an activated PowerShell session:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass
-. ./scripts/activate.ps1
-uv sync --locked
-python -m alembic upgrade head
-cd apps/web
-npm.cmd ci
-Copy-Item .env.example .env.local
-```
-
-Fill `apps/web/.env.local` privately using your existing Firebase web app
-configuration. Set the matching server `FIREBASE_PROJECT_ID` and provider keys
-in root `.env`; use the examples as a field inventory. Enable
-`SWAN_LOCAL_OWNER_BOOTSTRAP=true` only for this single-owner local development
-setup. Sign in as the intended owner. A fresh database starts a new account;
-it does not inherit old qualifications. Launch from the repository root with
-`local.cmd start`, open `http://localhost:3000`, then log into Angel One privately
-with `market.cmd login`. Update backend network identity/provider registration
-for the new machine as required. Rerun deliberate connection diagnostics;
-saved diagnostic results and broker sessions are not portable readiness proof.
-
-## If you need the existing account/database
-
-Transfer root `.env` and frontend `.env.local` through an encrypted private
-channel, never a Git commit or chat. Use a consistent PostgreSQL logical backup
-and restore with matching versions; do not copy a running database's data
-directory. Stop the old worker before moving operational responsibility. Do not
-run both laptops as workers against one account. Broker sessions should be
-renewed privately on the destination; never reactivate entries from old process
-state. Backups contain account/provider evidence and must stay private.
-
-The original laptop's `.local`, `.env` and installed tools remain in place;
-publishing this repository does not delete them or migrate the database.
-
-## Verify and continue
-
-From an activated root shell with the disposable-test database available:
-
-```powershell
-python -m ruff check services tests migrations
-python -m mypy services
-python -m pytest -q
-```
-
-Run `npm.cmd run typecheck` and `npm.cmd run build` in `apps/web`.
-Ask the next coding agent to read the latest checkpoint and deferred-work ledger,
-then continue the next implementation slice above. M3 manual acceptance stays deferred.
-Keep paper entries disabled until genuine connected qualification and explicit
-arming have passed. Chart history must never substitute for executable depth.
+Next acceptance work is the remaining qualification matrix and eligible
+strategy-to-agent-to-paper execution, plus actual target/stop/max-hold behavior,
+reconnect handling and authenticated dashboard/chat review. The captured ORB
+assessment expired and must not be executed. Provider checks and broker login are
+day-scoped or short-lived. Refresh them through existing controls as needed.
+The user resumed provider and actual-market paper checks. Do not relax permission,
+freshness, depth or risk gates. Exact broker fee parity remains unverified.

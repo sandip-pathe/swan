@@ -22,6 +22,7 @@
       "enum": [
         "documented",
         "account_verified",
+        "assumed",
         "unverified"
       ],
       "title": "Status",

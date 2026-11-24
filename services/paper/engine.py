@@ -17,6 +17,7 @@ from services.core.contracts import (
     RiskConfig,
     StrategyEnvelope,
     TradeDecision,
+    UnderlyingExitPolicy,
     money,
 )
 from services.core.models import (
@@ -31,6 +32,7 @@ from services.core.models import (
     SnapshotRecord,
     StrategyRecord,
 )
+from services.market.reference_contracts import IndexReference
 from services.paper.accounting import (
     ACTIVE,
     LEGACY,
@@ -105,7 +107,10 @@ class PaperEngine:
         )
         if existing and previous != identity:
             raise ConflictError("Instrument identifier metadata changed")
-        if existing and existing.payload != payload:
+        if (
+            existing and existing.payload != payload
+            and Instrument.model_validate(existing.payload).verified_at < instrument.verified_at
+        ):
             existing.payload = payload
 
     @staticmethod
@@ -362,13 +367,25 @@ class PaperEngine:
                     quantity=risk.quantity,
                     average_price=risk.fill_price,
                     entry_fees=fill.fees,
-                    stop_loss=envelope.stop_loss,
+                    stop_loss=(
+                        envelope.underlying_exit_policy.premium_stop(
+                            risk.fill_price, instrument.tick_size
+                        )
+                        if envelope.underlying_exit_policy is not None
+                        and envelope.underlying_exit_policy.premium_stop_fraction is not None
+                        else envelope.stop_loss
+                    ),
                     target=envelope.target,
                     planned_risk=risk.planned_risk,
                     max_holding_seconds=min(
                         config.max_holding_seconds, envelope.max_holding_seconds
                     ),
                     opened_at=now,
+                    underlying_exit_policy=(
+                        envelope.underlying_exit_policy.model_dump(mode="json")
+                        if envelope.underlying_exit_policy is not None
+                        else None
+                    ),
                     config=config.model_dump(mode="json"),
                 )
             )
@@ -451,6 +468,7 @@ class PaperEngine:
         now: datetime,
         *,
         invalidated: bool = False,
+        references: dict[str, IndexReference] | None = None,
     ) -> list[Execution]:
         if now.tzinfo is None:
             raise ValueError("Timezone-aware clock required")
@@ -496,8 +514,37 @@ class PaperEngine:
                         assert quote.bid is not None
                         if quote.bid <= position.stop_loss:
                             reason = "STOP_LOSS"
-                        elif quote.bid >= position.target:
+                        elif position.target is not None and quote.bid >= position.target:
                             reason = "TAKE_PROFIT"
+                    if not reason and position.underlying_exit_policy is not None:
+                        try:
+                            policy = UnderlyingExitPolicy.model_validate(
+                                position.underlying_exit_policy
+                            )
+                            reference = (references or {}).get(policy.underlying)
+                            if (
+                                reference is None
+                                or reference.underlying != policy.underlying
+                                or reference.timestamp > now
+                                or reference.received_at > now
+                                or (now - reference.timestamp).total_seconds()
+                                > config.quote_max_age_seconds
+                                or (now - reference.received_at).total_seconds()
+                                > config.quote_max_age_seconds
+                            ):
+                                reason = "UNDERLYING_REFERENCE_UNAVAILABLE"
+                            elif policy.direction == "BULLISH":
+                                if reference.last_price <= policy.invalidation:
+                                    reason = "UNDERLYING_INVALIDATION"
+                                elif reference.last_price >= policy.target:
+                                    reason = "UNDERLYING_TARGET"
+                            else:
+                                if reference.last_price >= policy.invalidation:
+                                    reason = "UNDERLYING_INVALIDATION"
+                                elif reference.last_price <= policy.target:
+                                    reason = "UNDERLYING_TARGET"
+                        except (ValueError, TypeError, KeyError):
+                            reason = "UNDERLYING_REFERENCE_UNAVAILABLE"
                 problem = quote_problem(quote, now, config.quote_max_age_seconds)
                 if not reason:
                     if problem:

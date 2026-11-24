@@ -12,7 +12,7 @@ from test_manual_amend import amendable  # noqa: F401
 from test_manual_execution import human, submit  # noqa: F401
 
 from services.api import portfolio as api
-from services.core.models import Account
+from services.core.models import Account, PaperOrder
 from services.worker.models import LatestMarketQuote
 
 pytestmark = pytest.mark.integration
@@ -38,6 +38,7 @@ def test_flat_reservations_do_not_reduce_equity_or_fake_pnl(valued):
         revision = db.get(Account, d.account).revision
     result = read(h)
     assert result["status"] == "FLAT" and result["reconciled"]
+    assert result["fee_basis"] == "no_fills"
     assert Decimal(result["equity"]) == 100000 and Decimal(result["available_cash"]) < 100000
     assert (
         Decimal(result["total_pnl"])
@@ -48,6 +49,25 @@ def test_flat_reservations_do_not_reduce_equity_or_fake_pnl(valued):
     assert result["valid_until"] is None
     with Session(d.engine) as db:
         assert db.get(Account, d.account).revision == revision
+
+
+def test_estimated_fees_are_reported_from_filled_order_not_other_venue(valued):
+    from copy import deepcopy
+
+    h, d = valued, valued.d
+    cycle(d, 300)
+    with Session(d.engine) as db, db.begin():
+        order = db.get(PaperOrder, h.order)
+        execution = deepcopy(order.execution_config)
+        for schedule in execution["fee_schedules"]:
+            if schedule["exchange"] == d.instrument.exchange:
+                schedule["calculation_basis"] = "estimated"
+                for rule in schedule["rules"]:
+                    rule["sources"][0]["status"] = "assumed"
+        order.execution_config = execution
+    result = read(h)
+    assert result["fee_basis"] == "estimated"
+    assert result["reconciled"] and result["total_pnl"] is not None
 
 
 def test_depth_equity_pnl_fees_then_closed_cash_and_restricted_proceeds(valued):

@@ -1,33 +1,56 @@
 {
   "schema_version": 1,
-  "version": "paper-configuration-review-20261118-v1",
+  "version": "paper-displayed-depth-20261123-v2",
   "execution": {
     "schema_version": 1,
-    "version": "conservative-paper-draft-20261118-v1",
+    "version": "observed-depth-capacity-20261123-v2",
     "reviewed": true,
     "assumed_latency_ms": 250,
-    "displayed_participation": "0.10",
+    "displayed_participation": "1.00",
     "extra_adverse_slippage_bps": "5",
     "market_protection_bps": "100",
     "quote_max_age_ms": 2000,
     "pending_entry_lifetime_ms": 5000,
-    "quantity_unit": "unknown",
-    "quantity_unit_sources": [],
+    "quantity_unit": "units",
+    "quantity_unit_sources": [
+      {
+        "schema_version": 1,
+        "url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/TP_FO_Trimmed_NNF_PROTOCOL_9.36_0.pdf",
+        "checked_at": "2026-11-23T06:26:36.676998Z",
+        "finding": "NSE F&O order quantities are absolute multiples of board lot and MBP reports aggregate order quantities. Combined with raw SDK decoding, mapping to option units is an inference from exchange/protocol semantics, not an explicit SmartAPI support confirmation.",
+        "status": "documented"
+      },
+      {
+        "schema_version": 1,
+        "url": "https://www.bseindia.com/downloads1/Equity_Derivative_IML_API_version_1_1.pdf",
+        "checked_at": "2026-11-23T06:26:36.676998Z",
+        "finding": "BSE derivatives section 7.4.1 specifies absolute order quantity, a multiple of market lot; best bid/offer carries total available quantity. Together with raw SDK decoding this supports absolute option-unit mapping; no extra lot multiplier.",
+        "status": "documented"
+      },
+      {
+        "schema_version": 1,
+        "url": "https://github.com/angel-one/smartapi-python/blob/6bd06ff8e9085e95b709e560a3482586860fb2b3/SmartApi/smartWebSocketV2.py",
+        "checked_at": "2026-11-23T06:26:36.676998Z",
+        "finding": "Official SnapQuote best-five parser decodes raw quantity integer with no lot multiplier. Corroborated 2026-11-23 against 80 depth levels: calls/puts in NFO/BFO over FULL REST and SnapQuote, all multiples of actual 65/20-unit catalog lot sizes. Divisibility is corroboration, not standalone proof. NFO REST sample age 3.65s is not admission-fresh; WS samples about 0.71s.",
+        "status": "documented"
+      }
+    ],
     "partial_fill_granularity": "lots",
     "sale_proceeds_reuse": "block_until_verified",
     "sale_proceeds_sources": [],
-    "notes": "PROPOSED paper assumptions, not measured provider guarantees: 250ms latency, 10% displayed depth, 5bps additional adverse slippage, 100bps market protection, quotes <=2s old, entry expiry 5s, whole-lot partial fills. Review required. Depth quantity units remain unknown until verified; sale proceeds stay restricted. No engine activation. Owner explicitly approved these paper assumptions on 2026-11-18; quantity-unit verification and fee qualification remain independent blockers."
+    "notes": "Paper model uses up to 100% of observed best-five quantities, with durable consumption budgets; no inferred hidden liquidity or guaranteed real fills. Queue position and competing traders are not modeled. Assumed 250ms latency, 5bps adverse slippage, 100bps market protection, quote age at most 2s, entry lifetime at most 5s and whole-lot partial fills remain. Absolute-unit mapping is an inference from exchange semantics and raw broker decoding with live corroboration. Sale proceeds remain restricted pending evidence. No permission or risk limit changes."
   },
   "fee_schedules": [
     {
       "schema_version": 1,
-      "version": "angel-standard-nfo-draft-20261118-v1",
+      "version": "angel-paper-estimate-nfo-20261123-v1",
       "exchange": "NFO",
       "product": "LONG_OPTION_INTRADAY",
       "effective_from": "2026-11-18",
       "effective_until": "2026-11-30",
-      "reviewed": false,
+      "reviewed": true,
       "account_pricing_verified": true,
+      "calculation_basis": "estimated",
       "rules": [
         {
           "schema_version": 1,
@@ -55,9 +78,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -87,9 +110,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -118,9 +141,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -150,9 +173,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -181,9 +204,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -213,9 +236,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -245,9 +268,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -282,9 +305,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             },
             {
               "schema_version": 1,
@@ -296,17 +319,18 @@
           ]
         }
       ],
-      "notes": "Current published standard pricing; owner confirmed standard plan. Proposed observation window only, not a claim about original rate effective dates. Rounding remains unverified. GST inclusion of IPFT is documented in the broker contract-note guide. BFO IPFT omitted pending explicit source; missing never means zero. Not executable until reviewed."
+      "notes": "Paper simulation: published standard rates; 0.01 INR HALF_UP cumulative-order rounding is a model assumption, not contract-note parity. BFO IPFT uses an explicit INR 1 per executed order modeling allowance, not an established charge or guaranteed upper bound. No broker orders."
     },
     {
       "schema_version": 1,
-      "version": "angel-standard-bfo-draft-20261118-v1",
+      "version": "angel-paper-estimate-bfo-20261123-v1",
       "exchange": "BFO",
       "product": "LONG_OPTION_INTRADAY",
       "effective_from": "2026-11-18",
       "effective_until": "2026-11-30",
-      "reviewed": false,
+      "reviewed": true,
       "account_pricing_verified": true,
+      "calculation_basis": "estimated",
       "rules": [
         {
           "schema_version": 1,
@@ -334,9 +358,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -366,9 +390,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -397,9 +421,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -429,9 +453,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -460,9 +484,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             }
           ]
         },
@@ -492,9 +516,34 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
+            }
+          ]
+        },
+        {
+          "schema_version": 1,
+          "code": "IPFT",
+          "sides": [
+            "BUY",
+            "SELL"
+          ],
+          "calculation": "flat_per_order",
+          "amount": "1.00",
+          "rate": null,
+          "charge_basis": [],
+          "cap_per_order": null,
+          "rounding_increment": "0.01",
+          "rounding_mode": "HALF_UP",
+          "rounding_scope": "cumulative_order",
+          "sources": [
+            {
+              "schema_version": 1,
+              "url": "https://www.angelone.in/exchange-transaction-charges",
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION ONLY: INR 1 per executed order allowance for unresolved BFO IPFT. This page does not establish a BFO IPFT rate. Replace after broker/exchange evidence; not a guaranteed upper bound.",
+              "status": "assumed"
             }
           ]
         },
@@ -511,7 +560,8 @@
           "charge_basis": [
             "BROKERAGE",
             "EXCHANGE",
-            "SEBI"
+            "SEBI",
+            "IPFT"
           ],
           "cap_per_order": null,
           "rounding_increment": "0.01",
@@ -528,9 +578,9 @@
             {
               "schema_version": 1,
               "url": "https://www.angelone.in/exchange-transaction-charges",
-              "checked_at": "2026-11-18T04:29:44.987544Z",
-              "finding": "PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
-              "status": "unverified"
+              "checked_at": "2026-11-23T06:03:42.705345Z",
+              "finding": "PAPER ASSUMPTION: 0.01 INR HALF_UP cumulative-order rounding; broker rounding/allocation remains unverified. Earlier finding: PROVISIONAL rounding scope/increment: actual Angel One contract-note rounding must still be verified.",
+              "status": "assumed"
             },
             {
               "schema_version": 1,
@@ -542,7 +592,7 @@
           ]
         }
       ],
-      "notes": "Current published standard pricing; owner confirmed standard plan. Proposed observation window only, not a claim about original rate effective dates. Rounding remains unverified. GST inclusion of IPFT is documented in the broker contract-note guide. BFO IPFT omitted pending explicit source; missing never means zero. Not executable until reviewed."
+      "notes": "Paper simulation: published standard rates; 0.01 INR HALF_UP cumulative-order rounding is a model assumption, not contract-note parity. BFO IPFT uses an explicit INR 1 per executed order modeling allowance, not an established charge or guaranteed upper bound. No broker orders."
     }
   ]
 }

@@ -1,0 +1,81 @@
+name: swan
+x-backend: &backend
+  image: swan-backend:local
+  build:
+    context: ../..
+    dockerfile: hosting/oracle/Dockerfile
+  env_file: runtime.env
+  environment:
+    DATABASE_URL: postgresql+psycopg://swan:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/swan_trade
+    SWAN_LOCAL_OWNER_BOOTSTRAP: "false"
+    ANGELONE_SESSION_FILE: /app/.local/angel-session.json
+  volumes:
+    - ../../config:/app/config
+    - broker-session:/app/.local
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 45s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  depends_on:
+    db:
+      condition: service_healthy
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: swan
+      POSTGRES_DB: swan_trade
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swan -d swan_trade"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  api:
+    <<: *backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+  worker:
+    <<: *backend
+    command: ["python", "-m", "services.market.cli", "worker", "--local-owner", "--observe-only"]
+  migrate:
+    <<: *backend
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    restart: "no"
+    profiles: ["tools"]
+  caddy:
+    image: caddy:2
+    environment:
+      SWAN_API_DOMAIN: ${SWAN_API_DOMAIN:?Set SWAN_API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  postgres-data:
+  broker-session:
+  caddy-data:
+  caddy-config:

@@ -122,3 +122,39 @@ def test_day_boundary_uses_ist_not_utc(usage, monkeypatch):
     save(d, "AI_RESERVATION", {"tokens": 200, "model": "today"}, now - timedelta(seconds=30))
     save(d, "AI_RESERVATION", {"tokens": 800, "model": "yesterday"}, now - timedelta(minutes=2))
     assert get(d)["reserved_allowance"] == 200
+
+
+@pytest.mark.parametrize(
+    "receipt,remaining",
+    [
+        ({"total_tokens": 100, "input_tokens": 80, "output_tokens": 20}, 900),
+        ({"total_tokens": 100, "input_tokens": 80, "output_tokens": 30}, 100),
+        ({"total_tokens": True}, 100),
+        ({"total_tokens": 1200}, 0),
+    ],
+)
+def test_settled_allowance_uses_valid_receipt_only(usage, receipt, remaining):
+    key = save(usage, "AI_RESERVATION", {"tokens": 900})
+    save(usage, "AI_RESPONSE_USAGE", {"reservation_id": key, "usage": receipt})
+    result = get(usage)
+    assert result["reserved_allowance"] == 900
+    assert result["remaining_allowance"] == remaining
+
+
+def test_provider_reuses_settled_allowance_but_duplicate_receipts_stay_reserved(usage):
+    from services.agents.provider import StructuredProvider
+    from services.market.settings import ProviderError
+
+    provider = StructuredProvider(
+        usage.engine,
+        usage.account,
+        SimpleNamespace(swan_ai_daily_token_budget=1000, openai_model="test"),
+    )
+    key = provider.reserve("chat_tool_planner", 900)
+    with pytest.raises(ProviderError, match="AI_DAILY_TOKEN_BUDGET"):
+        provider.reserve("chat_answer", 500)
+    provider.persist_usage({"reservation_id": str(key), "usage": {"total_tokens": 100}})
+    provider.reserve("chat_answer", 500)
+    provider.persist_usage({"reservation_id": str(key), "usage": {"total_tokens": 100}})
+    with pytest.raises(ProviderError, match="AI_DAILY_TOKEN_BUDGET"):
+        provider.reserve("chat_answer", 1)

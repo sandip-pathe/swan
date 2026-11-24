@@ -52,6 +52,14 @@ Liquidity thresholds, fee/slippage settings, strategy thresholds and model budge
 
 An approved strategy envelope must specify instrument universe, eligible expiry/strike filters, deterministic entry predicates, stop/target method, maximum holding time, invalidation predicates, evidence timestamps, expiry and strategy version. AI prose alone cannot authorize an entry. Deterministic rules can narrow an envelope but cannot enlarge risk permissions. A single active envelope and one open position avoid conflicting concurrent strategies.
 
+Evaluate the predefined strategy set first against current eligible evidence. If
+none fits, research agents may propose an agent-originated strategy with a
+versioned hypothesis, instrument-selection rules, entry/exit/invalidation
+conditions, supporting evidence and known limitations. A proposal is not an
+approved or qualified strategy: it must pass the same deterministic review and
+separate evaluation/qualification gates before it can enter the paper workflow.
+No strategy may be fabricated from unavailable market evidence.
+
 Do not claim a successful scalping strategy merely because the software works. Evaluate actual paper observations for net results, drawdown, turnover, fees, spread, slippage, rejection rates and data gaps. Record strategy/model/prompt/risk versions and explicit iteration boundaries so changes remain attributable. Do not add a replay runner or synthetic market/agent responses; these were explicitly rejected by the user.
 
 ## Quality bar

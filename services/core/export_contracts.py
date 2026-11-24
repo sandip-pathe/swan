@@ -12,6 +12,7 @@ from services.core.contracts import (
     RiskConfig,
     StrategyEnvelope,
     TradeDecision,
+    UnderlyingExitPolicy,
 )
 from services.core.execution import (
     ExecutionPolicy,
@@ -29,6 +30,7 @@ MODELS = (
     ExchangeSession,
     CostModel,
     RiskConfig,
+    UnderlyingExitPolicy,
     StrategyEnvelope,
     TradeDecision,
     SourceEvidence,

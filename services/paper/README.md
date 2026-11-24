@@ -1,5 +1,39 @@
 # Paper execution
 
+The current reviewed paper model uses up to 100% of observed depth, with durable
+consumption budgets and modeled slippage. This does not guarantee real fills.
+An unavailable portfolio valuation pauses new entries without closing an existing
+manual holding. Protection checks the holding's bounded validation lease instead
+of treating the entry-enable flag as a liquidation command. Explicit session
+termination, user exits, stops, targets, maximum hold and feed/loss protection
+remain active. See the [23 November audit](../../EXECUTION-AND-AGENT-AUDIT-2026-11-23.md).
+
+## Estimated fee schedules
+
+Fee schedules distinguish `calculation_basis: documented` (the default) from
+`estimated`. Both require complete formulas/components and explicit review.
+Estimated schedules must disclose `assumed` evidence; they cannot contain
+unresolved `unverified` sources. A documented reviewed schedule rejects assumed
+inputs. Assumptions cannot verify depth-unit mappings or reusable sale proceeds.
+
+Each order retains the full execution configuration, including fee basis and
+assumptions. Portfolio `fee_basis` is derived from filled orders for their actual
+venue, rather than today's configuration or an unused venue's schedule. It is
+`no_fills`, `documented`, `estimated`, `mixed`, or `legacy`; the UI labels modeled
+fees. These labels describe simulation inputs, not actual broker debits.
+
+The 23 November paper configuration uses published standard rates with explicit
+cumulative-order paise rounding assumptions. BFO IPFT has an INR 1 per executed
+order modeling allowance, including its GST dependency. This is an estimate,
+neither an established tariff nor a guaranteed conservative upper bound. Exact
+broker-statement reconciliation remains separate from paper simulation testing.
+The reviewed 23 November configuration maps depth to absolute option units using
+exchange protocol semantics, the raw SDK decoder and live corroboration. This is
+a documented inference, not explicit SmartAPI confirmation. See the
+[source review](../../SMARTAPI-DEPTH-UNITS-QUESTION.md). Two actual-data manual
+paper round trips closed and reconciled. Autonomous qualification remains open.
+Older increment notes below describe implementation history.
+
 Current integration: [worker routing and protection](../../__workspace/29-paper-worker-and-protection.md). `coordinator.py` connects locked portfolio/risk admission to the ledger and matcher. Its separate worker watchdog handles real-observation fills, first-partial cancellation/protection, protective stops, prioritized exits and unresolved exposure. `portfolio.py` provides complete net liquidation snapshots. New orders retain their entire risk budget while any units remain; historical allocation is preserved by request evidence. Configuration and final QA keep activation blocked.
 
 Latest sizing increment: [depth-aware risk sizing](../../__workspace/28-paper-depth-risk-sizing.md). `risk.py::size_entry` consumes reconciled portfolio state and actual depth budgets and returns a typed approval with a fixed entry limit. It is read-only and not yet connected to worker admission. Partial-entry flat-fee risk allocation and independent protection must be completed before routing; readiness remains false.

@@ -127,7 +127,8 @@ def size_entry(
     if (
         decision.entry is None
         or not envelope.min_entry <= decision.entry <= envelope.max_entry
-        or not envelope.min_entry <= entry_limit < envelope.target
+        or entry_limit < envelope.min_entry
+        or (envelope.target is not None and entry_limit >= envelope.target)
     ):
         return DepthRiskResult("ENTRY_PREDICATE_FAILED")
     try:

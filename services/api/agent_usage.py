@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.agents.budget import consumed_allowance
 from services.agents.provenance import token_usage
 from services.agents.settings import AgentSettings
 from services.api.auth import account_identity
@@ -113,6 +114,7 @@ def agent_usage(request: Request, owner: UUID = Depends(account_identity), day: 
                 reported += usage
                 without_output += not linked.get(str(row.id))
         allowance = policy["daily_allowance"] if policy else None
+        consumed = consumed_allowance(db, reservations) if valid else None
         return {
             "day": start.date().isoformat(),
             "as_of": now.isoformat(),
@@ -122,8 +124,9 @@ def agent_usage(request: Request, owner: UUID = Depends(account_identity), day: 
             "day_ended": historical,
             "reservation_count": len(reservations),
             "reserved_allowance": reserved if valid else None,
-            "remaining_allowance": max(0, allowance - reserved)
-            if valid and isinstance(allowance, int)
+            "consumed_allowance": consumed,
+            "remaining_allowance": max(0, allowance - consumed)
+            if consumed is not None and isinstance(allowance, int)
             else None,
             "reported_tokens": reported,
             "reported_calls": known,

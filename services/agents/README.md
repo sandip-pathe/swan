@@ -1,5 +1,54 @@
 # Evidence-bound agents
 
+23 November: free-text chat uses bounded allowlisted read-only tools. The worker
+checks for a new completed ORB bar once each minute during its window; the durable consumer runs
+analyst/reviewer work only for eligible changed setups. Indicator context includes
+DEMA 9; index VWAP remains unavailable without traded volume. Daily allowance uses
+reported usage from one valid receipt, otherwise its conservative reservation.
+ORB qualification recognizes the original workflow proof; no gate is granted by
+these modules. See ../../RESUME.md for connected acceptance and remaining gaps.
+
+## Explicit strategy assessment workflow
+
+`services.agents.assessment_workflow.AssessmentWorkflow` is the separate,
+read-only spike path. Call `request` with a stable request key, an already stored
+index snapshot ID, an aware as-of timestamp, and the verified session. It saves
+an assignment before work, records typed snapshot/ORB tool results, and saves
+analyst, reviewer, research, and outcome artifacts for `readback`. Requests
+with the same account and key return the existing assignment. Interrupted or
+expired work stays explicit; there are no billable automatic retries.
+
+The first tool surface is deliberately small: read one stored, as-of-eligible
+index snapshot and run the deterministic predefined strategy evaluator. Empty,
+late, gapped, unsupported, and expired evidence terminates without an analyst
+opinion. A research child assignment is created only when the analyst requests
+it after a valid `NO_SETUP` assessment. Research hypotheses remain inactive.
+The provider uses the existing key, budget reservation, timeout, structured
+output and audit path. No provider access is enabled by this module.
+
+The research run has a separate assignment linked to its parent, snapshot,
+assessment and evidence. Parent `readback` includes the bounded child outcome
+and artifacts so a consumer can retrieve the saved hypothesis and its sources.
+
+The analyst can select only the exact deterministic strategy version attached
+to the assessment, abstain, report insufficient data, or request research only
+after a valid `NO_SETUP`. Selection and reviewer citations must belong to the
+assessment's evidence set. The reviewer must cover every analyst citation.
+Provider access, budget exhaustion, and transport failures end as unavailable;
+invalid model output and failed contract checks remain failures. A reviewer
+rejection and analyst abstention are saved as their own outcomes.
+
+Saved drafts and hypotheses are not `StrategyEnvelope` values and are not
+connected to risk admission, worker scheduling, or order creation. ORB watcher
+transitions persist a bounded queued assignment. The application background
+consumer claims queued work and invokes the existing assessment workflow; this
+can make budgeted model calls when a qualifying watcher event is queued. The
+authenticated `POST /api/strategies/watcher-assignments/{id}/run` endpoint is
+also available for explicit recovery and atomically claims one queued item.
+Queued work survives restart, and expired in-flight work is closed instead of
+replayed. Chat UI, broker integration, and market acceptance are outside this
+slice.
+
 The worker invokes analysis, proposal and independent review through the OpenAI Responses API. A reviewed proposal becomes a short-lived strategy envelope. Models have no broker tools, settings controls or execution permission; deterministic live risk checks, sizing and the paper ledger remain responsible for execution.
 
 User instruction defers all API credentials and tests. No requests are made until configured, and missing dependencies produce explicit statuses rather than synthetic market data or agent opinions.

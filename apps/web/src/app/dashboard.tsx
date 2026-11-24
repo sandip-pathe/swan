@@ -13,6 +13,8 @@ import ValidationPanel from "./validation";
 import PaperControls from "./paper-controls";
 import { PaperActionProvider, PaperActionStatus } from "./paper-action";
 import AgentActivity from "./agent-activity";
+import StrategyIntelligence from "./strategy-intelligence";
+import Chat from "./chat";
 import AgentUsage from "./agent-usage";
 import DailyReport from "./daily-report";
 import ClosedJournal from "./closed-journal";
@@ -32,7 +34,7 @@ type Workspace = ExecutionData & {
   events: { id: string; timestamp: string; kind: string; details: unknown }[];
 };
 const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
+const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", strategies: "Strategy intelligence", chat: "Chat", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
 const errors: Record<string, string> = {
   PAPER_PLAN_REQUEST_CONFLICT: "This save request was already used with different inputs. Preview again before saving.",
   PREVIEW_ACCOUNT_CHANGED: "Your account changed. Preview again before saving or placing this plan.",
@@ -312,7 +314,7 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
 
   return <main className="workspace"><PaperActionProvider key={user.uid} ownerKey={user.uid} revision={data?.account.revision} request={request} onRefresh={() => setRefresh(value => value + 1)}>
     <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 22 15 9l3 8 7-5-9 13-3-8Z" fill="currentColor"/></svg></span><div><p className="brand-name">swan<span className="brand-period">.</span></p></div></div><div className="header-actions"><button className="avatar-button" aria-label="Open account settings" onClick={() => navigate("System setup")}>{(user.displayName ?? user.email ?? "S").slice(0, 1).toUpperCase()}</button></div></header>
-    <nav className="tabs" aria-label="Main navigation">{([["Overview", "Home", "home"], ["Option chain", "Markets", "markets"], ["Execution", "Orders", "orders"], ["Journal", "History", "history"], ["System setup", "Account", "account"]] as [string, string, IconName][]).map(([name, label, icon]) => <button key={name} aria-current={(name === "System setup" ? settingsPage : tab === name) ? "page" : undefined} onClick={() => navigate(name === "System setup" ? settingsTab : name)}><Icon name={icon} /><span>{label}</span></button>)}</nav>
+    <nav className="tabs" aria-label="Main navigation">{([["Overview", "Home", "home"], ["Chat", "Chat", "activity"], ["Option chain", "Markets", "markets"], ["Execution", "Orders", "orders"], ["Journal", "History", "history"], ["Strategy intelligence", "Strategies", "activity"], ["System setup", "Account", "account"]] as [string, string, IconName][]).map(([name, label, icon]) => <button key={name} aria-current={(name === "System setup" ? settingsPage : tab === name) ? "page" : undefined} onClick={() => navigate(name === "System setup" ? settingsTab : name)}><Icon name={icon} /><span>{label}</span></button>)}</nav>
     {settingsPage && <div className="account-heading"><div><h1>Account</h1><p>{user.email ?? user.displayName}</p></div><button className="text-button" onClick={onSignOut}><Icon name="logout" />Sign out</button></div>}
     {settingsPage && <nav className="settings-tabs" aria-label="Account settings">{[["System setup", "Connections & setup"], ["Risk settings", "Risk limits"], ["Paper controls", "Trading permissions"], ["Paper validation", "Trial sessions"], ["Activity", "Account activity"]].map(([name, label]) => <button className="secondary" key={name} aria-current={tab === name ? "page" : undefined} onClick={() => { setSettingsTab(name); navigate(name); }}>{label}</button>)}</nav>}
     {error && <div className="notice error" role="alert">{error}<button className="secondary" onClick={() => setRefresh(value => value + 1)}>Retry</button></div>}
@@ -335,6 +337,8 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
         {(data.order_summary?.active_count ?? 0) > 0 && <ActiveOrders data={data} />}
       </>}
       {tab === "Execution" && <><FundsPanel funds={data.funds} /><ActiveOrders data={data} /><section className="panel"><h2>Open positions</h2><Positions rows={data.positions} data={data} workerOnline={workerOnline} stale={stale} empty="No open paper positions." /></section><ExecutionHistory data={data} /></>}
+      {tab === "Strategy intelligence" && <StrategyIntelligence request={request} onNavigate={navigate} />}
+      {tab === "Chat" && <Chat request={request} />}
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
