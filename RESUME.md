@@ -1,5 +1,15 @@
 # SWAN implementation checkpoint
 
+## Hosting decision: 24 November 2026, after VM creation
+
+The user reports that the 1 GB Oracle VM has been created after A1 Flex requests
+failed with out-of-capacity errors in Mumbai. The account has no trial credits.
+The user requested publishing the current project to GitHub and explicitly deferred
+the 1 GB hosting experiment until later. No SSH connection or cloud deployment has
+been performed. Resource sizing remains unverified; next session should obtain the
+public IP, SSH username and local private-key path, then measure API/worker/database
+memory before deciding whether to split PostgreSQL. D26 remains open.
+
 ## Oracle hosting preparation: 24 November 2026
 
 The user now has Oracle access, but confirmed the VM is not created. Region shown

@@ -205,9 +205,13 @@ permission gates and preserve actual-market evidence separately from offline tes
 
 ## D26 - Oracle deployment acceptance
 
-Status: deployment package prepared; blocked on VM creation and access. The user
-confirmed no VM exists yet. Local Docker engine is unavailable, so Compose/source
-validation must not be represented as a successful container build or cloud deploy.
+Status: deployment package prepared; hosting experiment deferred at the user's
+request on 24 November 2026 while publishing the current project to GitHub. The user
+reports a 1 GB Oracle VM now exists; A1 creation failed for capacity and the account
+has no trial credits. SSH access and actual resource sizing remain unverified.
+Local Docker engine is unavailable, so Compose/source validation must not be
+represented as a successful container build or cloud deploy. Next: obtain VM access
+and measure memory, including whether PostgreSQL needs a separate host.
 Closure: build on the VM, restore the existing ledger and configuration, configure
 HTTPS and explicit Firebase bindings/Vercel origin, verify startup/restart/backups,
 then check current market data and bounded paper workflow through existing gates.
