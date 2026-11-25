@@ -1,5 +1,15 @@
 # SWAN implementation checkpoint
 
+## Insights cleanup: 26 November 2026
+
+Removed the no-idea Ask SWAN button and the About this research footer at the
+user's request. Restored the earlier blue text/underline active Chat/Insights tab
+style. Removed the corresponding unused footer/button CSS. Added an accessible
+icon-only logout control, smaller header logo, mobile safe-area padding and more
+comfortable feed/settings/chat spacing. Budget controls wrap on narrow screens.
+Frontend typecheck and production build passed. No backend changes.
+
+
 ## Insights product UI simplification: 26 November 2026
 
 User rejected the operational dashboard and repeated empty-state/caveat cards.
@@ -13,7 +23,7 @@ prices, returns or live freshness were added. Chat and single-account login kept
 Budget, notification control and storage/data diagnostics are behind the Settings
 icon. Existing affordability/5% reference, entry reporting, stars, local archive,
 source evidence, sync and research boundaries remain. Empty prospective evaluation
-metrics are no longer shown; nonempty hypothetical records remain in About research.
+metrics are no longer shown.
 Idea cards show one waiting reason first and disclose remaining risk/evidence on
 request. Real dates/times remain visible alongside historical market values.
 

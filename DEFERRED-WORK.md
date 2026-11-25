@@ -2,6 +2,11 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+26 November follow-up: removed Ask SWAN empty-state action and About this research
+footer; restored original blue active-tab underline. Mobile header/logo/logout and
+content spacing updated; typecheck/build passed. User Vercel deployment remains
+pending; closure is the deployed frontend reflecting these changes.
+
 26 November UI correction: Insights redesigned around research feed, compact
 market strip, Latest/Saved, linked news and one compact empty state. Settings hides
 budget/notifications/storage diagnostics; empty evaluation/context cards removed.
