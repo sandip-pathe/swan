@@ -1,5 +1,8 @@
 # SWAN implementation checkpoint
 
+26 November avatar follow-up: round chat avatar uses original SWAN blue #2455e6
+with white lightning, at user request. CSS-only change; backend unchanged.
+
 ## Authorized Oracle deployment and chat layout: 26 November 2026
 
 User explicitly resumed Oracle deployment for accumulated local changes. Added
