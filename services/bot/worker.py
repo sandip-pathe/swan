@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import signal
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 
 from services.bot.analysis import analyze, insight_for
 from services.bot.session import market_context
@@ -63,6 +63,7 @@ async def collect(store: Store, client: AngelOneClient, settings: MarketSettings
             previous = store.read("last_published")
             insight = insight_for(analysis, previous, str(session.key))
             if insight:
+                insight["published_at"] = datetime.now(UTC).isoformat()
                 insight["source_snapshot"] = result.model_dump(mode="json")
                 store.publish(insight)
                 store.write("last_published", {**analysis, "session": str(session.key)})
@@ -94,6 +95,7 @@ async def run() -> None:
     try:
         while not stop.is_set():
             now = datetime.now(UTC)
+            store.prune()
             if os.environ.get("BOT_COLLECTION_ENABLED", "false").lower() != "true":
                 store.write("worker", {"heartbeat": now.isoformat(), "status": "paused",
                                        "detail": "Provider collection has not been enabled."})
@@ -107,7 +109,13 @@ async def run() -> None:
                     logger.warning("Bot collection unavailable; retrying with bounded backoff")
                     store.write("worker", {"heartbeat": now.isoformat(), "status": "unavailable",
                                            "detail": "Collection failed; saved data retained."})
-            delay = min(300, 60 * 2 ** min(failures, 3))
+            # Fetch just after a completed minute, rather than drifting by request duration.
+            finished = datetime.now(UTC)
+            next_minute = finished.replace(second=3, microsecond=0)
+            if next_minute <= finished:
+                next_minute += timedelta(minutes=1)
+            delay = min(300, 60 * 2 ** min(failures, 3)) if failures else (
+                next_minute - finished).total_seconds()
             try:
                 await asyncio.wait_for(stop.wait(), timeout=delay)
             except TimeoutError:

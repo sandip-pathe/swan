@@ -1,5 +1,40 @@
 # SWAN implementation checkpoint
 
+## Local-first insights and slim public backend: 25 November 2026
+
+Bot workspace D:\s\swan-bot, branch bot/read-only. User prioritized timing,
+reliability, information quality and low token usage; intended SENSEX option buying
+intraday/weekly swing research, total capital INR 25k or 1 lakh, 5% loss basis still
+unresolved. INR 500 net/day is an evaluation example, never a guaranteed quota.
+BOT-SCOPE.md now separates implemented functionality from the intended catalogue.
+
+Implemented account-scoped IndexedDB archive, monotonic paged insight sync,
+15-second visible polling on either screen, reconnect catch-up and star/unstar
+retention (200/account). Unchanged starred payloads are not retransmitted. Cursor
+and new local records commit atomically. Public PWA shell/static chunks are cached
+for offline reuse; private API responses are not. Browser eviction/sign-out clears
+local history, catch-up past seven-day/1000-record server buffer is not guaranteed.
+Unstarred server insights/evidence expire; starred evidence persists. Source evidence
+is still on-demand, not archived offline. Closed/suspended delivery needs future push.
+Collector is aligned to minute+03 rather than request-duration drift; insights now
+carry publication time. No background model calls were added. Real source-to-device
+latency and the new persistence/retention behavior still need acceptance (D34).
+
+Oracle updated, bot health passed, then Caddy switched to bot-api:8000. Reload alone
+initially saw an old bind-mounted Caddyfile inode; recreating only Caddy fixed it.
+External health now identifies swan-bot, unauthenticated insights=401, trading arm=404.
+Fresh legacy preflight counts all zero. Original API, worker and PostgreSQL are now
+stopped; volumes/images/source remain. Login timer active; --no-deps login command
+does not need PostgreSQL. Only bot API, bot worker and Caddy remain continuously up.
+One idle sample: API 66 MiB, collector 64 MiB, proxy 10 MiB; host available 513 MiB.
+These are samples, not capacity or open-session latency guarantees.
+Root-only ledger backup /opt/swan/backups/bot-cutover-20261125T154552Z/legacy-ledger.dump
+is 4,657,144 bytes, archive listing readable (243 lines); restore was not exercised.
+Caddyfile.before-bot is beside it. See updated runbook for reversal/start order.
+Vercel deployment is still assigned to the user; the legacy frontend is no longer
+compatible with the public bot API. Build/typecheck and Python Ruff/mypy pass for
+this change. No test suites or real model calls were run in this pass.
+
 ## Read-only collection resumed: 25 November 2026
 
 User explicitly resumed read-only collection/freshness checks and will deploy

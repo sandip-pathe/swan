@@ -8,12 +8,13 @@ Workspace: `D:\s\swan-bot`. Git branch: `bot/read-only`. Original checkpoint:
 - `services.bot.app:app`: authenticated saved insights, evidence drill-down and chat.
   Registers no legacy API routes and never opens the PostgreSQL trading ledger.
 - `services.bot.worker`: one Linux process, shared-volume singleton lock, at most
-  one collection pass per minute with failure backoff. No execution watchdog,
+  one collection pass per minute at second 03 with failure backoff. No execution watchdog,
   strategy qualification, order handling or continuous model agents.
 - `apps/web`: same Firebase setup and chat component; Chat and Insights are the only
   product destinations. Bot chat uses a separate owner namespace on the device.
 - Independent SQLite WAL database: no trading migrations or copied trading records.
-  Latest market context and up to 300 insights with their source snapshots persist.
+  Latest market context, up to seven days/1,000 unstarred insights and starred insights
+  (200/account) with source snapshots persist.
   Insight lists omit the full snapshot; authenticated drill-down loads it on demand.
 
 Current implementation is a first slice: NIFTY opening fifteen-minute range and
@@ -72,7 +73,7 @@ existing source, credentials, service and timer. Bot state has its own volume.
 The existing PostgreSQL database and volumes stay intact. No `down -v` or database
 cleanup is part of this migration.
 
-Before production switch, recheck flat/inactive legacy paper state, take a verified
+For a future cutover, recheck flat/inactive legacy paper state, take a readable
 ledger backup, ensure the Vercel frontend is ready, then switch the existing Caddy
 upstream to `bot-api:8000`, validate/reload and verify external TLS/auth/read behavior.
 The old observation worker was stopped after a flat/inactive preflight when read-only
@@ -95,8 +96,7 @@ validate/reload Caddy, then stop the bot services. Keep collection stopped on on
 
 Keep the existing project, Firebase public environment variables and
 `NEXT_PUBLIC_API_BASE_URL` pointing at the existing HTTPS API hostname. Keep root
-directory `apps/web`. Deploy `bot/read-only` as a preview first; production must be
-paired with the bot API cutover because the insight route is new. A branch push
+directory `apps/web`. Deploy `bot/read-only` as a preview first; the public API cutover is now complete, so this frontend deployment is required. A branch push
 alone is not evidence of a successful Vercel deployment. No Vercel CLI session or
 linked project was available at the start of this work. The user chose to deploy
 Vercel themselves; the pushed branch is ready. The frontend checks backend identity
@@ -142,3 +142,42 @@ Investigate these provider omissions and verify open-session freshness/recovery
 before source acceptance. This check did not exercise a real model response.
 Legacy paper state was flat/inactive (all five preflight counts zero) before
 stopping swan-worker-1. Public API, DB, proxy and login timer remain intact.
+
+## Current public deployment and retention: 25 November
+
+Caddy now serves `bot-api:8000`; external health identifies `swan-bot`. Original
+`swan-api-1`, `swan-worker-1`, `swan-db-1` are stopped. Only bot API, bot worker and
+proxy remain continuously running. Automatic login timer remains active and its
+one-shot `run --rm --no-deps broker-login` does not require PostgreSQL to run.
+Do not run the legacy stack's default `up` command: it would restart retired services.
+No images, volumes, secrets or ledger data were deleted. One idle sample was
+66 MiB API + 64 MiB worker + 10 MiB proxy; this is not a peak load guarantee.
+
+Ledger backup: `/opt/swan/backups/bot-cutover-20261125T154552Z/legacy-ledger.dump`,
+root-only, 4,657,144 bytes. `pg_restore --list` succeeded; full restore was not run.
+`Caddyfile.before-bot` in that directory is the original upstream configuration.
+To reverse, first stop bot collection, start original db/API (and observation worker
+only if intended) using original Compose, restore the saved Caddyfile, recreate
+Caddy with `--no-deps --force-recreate caddy` so bind mount inode changes take effect,
+and verify service identity before restoring the original frontend. A simple reload
+was insufficient on this host because the container had an older bind-mounted inode.
+`hosting/oracle/Caddyfile.bot` is the versioned bot upstream template; install it at
+`/opt/swan/hosting/oracle/Caddyfile` before recreating the existing proxy if needed.
+
+The frontend restores account-scoped IndexedDB first and syncs deltas on either
+screen every 15 seconds while visible/online. Server cursor and new local entries
+commit atomically. Stars are account-scoped, retained on server until unstarred and
+eligible for cleanup; limit 200/account. Unstarred evidence/insights expire after
+seven days or 1,000 records. Worker prunes even outside sessions. Star retention
+requires connectivity and a successful server response. Old expired local entries
+cannot be uploaded back as trusted server evidence. No private API SW cache exists.
+Source evidence is fetched on demand, not persisted in the device archive yet.
+
+PWA root/static shell caching enables revisiting previously loaded screens offline;
+fresh sign-in still requires network. Local history is removed on sign-out or site
+data clearing and may be evicted by the browser. Suspended/closed PWAs cannot be
+promised live delivery. Sync beyond server retention can miss unstarred insights.
+No new behavioral test suite was run for this change; build/typecheck and Python
+lint/mypy passed. D34 tracks persistence, offline and multi-device acceptance,
+backup/recovery and outstanding SENSEX/swing/data-source work. Prior passing test
+counts above refer to the earlier implementation and are not current acceptance.

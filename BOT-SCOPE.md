@@ -1,3 +1,100 @@
+# Current bot priorities: 25 November 2026
+
+This section supersedes the earlier proposal below. Product stays read-only with
+Chat and Insights. Primary intended use is buying SENSEX options for intraday
+sessions and, separately, weekly swing research. Total capital may be INR 25,000
+or INR 100,000; INR 6,000 was an example position allocation, not confirmed capital.
+User stated up to 5% loss; the basis (capital versus position; trade versus day)
+is still unresolved, so no risk allocation or recommendation is inferred.
+
+## What a useful insight must contain
+
+- Instrument/contract identity and horizon; never substitute NIFTY context for a
+  SENSEX or option-specific setup. Contract lot/expiry must come from current master.
+- Source event time, source received time, publication time, rule version and
+  reproducible evidence. A fresh HTTP response alone is not fresh market data.
+- What materially changed, counterevidence, invalidation condition and expiry.
+- Data health: coverage, age, ordering and gaps. Withhold unsupported conclusions.
+- For any future option setup: executable bid/ask, spread/liquidity, expiry,
+  premium budget, whole-lot sizing, all fees, estimated slippage and downside.
+  An underlying move cannot establish the corresponding option profit.
+
+## Insight catalogue and order
+
+1. Source health and session state: authentication/collection/coverage failures,
+   stale observations and recovery. Already displayed as status; durable event
+   publication/recovery notifications are not implemented.
+2. Intraday context changes: completed-bar opening-range break, return inside,
+   trend confirmation/invalidation; publish state transitions, not every candle.
+   Existing slice implements NIFTY range/SMA observations only. SENSEX scans and
+   confirmed multi-timeframe conditions require implementation and source acceptance.
+3. A small watchlist of cost-aware SENSEX option opportunities or explicit no-setup
+   explanations. Aim for selectivity compatible with one/two user decisions daily;
+   do not suppress genuine invalidation/risk updates to satisfy an alert quota.
+   Not implemented; requires contract data and acceptance before actionable claims.
+4. Weekly swing context: confirmed daily/weekly structure, event calendar and
+   invalidation, with a separately validated multi-session history pipeline.
+   Not implemented. Do not reuse intraday freshness or assume weekly option expiry
+   equals a safe week-long hold. Overnight gaps and premium decay matter.
+5. Official exchange/company announcements through verified feeds. RSS is transport,
+   not a reliability guarantee. Retain source links/event times, deduplicate, filter
+   relevance and treat content as untrusted. Feed ingestion is not implemented.
+
+## Timing and token contract
+
+The bot does not scalp or execute trades. Current REST collector targets each
+completed minute at second 03; it cannot know a completed candle before its close.
+Requests may be delayed or fail. Foreground device sync runs every 15 seconds,
+including while Chat is open; this reads SQLite and never calls OpenAI. These are
+scheduling settings, not measured latency guarantees. Measure source-to-receipt,
+receipt-to-publication and publication-to-device separately under open-session load.
+Investigate observed missing candles before accepting continuous scans. Do not
+increase request frequency to disguise an upstream delay.
+
+Background maths, state-change detection, validation, deduplication and publication
+use zero model tokens. Existing chat can request bounded interpretation using only
+current structured evidence. No news dump or minute-by-minute model loop. Daily
+conservative reservations and single-call concurrency remain enforced. Future feed
+summaries should be on-demand or materially triggered, cached and bounded, never
+required to publish time-sensitive deterministic facts.
+
+INR 500 net is an evaluation example, not a daily quota or guaranteed result:
+2% of INR 25,000, 0.5% of INR 100,000, or 8.33% of an INR 6,000 allocation.
+For a long option, net result = (exit premium - entry premium) * quantity - all
+charges - slippage. One entry plus one exit already incurs two executed-order
+charges; additional exits add costs. Published Angel One pricing currently lists
+INR 20 per F&O executed order plus statutory charges. Use versioned applicable
+rates and actual contract quantity, not a fixed guessed total cost.
+Reference: https://www.angelone.in/exchange-transaction-charges (read 25 Nov 2026).
+Evaluate net expectancy, drawdown and skipped opportunities across multiple
+sessions; never tune rules to force INR 500 every day.
+
+## Local-first retention implemented in this branch
+
+IndexedDB is scoped to the signed-in account. Initial restore is local; sync uses
+a monotonic server cursor, paginates new records and idempotently inserts by ID.
+Star changes synchronize across devices; unchanged starred bodies are not resent.
+Only the newest 100 device entries render initially, with access to older entries.
+Unstarred backend insights/evidence expire after seven days or 1,000 records;
+starred records/evidence persist (up to 200 per account) until unstarred and eligible
+for cleanup. The short-lived server buffer is necessary for offline catch-up.
+Device history persists until sign-out or site-data deletion; browsers may evict it.
+Evidence is fetched on demand and is not yet archived locally. Users offline longer
+than backend retention may miss unstarred insights. No guarantee of delivery while
+the PWA is suspended/closed: push and delivery acknowledgments are not implemented.
+PWA caches the public shell/static files; private API responses never enter shared
+service-worker cache. Offline fresh sign-in still requires a connection.
+
+## Hosted reduction completed
+
+Oracle now runs bot API, one collector and Caddy; old API/worker/PostgreSQL are
+stopped, not destructively deleted. Existing automatic-login timer uses a bounded
+one-shot container with --no-deps and does not restart PostgreSQL. Original ledger,
+credentials, source and images remain available for rollback. Public API now serves
+the bot; Vercel remains the user's deployment task. See BOT-RUNBOOK.md and D34.
+
+---
+
 # SWAN market bot — proposed scope
 
 25 November 2026. Discussion draft, not approved implementation or a claim of

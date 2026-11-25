@@ -2,6 +2,36 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November local-first/slim deployment update (supersedes earlier hosted status):
+Public Caddy now serves bot-api:8000; legacy API/worker/PostgreSQL stopped after
+all-zero preflight and root-only readable pg_dump archive backup. Login timer active.
+Archive restore remains unverified. Vercel deployment remains the user's task.
+Implemented IndexedDB incremental archive, star/unstar, seven-day/1000 transient
+server retention, 200 saved/account and public offline shell. New behavior passed
+build/typecheck/lint/mypy only; automated persistence/restart/account isolation,
+retention boundary, multi-device star, browser eviction and actual offline PWA
+acceptance have not been run. Closure: verify those paths and migrations against
+isolated data, then signed-in hosted clients without substituting fixtures for
+live-market acceptance. Existing old test counts predate these behavior changes.
+
+Accepted intended scope is now SENSEX option buying and separate weekly research;
+current implementation still has only NIFTY intraday scans and index quote reads.
+SENSEX candle/history/contract acceptance, cost-aware option analysis, multi-session
+swing pipeline, official announcement feeds, structured invalidation/supersession,
+noise/expectancy evaluation and durable data-health events remain unimplemented.
+See latest BOT-SCOPE.md for required fields, boundaries and proposed sequencing.
+These need source validation and selected-horizon acceptance before useful setup
+claims. User's 5% loss basis is unresolved; no capital allocation was inferred.
+No daily profit promise or automated trade authorization exists.
+
+Closed/suspended-device notifications, guaranteed delivery/acknowledgments, offline
+source-evidence storage, important-insight backup/restore and off-host bot backups
+remain open. Local records can be evicted; long-offline clients can miss expired
+unstarred server records. Closure requires implementing/accepting retained delivery
+and backup requirements, or an explicit scope decision. Scheduling is minute+03
+collector and 15-second foreground sync; actual end-to-end latency and uptime
+remain unmeasured. Zero background AI token calls; chat budget remains enforced.
+
 25 November resumed acceptance: user explicitly authorized read-only collection
 and freshness checks; Vercel deployment is assigned to the user. Collection is now
 enabled persistently on Oracle. Legacy observation worker stopped after fresh

@@ -1,0 +1,4 @@
+{$SWAN_API_DOMAIN} {
+    encode gzip
+    reverse_proxy bot-api:8000
+}

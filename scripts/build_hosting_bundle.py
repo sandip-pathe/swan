@@ -33,6 +33,7 @@ def main() -> None:
             "swan-broker-login.service",
             "swan-broker-login.timer",
             "Caddyfile",
+            "Caddyfile.bot",
             "deploy.env.example",
             "runtime.env.example",
             "swan",

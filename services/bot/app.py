@@ -1,13 +1,14 @@
 """Only bot reads and chat are exposed; no legacy routers or account writes."""
 
 import asyncio
+import hashlib
 import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -63,7 +64,7 @@ def health():
     return {"service": "swan-bot", "database": "connected"}
 
 
-def context(store: Store, now: datetime) -> dict:
+def context(store: Store, now: datetime, include_insights: bool = True) -> dict:
     try:
         calendar = market_context(SessionCalendar(MarketSettings().calendar_file), now)
     except ProviderError:
@@ -87,14 +88,40 @@ def context(store: Store, now: datetime) -> dict:
             analysis = {**analysis, "status": "historical"}
     return {"as_of": now.isoformat(), "calendar": calendar, "worker": worker,
             "quotes": quotes, "analysis": analysis,
-            "insights": store.insights(), "capabilities": {
+            "insights": store.insights() if include_insights else [], "capabilities": {
                 "nifty_analysis": True, "sensex_history": False, "options": False,
                 "news": False, "trading": False}}
 
 
 @app.get("/api/bot/insights")
-def insights(identifier: UUID = Depends(owner)):
-    return context(app.state.store, datetime.now(UTC))
+def insights(after: int | None = Query(default=None, ge=0, le=9223372036854775807),
+             saved_version: str = Query(default="", max_length=64),
+             identifier: UUID = Depends(owner)):
+    value = context(app.state.store, datetime.now(UTC), include_insights=after is None)
+    if after is not None:
+        value.update(app.state.store.changes(after))
+        saved = app.state.store.saved(str(identifier))
+        value["saved_ids"] = [item["id"] for item in saved]
+        version = hashlib.sha256("\n".join(value["saved_ids"]).encode()).hexdigest()
+        value["saved_version"] = version
+        value["saved"] = saved if version != saved_version else []
+    return value
+
+
+class Star(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    starred: bool
+
+
+@app.post("/api/bot/insights/{insight_id}/star")
+def star_insight(insight_id: str, body: Star, identifier: UUID = Depends(owner)):
+    try:
+        found = app.state.store.star(str(identifier), insight_id, body.starred)
+    except ValueError:
+        raise HTTPException(409, "SAVED_INSIGHT_LIMIT") from None
+    if not found:
+        raise HTTPException(404, "INSIGHT_EXPIRED_OR_NOT_FOUND")
+    return {"id": insight_id, "starred": body.starred}
 
 
 @app.get("/api/bot/insights/{insight_id}/evidence")
