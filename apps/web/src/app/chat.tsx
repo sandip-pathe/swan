@@ -195,11 +195,11 @@ export default function Chat({
           },
         ].slice(-50),
       );
-    } catch {
+    } catch (failure) {
       if (generation.current === ticket) {
         setFailed(value);
         setQuestion((current) => current || value);
-        setError(
+        setError(failure instanceof Error && /^(This frontend|Research is busy|Sign in again|This account)/.test(failure.message) ? failure.message :
           "This answer couldn’t complete. Your question is preserved. You can retry or use the rest of SWAN.",
         );
       }

@@ -16,8 +16,14 @@ existing model/config with durable conservative reservations and output validati
 9 bot + 13 isolated login tests, Ruff and Linux mypy pass. Frontend build/typecheck
 and 15 inherited chart tests pass. Fixture browser check passes two-screen routing,
 reused chat, paused/empty states and mobile overflow; screenshots inspected. Local
-API health passes. Oracle isolated image/staging preparation is in progress; public
-traffic has not switched. Vercel access and resumption of read-only source checks
+API health passes. Oracle isolated staging is now running under /opt/swan-bot;
+bot-api is healthy, the collector reports paused/collection_enabled=false, and the
+original auto-login timer remains active. Three warm unauthenticated local health
+samples took 0.003-0.060 seconds. Hosted no-token Insights returns 401; the old arm
+route returns 404. These are basic hosted boundary checks, not authenticated latency
+or source acceptance. Image builds reuse the installed swan-backend:local environment
+with a small bot-only layer after a fresh dependency-layer export was too slow.
+Public traffic has not switched. Vercel access and resumption of read-only source checks
 were asked asynchronously; neither is inferred from elapsed time. BOT-RUNBOOK.md
 records deployment, rollback and remaining real acceptance. D34 remains open.
 

@@ -4,7 +4,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import BotHome from "./bot-home";
-import DashboardSkeleton from "./dashboard-skeleton";
 
 function errorMessage(error: unknown, method: "google" | "password" = "google"): string {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
@@ -90,7 +89,7 @@ export default function Home() {
     }
   }
 
-  if (loading) return <DashboardSkeleton shell />;
+  if (loading) return <main aria-busy="true"><p role="status">Restoring your sign-in…</p></main>;
 
   if (user && !loading) return <BotHome key={user.uid} user={user} onSignOut={authenticate} />;
 

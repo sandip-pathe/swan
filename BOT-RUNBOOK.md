@@ -26,7 +26,9 @@ must be renewed after 30 November 2026; no new dates were guessed.
 
 Chat has local concept definitions, deterministic numerical facts and optional
 bounded OpenAI interpretation when current candle evidence exists. Model output is
-validated for schema, allowed evidence IDs and absence of generated numeric claims.
+validated for schema and allowed evidence IDs; digit-bearing model narrative is
+rejected so displayed numerical facts come from code. This is not a semantic proof
+of all prose claims or written-out quantities.
 Qualitative correctness still needs actual output review; citations do not prove it.
 The model is taken from the existing `config/agents.json`, with a global conservative
 30,000-token daily reservation ceiling or the existing allowance, whichever is lower.
@@ -105,6 +107,15 @@ linked project was available at the start of this work.
   empty/paused source state, mobile overflow and absence of legacy API calls.
 - Local real bot health returns database connected. Broker/model freshness and
   usefulness have not been accepted by these tests.
+- Oracle bot staging is healthy on loopback port 8001. Three warm unauthenticated
+  health requests took 3-60 ms. No-token Insights is 401, legacy arm route is 404,
+  collector state is paused and the original automatic-login timer is active.
+  Cold startup was slow under host contention; public traffic has not switched.
+
+The bot-only Dockerfile reuses the installed `swan-backend:local` environment and
+adds a small code layer. A fresh full dependency-layer build was cancelled during
+slow export on the Micro host. For portability, build the supplied base Dockerfile
+on a new host first; this is reuse of the locked environment, not dependency removal.
 
 Remaining: actual source/model review, authenticated hosted latency, provider
 recovery, calendar renewal, source correction/supersession UX, opening/closing

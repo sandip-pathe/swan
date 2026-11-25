@@ -12,6 +12,11 @@ the read-only provider hold; do not infer permission. Remaining scope from the d
 includes options scans, SENSEX history, opening/closing briefings, source correction
 supersession, research breadth and actual usefulness/noise evaluation. These were
 not included in this initial bot slice so that unsupported data is never implied.
+Isolated Oracle bot staging now passes health and unauthenticated boundary checks:
+local health 3-60 ms in three warm samples, Insights 401 without a token and old
+arm route 404. Collector is confirmed paused, original auto-login timer active.
+Public Caddy/Vercel traffic is unchanged. Initial cold import/startup was slow under
+host CPU contention; do not infer p95 or recovery acceptance from warm health samples.
 Closure requires implementing/accepting any retained scope or an explicit scope
 decision, plus the deployment and actual-data criteria below. Calendar renewal
 before the existing 30 November coverage boundary remains required under D26.
