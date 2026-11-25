@@ -1,7 +1,8 @@
 {
   "sources": [
-    {"name": "Reserve Bank of India press releases", "url": "https://www.rbi.org.in/pressreleases_rss.xml"},
-    {"name": "BSE corporate announcements", "url": "https://www.bseindia.com/data/xml/announcements.aspx"}
+    {"name": "Reserve Bank of India press releases", "url": "https://www.rbi.org.in/pressreleases_rss.xml", "naive_timezone": "Asia/Kolkata"},
+    {"name": "Mint markets", "url": "https://www.livemint.com/rss/markets"},
+    {"name": "Mint economy", "url": "https://www.livemint.com/rss/economy"}
   ],
-  "notes": "Official public RSS excerpts and attribution only; no full report scraping or delayed commercial news feed. Reachability and publication age are checked at runtime; outage never implies no news."
+  "notes": "Publisher-provided RSS headlines and short excerpts, attributed and linked for this private personal research bot. No full article scraping. RBI offset-less publication dates are explicitly interpreted in Asia/Kolkata; other timezone-less sources are rejected. No claim of exhaustive news coverage."
 }

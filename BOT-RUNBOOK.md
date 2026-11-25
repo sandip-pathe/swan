@@ -1,3 +1,13 @@
+## 26 November source update
+
+Use the reviewed existing depth policy; see RESUME.md. RBI offset-less dates use
+Asia/Kolkata. Mint RSS adds market/economy coverage with bounded linked excerpts.
+Completed weekly OHLC is cached per session, repaired in bounded requests and
+supplemented by validated Yahoo ^BSESN daily history. Per-session source labels
+persist; secondary history never supplies executable option prices. Partial
+history affects its dependent rule only. Normal read-only operation is enabled;
+source/latency monitoring does not require a separate user acceptance ceremony.
+
 # Isolated market bot
 
 Workspace: `D:\s\swan-bot`. Git branch: `bot/read-only`. Original checkpoint:
@@ -12,10 +22,10 @@ Workspace: `D:\s\swan-bot`. Git branch: `bot/read-only`. Original checkpoint:
   per minute with per-window backoff. Opening 15/recent 20 bars are independent.
 - Versioned experimental range-retest/failed-break intraday ideas and separate
   five-completed-session weekly structure. Whole-lot quote/depth/noise/cost and
-  user-budget checks apply. Unknown depth units prevent eligibility.
+  user-budget checks apply. The existing reviewed absolute-unit mapping is reused for AngelOne SnapQuote; raw quantities are unchanged.
 - Triggered compact AI research, shared one-call lease, persistent daily 30,000-token
   reservation ceiling or configured lower allowance. No tick/minute model polling.
-- Official RSS excerpts every five minutes and verified daily history for weekly
+- RBI and Mint markets/economy RSS excerpts every five minutes and verified daily history for weekly
   research; missing sources remain explicitly unavailable, not invented news.
 - SQLite WAL, atomic revisions/feed/outbox, source snapshots, twenty revisions/idea,
   seven-day/1,000 unstarred buffer, 200 stars/account, 2,000 hypothetical evaluations.

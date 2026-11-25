@@ -110,7 +110,11 @@ class RollingMarket:
         last = max(day, key=lambda bar: bar.opens_at) if day else None
         value: dict = {
             "underlying": self.name,
-            "status": "current" if recent and morning else "insufficient",
+            "status": "current"
+            if recent and morning
+            else "partial"
+            if recent or morning
+            else "insufficient",
             "opening_range_status": "complete" if morning else "incomplete",
             "rolling_status": "complete" if recent else "incomplete",
             "reason": None

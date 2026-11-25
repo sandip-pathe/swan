@@ -602,6 +602,26 @@ class Runtime:
             if tick >= news_next:
                 try:
                     result = await headlines()
+                    prior_news = self.store.read("news", {})
+                    failed = {
+                        row.get("source")
+                        for row in result.get("sources", [])
+                        if row.get("status") != "available"
+                    }
+                    retained = [
+                        {**row, "retained_during_outage": True, "fresh_catalyst": False}
+                        for row in prior_news.get("items", [])
+                        if row.get("source") in failed
+                        and timedelta(0)
+                        <= now - datetime.fromisoformat(row["published_at"])
+                        <= timedelta(days=7)
+                    ]
+                    combined = {row["id"]: row for row in retained + result.get("items", [])}
+                    result["items"] = sorted(
+                        combined.values(),
+                        key=lambda row: (row.get("market_relevant", False), row["published_at"]),
+                        reverse=True,
+                    )[:30]
                     self.store.write("news", result)
                     catalyst_ids = sorted(
                         row["id"] for row in result.get("items", []) if row.get("fresh_catalyst")
@@ -629,7 +649,7 @@ class Runtime:
                 and os.environ.get("BOT_COLLECTION_ENABLED", "false").lower() == "true"
             ):
                 try:
-                    result, ideas = await weekly(self.client, self.calendar, now)
+                    result, ideas = await weekly(self.client, self.calendar, now, self.store)
                     self.store.write("weekly", result)
                     self.store.write("weekly_candidates", ideas)
                 except (ProviderError, ValueError, TimeoutError):

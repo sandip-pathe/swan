@@ -1,5 +1,44 @@
 # SWAN implementation checkpoint
 
+## Source continuity fixes: 26 November 2026
+
+User explicitly requests autonomous integration and normal operation; live-market
+observation is ongoing monitoring, NOT a user approval/release gate. No additional
+questions or manual depth investigation are required from the user.
+
+Root cause corrected: depth mapping had already been reviewed on 23 November in
+config/paper-execution.json, SMARTAPI-DEPTH-UNITS-QUESTION.md and the later D03
+acceptance update. The bot failed to reuse it. Advisory feasibility now applies
+that reviewed units mapping ONLY to unknown AngelOne SnapQuote metadata, retains
+source URLs and leaves raw quantities unchanged (no lot multiplier). Original paper
+risk/qualification/order permissions are unchanged. Written broker confirmation
+was never claimed and is not a newly imposed bot-release requirement.
+
+RBI RSS was falsely empty because its publication dates omit the timezone. Explicit
+source-level Asia/Kolkata interpretation fixes this; unknown offset-less sources
+still require their own configured timezone. Replaced unusable BSE RSS with Mint
+markets/economy publisher feeds. Hosted reads: RBI 10, Mint markets 35, economy 27
+usable entries; bounded archive keeps 30. Linked short excerpts only, source times
+and relevance filter, no full-article scraping. Source outages retain bounded old
+items with original timestamps; retained items cannot trigger fresh-catalyst calls.
+
+Daily history requests now start/end at calendar-day boundaries, persist completed
+OHLC/session provenance and retry up to two missing days per pass. Broker returned
+no daily rows in observed calls. Added bounded Yahoo ^BSESN daily-history fallback
+with symbol/currency/exchange/type, completed-session and OHLC validation. Hosted
+fallback recovered four required sessions; 25 November was still absent. Cache
+retains valid context and automated hourly recovery continues without user action.
+Partial weekly context exposes available-session range and last available close;
+only the five-session breakout rule waits for its actual missing input. Secondary
+history is labelled and never used for live option quotes or depth.
+
+Independent opening/recent-bar facts remain usable and explicitly partial; chat/AI
+can explain supported partial context instead of declaring the entire market
+analysis unavailable. Range entry rules still require their actual dependencies.
+Ruff and Linux mypy pass; no tests added/run. Oracle rollout and GitHub branch are
+updated. Live latency/usefulness/outcomes remain observations to collect during
+normal operation, not permission requests or guarantees of edge.
+
 ## Decision assistant implementation: 25 November 2026, 23:55 IST
 
 Current worktree `D:/s/swan-bot`, branch `bot/read-only`. This checkpoint supersedes

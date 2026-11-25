@@ -173,7 +173,7 @@ def context(
                 "underlying": underlying,
             },
         )
-        if analysis.get("status") == "current":
+        if analysis.get("status") in {"current", "partial"} and analysis.get("as_of"):
             analysis_age = now - datetime.fromisoformat(analysis["as_of"])
             if calendars[underlying].get("state") != "open" or not timedelta(
                 0

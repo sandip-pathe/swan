@@ -12,6 +12,20 @@ from services.paper.fees import estimate_fees
 
 
 @lru_cache(maxsize=1)
+def depth_mapping() -> dict:
+    config = Path(__file__).resolve().parents[2] / "config/paper-execution.json"
+    from services.core.execution import PaperExecutionConfig
+
+    policy = PaperExecutionConfig.model_validate_json(config.read_text()).execution
+    if policy.blockers() or policy.quantity_unit != "units":
+        raise ValueError("REVIEWED_DEPTH_MAPPING_REQUIRED")
+    return {
+        "unit": policy.quantity_unit,
+        "source": ";".join(str(row.url) for row in policy.quantity_unit_sources),
+    }
+
+
+@lru_cache(maxsize=1)
 def fee_schedule() -> FeeSchedule:
     config = Path(__file__).resolve().parents[2] / "config/paper-execution.json"
     schedules = json.loads(config.read_text())["fee_schedules"]
@@ -44,6 +58,15 @@ def assess(
         or quote.timestamp_basis != "exchange_feed"
     ):
         return None, ["EXECUTABLE_SPREAD_UNAVAILABLE"]
+    if quote.quantity_unit == "unknown" and quote.source == "angelone-websocket-v2:snapquote":
+        try:
+            mapping = depth_mapping()
+            # Reuse the reviewed exchange/SDK mapping; raw quantities are unchanged.
+            quote = quote.model_copy(
+                update={"quantity_unit": mapping["unit"], "quantity_unit_source": mapping["source"]}
+            )
+        except (ValueError, OSError):
+            problems.append("DEPTH_MAPPING_CONFIGURATION_UNAVAILABLE")
     if quote.quantity_unit != "units":
         problems.append("DEPTH_QUANTITY_UNITS_UNVERIFIED")
     if (
@@ -54,6 +77,7 @@ def assess(
         or (quote.ask_quantity or 0) < instrument.lot_size
     ):
         problems.append("ONE_LOT_DEPTH_UNCONFIRMED")
+    assert quote.ask is not None and quote.bid is not None
     premium = quote.ask * instrument.lot_size
     spread = quote.ask - quote.bid
     tick = instrument.tick_size
@@ -124,6 +148,8 @@ def assess(
         "estimated_round_trip_cost": str(entry_fee + stop_fee + slippage),
         "quote_at": quote.timestamp.isoformat(),
         "quote_source": quote.source,
+        "depth_quantity_unit": quote.quantity_unit,
+        "depth_quantity_source": quote.quantity_unit_source,
         "fee_basis": schedule.version,
         "costs_are_estimates": True,
         "assumptions": "One entry/exit, displayed best quotes, two-sided slippage allowance; "

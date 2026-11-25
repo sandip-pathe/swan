@@ -2,6 +2,25 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+26 November correction supersedes the earlier depth/news blockers below: the
+reviewed 23 November absolute-unit mapping existed; bot feasibility now reuses it
+with source provenance and no raw-quantity multiplier. D03's old explicit-broker-
+confirmation note is not a new bot release gate. Root cause/evidence are in the
+leading RESUME.md checkpoint and SMARTAPI-DEPTH-UNITS-QUESTION.md. Original trading
+permissions are unchanged. RBI date parsing fixed; RBI/Mint markets/economy all
+returned usable hosted items. These integration defects are resolved, not tasks
+for the user to repeat. News coverage remains bounded, not exhaustive.
+
+Weekly midnight request boundaries, persistent daily cache, two targeted repairs
+and identity-validated secondary daily fallback are implemented. Four completed
+sessions recovered; 25 November still absent at this observation. Closure of that
+source gap is automatic on a valid returned row; preserve available context and
+per-session provenance. Do not synthesize missing OHLC or block unrelated analyses.
+User requests normal read-only operation now: live observation/latency/usefulness
+and prospective outcomes continue as operational work, not human approval gates.
+No user source-selection, credentials or depth-review work is pending.
+
+
 25 November build: implemented and deployed the decision-assistant API and worker;
 see leading RESUME.md. Earlier paragraphs below are historical. D34 stays OPEN.
 Versioned ideas/revisions/outbox, bounded streaming/dependency windows, experimental

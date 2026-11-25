@@ -53,7 +53,11 @@ def facts(context: dict) -> str:
             "I do not have validated market observations yet. Open Insights to check "
             "collection status. I cannot describe the current market without evidence."
         )
-    if analysis.get("status") != "current":
+    if analysis.get("status") == "partial":
+        lines.append(
+            "Some candle windows are incomplete; the independent facts above remain available. Only strategies needing the missing windows wait."
+        )
+    elif analysis.get("status") != "current":
         lines.append(
             "Current candle analysis is unavailable. Saved observations describe their "
             "original times and cannot establish what is happening now."
@@ -64,6 +68,25 @@ def facts(context: dict) -> str:
 def assessment(context: dict) -> str:
     analysis = context["analysis"]
     name = analysis.get("underlying", "SENSEX")
+    if analysis.get("status") == "partial":
+        available = []
+        if analysis.get("rolling_status") == "complete":
+            available.append(
+                "The latest twenty-minute window is complete: price is "
+                + analysis.get("trend", "unknown").replace("_", " ")
+                + "."
+            )
+        if analysis.get("opening_range_status") == "complete":
+            available.append(
+                "The opening range is retained: price is "
+                + analysis.get("range_state", "unknown").replace("_", " ")
+                + "."
+            )
+        return (
+            f"{name}: "
+            + " ".join(available)
+            + " Range-based entries wait for their required missing window; news and other verified context remain available."
+        )
     if analysis.get("status") != "current":
         missing = analysis.get("missing_minutes", [])
         detail = analysis.get("reason", "Current completed-candle evidence is unavailable.")
@@ -190,7 +213,11 @@ async def answer(question: str, context: dict, store: Store, history: list[dict]
                 + daily.get("reason", "No verified weekly opportunity yet.")
                 + (
                     f" Last verified daily close: {daily['last_close']} at {daily['as_of']}. "
-                    f"Prior structure: {daily.get('prior_four_session_low')} to {daily.get('prior_four_session_high')}."
+                    + (
+                        f"Prior structure: {daily['prior_four_session_low']} to {daily['prior_four_session_high']}."
+                        if daily.get("prior_four_session_low")
+                        else f"Available {daily.get('available_session_count', 0)}-session range: {daily.get('available_low')} to {daily.get('available_high')}; this is partial history."
+                    )
                     if daily.get("last_close")
                     else ""
                 )
@@ -264,7 +291,7 @@ async def answer(question: str, context: dict, store: Store, history: list[dict]
         for word in ("why", "explain", "interpret", "compare", "analyse", "analyze", "research")
     )
     interpretation, status = "", "deterministic"
-    if needs_interpretation and context["analysis"].get("status") == "current":
+    if needs_interpretation and context["analysis"].get("status") in {"current", "partial"}:
         from services.bot.research import synthesize
 
         analysis = context["analysis"]
