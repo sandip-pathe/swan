@@ -1,5 +1,19 @@
 # SWAN implementation checkpoint
 
+## Product alignment correction: 25 November 2026
+
+User explicitly clarified: wants AI-assisted trading decisions/best bets, including
+predictions/scenarios, strategies, call/put/action ideas informed by broker data,
+news/reports and analysis. No execution means user places orders, NOT that ideas
+must avoid actionable guidance. Current observation-only bot is insufficient.
+BOT-SCOPE.md now leads with the corrected intended deliverable and staged pipeline.
+No speculative recommender was enabled in this clarification pass. Existing prompt
+prohibits entry/exit recommendations; recorded as a mismatch to replace alongside
+contract/quote evidence, structured conditional ideas, mechanical validation and
+source-linked reasoning, not by simply deleting protective input checks. Weekly,
+news, option feasibility, idea lifecycle and measured outcome evaluation remain
+unimplemented/accepted scope in D34. Current deployed behavior is unchanged.
+
 ## Answer quality and SENSEX coverage: 25 November 2026
 
 Implemented separate SENSEX/BSE and NIFTY/NSE completed-candle collection with

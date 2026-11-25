@@ -1,3 +1,70 @@
+# Product correction: AI trading decision support
+
+25 November 2026: user clarified that the objective is making better trading bets
+using AI, real broker data, news, reports and analysis. An indicator-description
+bot is insufficient. No execution means the USER places every order; it does not
+exclude evidence-backed trade ideas, directional scenarios or suggested actions.
+This section supersedes narrower observation-only product wording below. It is an
+accepted product direction, NOT a claim that the following pipeline is implemented.
+
+## Primary deliverable
+
+A ranked, selective stream of actionable SENSEX long-option ideas for intraday use,
+with a separate weekly swing horizon. Ideas can suggest watching, considering a
+call or put purchase, waiting, avoiding an opportunity, or closing a user-reported
+long position. No naked option selling, order routing or autonomous execution is
+inferred. No live holdings access/monitoring is implemented. Existing Chat/Insights
+UI, local archive, slim host and token limits remain useful infrastructure.
+
+Each idea must identify:
+- Horizon, underlying, actual option contract/expiry/lot size and source times.
+- Thesis: price action, market participation/options evidence where available,
+  relevant verified catalyst, and evidence against the thesis.
+- Conditional action and entry trigger; whether it is watch-only or actually
+  triggered, supported by sufficiently fresh executable bid/ask observations.
+- Invalidation/exit condition, time expiry, targets/scenarios and why they are
+  justified. User executes; no guaranteed fill or enforced stop is implied.
+- Whole-lot premium required, costs/slippage estimate, net scenarios and the
+  user's five-percent position-premium loss reference. If minimum lot, liquidity
+  or plausible stop cannot fit, disclose incompatibility rather than force a setup.
+- Strategy/version, evidence links and measured historical results when available.
+  Unvalidated ideas must be labelled unvalidated. No invented win probabilities,
+  confidence percentages or guaranteed daily returns.
+- Lifecycle: watch -> trigger met -> invalidated/expired; update the same thesis
+  with provenance rather than endlessly issue contradictory standalone signals.
+
+## Intended reasoning pipeline
+
+Verified market/contract data + source-linked announcements/news/reports
+-> validation and timestamp alignment
+-> deterministic market features and small strategy candidate set
+-> AI synthesis of thesis, catalysts, counterarguments and scenarios
+-> mechanical checks on identity, freshness, liquidity, costs and risk compatibility
+-> rank/publish eligible ideas or an explained no-setup decision
+-> track subsequent outcomes for evaluation (not automatic execution).
+
+LLMs reason over concise relevant evidence on meaningful changes or explicit
+research requests. They do not fabricate prices, compute authoritative fees/size,
+substitute guessed news, or decide whether data passed validation. Mathematical
+checks are necessary for credible recommendations; they are not the entire product.
+News/report claims require accessible source content and publication/event times.
+No full-news/minute model loop. Source outage means withhold affected claims.
+
+## Actual gap and next build order
+
+Current deployed bot has source validation, SENSEX/NIFTY range/SMA observations,
+simple deterministic interpretation and optional tightly restricted explanation.
+It does NOT yet deliver the recommendation pipeline above. Current model instructions
+explicitly prohibit trade commands/entry-exit levels; this is a product mismatch.
+Do not merely remove that restriction and emit unsupported recommendations.
+First build option/contract quote evidence and conditional idea schema/lifecycle;
+then a small explicit strategy set, sourced event/news synthesis, scenario/cost
+checks and triggered AI reasoning. Weekly history and outcome evaluation need
+separate pipelines and acceptance. Keep price suggestions unpublished until their
+inputs exist, and do not mark simulated/fixture performance as market acceptance.
+
+---
+
 # Current bot priorities: 25 November 2026
 
 This section supersedes the earlier proposal below. Product stays read-only with

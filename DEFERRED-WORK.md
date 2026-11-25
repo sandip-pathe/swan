@@ -2,6 +2,20 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November product correction: user wants AI-assisted actionable trading research,
+not an indicator-description bot. See the leading BOT-SCOPE.md section. Accepted
+direction includes conditional call/put ideas, triggers/invalidation/exit scenarios,
+option identity/liquidity/cost/risk feasibility, verified news/report synthesis,
+ranked selective publication and lifecycle/outcome evaluation, with manual user
+execution only. Current deployed code is not this deliverable: prompt explicitly
+forbids entry/exit recommendations and optional explanation cannot bridge missing
+inputs. Closure requires implementing the evidence/idea/validation/reasoning chain,
+removing this product restriction as part of that complete grounded path, and
+separately accepting data freshness, usefulness and net outcome evaluation. Do not
+close from more fluent prose, guessed probability or isolated fixture performance.
+No naked option selling or autonomous execution was authorized. Work remains open;
+this pass records alignment, not a recommender implementation or deployment.
+
 25 November answer-quality pass: implemented SENSEX candles/analysis as the default
 chat focus with separate venue calendars, retained NIFTY analysis, bounded gap
 backfill, explicit gap details, deterministic interpretations/invalidation, cached
