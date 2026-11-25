@@ -68,14 +68,14 @@ export default function IdeaCard({ idea, clock, starred, onStar, onDiscuss, requ
       <div><dt>Estimated upside scenario</dt><dd>{money(idea.economics.estimated_net_gain)}</dd></div>
       <div><dt>Your 5% reference</dt><dd>{money(idea.economics.loss_reference)}</dd></div></dl>
       <p className="note">Ask / bid {idea.economics.entry_ask} / {idea.economics.exit_bid}; {stamp(idea.economics.quote_at)}. {pricesOld ? "Historical pricing; refresh before a decision." : "Source pricing received recently."}</p></>}
-    {!!idea.reasons.length && <ul className="idea-reasons">{idea.reasons.map(reason => <li key={reason}>{reasons[reason] ?? reason.replaceAll("_", " ").toLowerCase()}</li>)}</ul>}
+    {!!idea.reasons.length && <p className="idea-waiting">{reasons[idea.reasons[0]] ?? idea.reasons[0].replaceAll("_", " ").toLowerCase()}</p>}
     {research && <details><summary>Counterargument and next observation</summary><p>{research.counterargument}</p><p>{research.next_observation}</p></details>}
-    <details><summary>Sources, timing and assumptions</summary><p>Revision {idea.revision}; published {stamp(idea.published_at)}. Expires {stamp(idea.expires_at)}.</p>
+    <details><summary>Risk &amp; evidence</summary>{idea.reasons.length > 1 && <ul className="idea-reasons">{idea.reasons.slice(1).map(reason => <li key={reason}>{reasons[reason] ?? reason.replaceAll("_", " ").toLowerCase()}</li>)}</ul>}<p>Revision {idea.revision}; published {stamp(idea.published_at)}. Expires {stamp(idea.expires_at)}.</p>
       <p>{idea.evidence_ids.length} retained evidence references. {idea.limitation}</p>
       {idea.economics && <p>{idea.economics.assumptions} Estimated round-trip costs/slippage: {money(idea.economics.estimated_round_trip_cost)}. Premium invalidation/target scenarios: {idea.economics.premium_invalidation} / {idea.economics.premium_target_scenario}.</p>}
       <p>Scenario results are hypothetical. This assistant does not execute exits or guarantee the loss reference.</p></details>
     <div className="idea-actions"><button onClick={onDiscuss}>Discuss this idea</button>
-      <button className="text-button" aria-pressed={starred} onClick={onStar}>{starred ? "Unstar" : "Star"}</button>
+      <button className="text-button" aria-pressed={starred} onClick={onStar}>{starred ? "Saved" : "Save"}</button>
       {idea.contract && <button className="text-button" onClick={() => setReporting(value => !value)}>Record an entry I placed</button>}</div>
     {reporting && <form className="idea-report" onSubmit={event => { event.preventDefault(); void record(); }}>
       <p>This records your statement only. It does not send an order.</p>

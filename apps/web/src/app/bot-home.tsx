@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, ArrowUpRight, Bookmark, Clock3, RefreshCw, Settings2, X } from "lucide-react";
 import type { User } from "firebase/auth";
 import Chat from "./chat";
 import Brand from "./brand";
@@ -30,6 +31,9 @@ const stamp = (value?: string) => value ? new Date(value).toLocaleString("en-IN"
 const words = (value?: string) => (value ?? "unavailable").replaceAll("_", " ");
 
 export default function BotHome({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feed, setFeed] = useState<"latest" | "saved">("latest");
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [screen, setScreen] = useState<"chat" | "insights">("chat");
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
@@ -61,6 +65,13 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       .finally(() => { if (alive) setReady(true); });
     return () => { alive = false; };
   }, [ownerKey]);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let alive = true;
+    void navigator.serviceWorker.getRegistration().then(registration => registration?.pushManager?.getSubscription())
+      .then(subscription => { if (alive) setPushEnabled(Boolean(subscription)); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const request = useCallback(async (path: string, method = "GET", signal?: AbortSignal, body?: unknown) => {
     if (!navigator.onLine) throw new Error("Reconnect to continue.");
@@ -176,7 +187,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
   }
   function go(value: "chat" | "insights") { location.hash = value; setScreen(value); }
   async function saveBudget() {
-    try { await request("/api/bot/preferences", "POST", undefined, { position_budget: budget || "0" });
+    try { await request("/api/bot/preferences", "POST", undefined, { position_budget: budget || data?.preferences?.position_budget || "0" });
       setBudgetMessage("Position budget saved. This does not authorize any order."); refreshCurrent.current();
     } catch { setBudgetMessage("Budget was not saved. Reconnect and enter a valid amount."); }
   }
@@ -187,7 +198,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       if (!enable) {
         await request("/api/bot/push/disable", "POST", undefined, {});
         await (await registration.pushManager.getSubscription())?.unsubscribe();
-        setPushMessage("Notifications disabled on all your devices."); return;
+        setPushEnabled(false); setPushMessage("Notifications disabled on all your devices."); return;
       }
       if (await Notification.requestPermission() !== "granted") { setPushMessage("Notifications were not allowed. Insights still update while the app is open."); return; }
       const result = await request("/api/bot/push-key") as { public_key: string };
@@ -195,7 +206,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       const key = Uint8Array.from(raw, char => char.charCodeAt(0));
       const subscription = await registration.pushManager.getSubscription() ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
       await request("/api/bot/push", "POST", undefined, subscription.toJSON());
-      setPushMessage("Update notifications enabled. Open the app to confirm current conditions; delivery can be delayed by your device.");
+      setPushEnabled(true); setPushMessage("Update notifications enabled. Open the app to confirm current conditions; delivery can be delayed by your device.");
     } catch { setPushMessage("Notifications could not be updated. Use a supported installed PWA and reconnect."); }
   }
   async function toggleStar(id: string) {
@@ -214,6 +225,20 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
     } catch { setError("Unable to load this source record. The insight remains visible."); }
     finally { setEvidenceBusy(""); }
   }
+  const ideas = data?.current_ideas ?? [];
+  const visibleIdeas = feed === "saved" ? ideas.filter(idea => starred.includes(idea.id)) : ideas;
+  const archived = (data?.insights ?? []).filter(item => !ideas.some(idea => idea.id === item.id) && (feed !== "saved" || starred.includes(item.id)));
+  const closed = data?.calendar.state === "closed";
+  const sessionLabel = closed ? "Market closed" : data?.calendar.state === "open" ? "Market open" : "Market status unavailable";
+  const discuss = (idea: { id: string; title: string }) => { setSelectedIdea({ id: `idea:${idea.id}`, label: idea.title }); go("chat"); };
+  const marketValues = ["SENSEX", "NIFTY"].flatMap(name => {
+    const row = data?.quotes.find(quote => quote.underlying === name);
+    const analysis = data?.analyses?.[name] ?? (name === "SENSEX" ? data?.analysis : undefined);
+    const value = row?.quote?.last_price ?? analysis?.last_close;
+    const at = row?.quote?.timestamp ?? analysis?.as_of;
+    const current = row?.status === "current" && at && clock - Date.parse(at) <= 90000;
+    return value ? [{ name, value, at, current }] : [];
+  });
   return <div className="swan-app bot-app">
     <header className="bot-header"><Brand /><nav aria-label="Primary navigation">
       <button className="text-button" aria-current={screen === "chat" ? "page" : undefined} onClick={() => go("chat")}>Chat</button>
@@ -225,51 +250,32 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
         onTitle={() => {}} onMarket={() => go("insights")} />
     </div>
     {screen === "insights" && <main className="bot-insights">
-      <div className="bot-heading"><div><p className="eyebrow">OBSERVE. QUESTION. UNDERSTAND.</p><h1>Market insights</h1><p>What changed, the evidence behind it, and what remains uncertain.</p></div>
-        <button onClick={() => setRefresh(value => value + 1)} disabled={loading}>{loading ? "Refreshing…" : "Refresh saved insights"}</button></div>
-      {error && <p role="alert" className="error">{error}{data ? " Previously received observations remain below." : ""}</p>}
-      {archiveError && <p role="alert" className="error">{archiveError}</p>}
-      <div className="idea-actions"><button onClick={() => void notifications(true)}>Enable update notifications</button><button onClick={() => void notifications(false)}>Disable all notifications</button></div>
-      {pushMessage && <p role="status">{pushMessage}</p>}
-      <p className="note">Received insights stay on this device until you sign out or clear site data. Star important ones for server retention (up to 200). Unstarred server records expire after seven days or 1,000 records. Catch-up beyond that window is not guaranteed.</p>
-      {!data && loading && <p role="status">Loading your saved market observations…</p>}
+      <div className="insights-titlebar"><div><p className="insights-date">{new Date(clock).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" })}</p><h1>Insights</h1></div>
+        <div className="insights-tools"><button className="insight-icon-button secondary" aria-label="Refresh insights" title="Refresh" onClick={() => refreshCurrent.current()} disabled={loading}><RefreshCw size={18} aria-hidden="true" className={loading ? "is-refreshing" : undefined} /></button>
+        <button className="insight-icon-button secondary" aria-label={settingsOpen ? "Close insight settings" : "Insight settings"} aria-expanded={settingsOpen} aria-controls="insight-settings" onClick={() => setSettingsOpen(value => !value)}>{settingsOpen ? <X size={19} aria-hidden="true" /> : <Settings2 size={19} aria-hidden="true" />}</button></div></div>
+      {error && <p role="alert" className="insight-message error">{error}</p>}
+      {archiveError && <p role="alert" className="insight-message error">{archiveError}</p>}
+      {settingsOpen && <section id="insight-settings" className="insight-settings" aria-label="Insight settings">
+        <h2>Preferences</h2><form className="insight-budget-form" onSubmit={event => { event.preventDefault(); void saveBudget(); }}>
+          <label htmlFor="position-budget">Position budget <span>Maximum premium per trade</span></label><div><span className="budget-currency">INR</span><input id="position-budget" type="number" min="0" max="10000000" step="0.01" inputMode="decimal" value={budget} placeholder={data?.preferences?.position_budget === "0" ? "Not set" : data?.preferences?.position_budget} onChange={event => setBudget(event.target.value)} /><button>Save</button></div>
+          <p className="note">Risk reference: 5% of the position premium. You place every trade.</p>{budgetMessage && <p role="status" className="note">{budgetMessage}</p>}</form>
+        <div className="insight-notifications"><div><strong>Notifications</strong><p>Get an update when an idea changes.</p></div><button className="insight-secondary secondary" onClick={() => void notifications(!pushEnabled)}>{pushEnabled ? "Turn off all devices" : "Enable"}</button></div>
+        {pushMessage && <p role="status" className="note">{pushMessage}</p>}
+        <details className="insight-details"><summary>Storage &amp; data status</summary><p>Insights are saved on this device. Starred items also stay on the server. Signing out clears this device's archive.</p><p>Unstarred server history: seven days or 1,000 items. Starred: up to 200.</p><p>Collection: {words(data?.worker.status)}. Last sync: {stamp(data?.as_of)}.</p>{data?.news?.sources.map((source, index) => <p key={source.source ?? index}>{source.source}: {words(source.status)}</p>)}</details>
+      </section>}
+      {data && <div className="market-strip" aria-label="Market summary"><span className="market-session"><span className={closed ? "session-dot" : "session-dot session-open"} />{sessionLabel}</span>
+        {marketValues.map(row => <div className="market-value" key={row.name} title={stamp(row.at)}><span>{row.name}</span><strong>{Number(row.value).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong><small>{row.current ? "Live" : row.at ? new Date(row.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " IST" : "Historical"}</small></div>)}</div>}
+      <div className="insight-feedbar"><div className="insight-filters" aria-label="Insight filter"><button className="secondary" aria-pressed={feed === "latest"} onClick={() => setFeed("latest")}>Latest</button><button className="secondary" aria-pressed={feed === "saved"} onClick={() => setFeed("saved")}><Bookmark size={15} aria-hidden="true" />Saved{starred.length > 0 && <span>{starred.length}</span>}</button></div><span className="insight-sync">{loading ? "Updating" : data ? "Saved on this device" : "Connecting"}</span></div>
+      {!data && <div className="insight-empty" role="status"><div className="insight-empty-icon"><Clock3 size={25} aria-hidden="true" /></div><h2>{loading || !ready ? "Getting your insights" : "Waiting for a connection"}</h2><p>{loading || !ready ? "Your saved research will appear here." : "Previously downloaded insights appear here when available."}</p></div>}
       {data && <>
-        <form className="bot-budget" onSubmit={event => { event.preventDefault(); void saveBudget(); }}>
-          <label>Maximum premium allocation per position (INR)<input type="number" min="0" max="10000000" step="0.01" inputMode="decimal" value={budget} placeholder={data.preferences?.position_budget === "0" ? "Not set" : data.preferences?.position_budget} onChange={event => setBudget(event.target.value)} /></label>
-          <button>Save position budget</button><p className="note">Used for one-lot affordability; your loss reference remains 5% of the position premium. No account balance is assumed.</p>
-          {budgetMessage && <p role="status">{budgetMessage}</p>}</form>
-        <aside className="bot-status"><strong>Collection: {words(data.worker.status)}</strong><span>{data.worker.heartbeat_current && clock - Date.parse(data.as_of) <= 180000 ? "Worker heartbeat received" : "Worker heartbeat unavailable or old"} · Last received market calendar: {data.calendar.state}</span>
-          {data.worker.detail && <p>{data.worker.detail}</p>}<p>Server snapshot generated {stamp(data.as_of)}. Source times are shown separately. Refresh reads saved records.</p>
-          {data.worker.problems?.length ? <p>Some source reads failed. Retained values may be historical.</p> : null}</aside>
-        <section className="bot-quotes" aria-label="Index observations">{data.quotes.map(row => <article key={row.underlying}><div className="bot-row"><h2>{row.underlying}</h2><span>{words(row.status === "current" && row.quote && clock - Date.parse(row.quote.timestamp) > 90000 ? "historical" : row.status)}</span></div>
-          <p className="bot-price">{row.quote ? Number(row.quote.last_price).toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "Unavailable"}</p><p>Observed {stamp(row.quote?.timestamp)}</p></article>)}</section>
-        <section aria-labelledby="active-ideas"><h2 id="active-ideas">Decision ideas</h2>
-          <p className="note">Experimental conditional research. Watch means wait; conditions met still requires your decision and fresh pricing.</p>
-          {!data.current_ideas?.length && <p>No supported trade idea yet. The system will not force a call or put when required evidence is missing.</p>}
-          {data.current_ideas?.map(idea => <IdeaCard key={idea.id} idea={idea} clock={clock} starred={starred.includes(idea.id)}
-            onStar={() => void toggleStar(idea.id)} onDiscuss={() => { setSelectedIdea({ id: `idea:${idea.id}`, label: `${idea.title} / revision ${idea.revision}` }); go("chat"); }}
-            request={request} onUpdated={() => refreshCurrent.current()} />)}</section>
-        {!!data.reported_entries?.length && <aside className="bot-status"><strong>Your reported entries</strong>{data.reported_entries.map(entry => <p key={entry.idea_id}>{entry.quantity} units at INR {entry.premium} per unit. User-reported; not broker-verified or automatically protected.</p>)}</aside>}
-        <section className="bot-analysis"><h2>Weekly research</h2><p>{words(data.weekly?.status)}</p><p>{data.weekly?.reason ?? "Waiting for verified daily history."}</p>{data.weekly?.last_close && <p>Verified daily close {data.weekly.last_close} at {stamp(data.weekly.as_of)}</p>}</section>
-        <section className="bot-analysis"><h2>Source events</h2>{data.news?.sources.map((source, index) => <p key={source.source ?? index}>{source.source ?? "Official feed"}: {source.status}</p>)}
-          {!data.news?.items.length && <p>No usable source excerpts received. This does not establish that there is no news.</p>}
-          {data.news?.items.slice(0, 5).map(item => <p key={item.id}><a href={item.url} target="_blank" rel="noreferrer">{item.title}</a><br /><small>{item.source} / published {stamp(item.published_at)}</small></p>)}</section>
-        {Object.entries(data.analyses ?? { SENSEX: data.analysis }).map(([name, analysis]) => <section className="bot-analysis" key={name}><h2>{name} candle context <small>{words(analysis.status === "current" && analysis.as_of && clock - Date.parse(analysis.as_of) > 180000 ? "historical" : analysis.status)}</small></h2>
-          {analysis.last_close && <p>Last received completed close: {analysis.last_close} at {stamp(analysis.as_of)}</p>}
-          {analysis.reason && <p>{analysis.reason}</p>}
-          {analysis.trend ? <dl><div><dt>Trend</dt><dd>{words(analysis.trend)}</dd></div><div><dt>Opening range</dt><dd>{words(analysis.range_state)}</dd></div></dl> : !analysis.reason && <p>Waiting for validated completed candles.</p>}
-          {!!analysis.missing_minutes?.length && <p className="note">{analysis.missing_minutes.length} missing completed minutes. Scans withheld while coverage is incomplete.</p>}
-          <p className="note">Completed-bar context. Independent windows can remain useful when another window has gaps.</p></section>)}
-        {data.evaluation && <section><h2>Prospective record</h2><p>{data.evaluation.sample_count} hypothetical ideas ? {data.evaluation.closed_count} closed ? {data.evaluation.unpriced_count} without a verified exit price.</p><p>Net estimate across {data.evaluation.priced_count} priced outcomes: INR {data.evaluation.net_estimate_total}. No trading edge established.</p><p className="note">{data.evaluation.limitation}</p></section>}
-        <section aria-labelledby="changes"><h2 id="changes">Recorded changes</h2>{!data.insights.length && <p>No validated changes have been recorded yet. This does not establish that the market is quiet.</p>}
-          {data.insights.filter(insight => !data.current_ideas?.some(idea => idea.id === insight.id)).slice(0, visibleCount).map(insight => insight.kind === "idea" ? <IdeaCard key={`archive-${insight.id}`} idea={insight as unknown as AdvisoryIdea} clock={clock}
-            starred={starred.includes(insight.id)} onStar={() => void toggleStar(insight.id)} request={request}
-            onDiscuss={() => { setSelectedIdea({ id: `idea:${insight.id}`, label: insight.title }); go("chat"); }} onUpdated={() => refreshCurrent.current()} /> : <article className="bot-insight" key={insight.id}><p className="eyebrow">{stamp(insight.as_of)} · SAVED OBSERVATION</p><h3>{insight.title}</h3><p>{insight.summary}</p><p className="note">{insight.limitation}</p>
-            <button className="text-button" aria-pressed={starred.includes(insight.id)} disabled={!!starBusy} onClick={() => void toggleStar(insight.id)}>{starred.includes(insight.id) ? "Unstar" : "Star for retention"}</button>
-            {insight.published_at && <p className="note">Published {stamp(insight.published_at)}</p>}
-            <details><summary>Evidence and calculation</summary><p>Close: {insight.facts.last_close} · SMA: {insight.facts.sma20 ?? "Unavailable"}</p><p>Range: {insight.facts.range_low}–{insight.facts.range_high}</p><p>{insight.facts.source} · {insight.facts.rule}</p><p>{insight.facts.evidence.length} source candle references retained.</p>
-              {!evidence[insight.id] ? <button className="text-button" disabled={!!evidenceBusy} onClick={() => void loadEvidence(insight.id)}>{evidenceBusy === insight.id ? "Loading source…" : "Inspect source candles"}</button> : <div><p>Source received {stamp(evidence[insight.id].received_at)} · {evidence[insight.id].bars.length} validated bars</p><p>Response fingerprint: {evidence[insight.id].response_sha256}</p><ol>{evidence[insight.id].bars.slice(-20).map(bar => <li key={bar.evidence_id}>{stamp(bar.opens_at)} · close {bar.close}</li>)}</ol></div>}
-            </details></article>)}{data.insights.length > visibleCount && <button onClick={() => setVisibleCount(value => value + 100)}>Show older device insights</button>}</section>
+        {!!visibleIdeas.length && <section aria-label="Current ideas" className="insight-ideas">{visibleIdeas.map(idea => <IdeaCard key={idea.id} idea={idea} clock={clock} starred={starred.includes(idea.id)} onStar={() => void toggleStar(idea.id)} onDiscuss={() => discuss(idea)} request={request} onUpdated={() => refreshCurrent.current()} />)}</section>}
+        {!visibleIdeas.length && (feed === "latest" || !archived.length) && <section className="insight-empty insight-empty-compact" aria-label="No current ideas"><div className="insight-empty-icon">{feed === "saved" ? <Bookmark size={25} aria-hidden="true" /> : <Clock3 size={25} aria-hidden="true" />}</div>
+          <div><h2>{feed === "saved" ? "No saved insights yet" : closed ? "No new trade ideas" : data.worker.heartbeat_current ? "Watching for a clear setup" : "Waiting for market data"}</h2><p>{feed === "saved" ? "Save an insight to come back to it." : closed ? "Market closed. Your latest research is below." : "Ideas appear when current data supports them."}</p></div>{feed === "latest" && <button className="insight-secondary secondary" onClick={() => go("chat")}>Ask SWAN <ArrowRight size={16} aria-hidden="true" /></button>}</section>}
+        {feed === "latest" && !!data.news?.items.length && <section className="insight-brief" aria-labelledby="market-brief"><div className="insight-section-heading"><h2 id="market-brief">Market brief</h2><span>From your sources</span></div>{data.news.items.slice(0, 5).map(item => <a className="brief-story" key={item.id} href={item.url} target="_blank" rel="noreferrer"><div><p>{item.title}</p><span>{item.source} <span aria-hidden="true">/</span> {new Date(item.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} IST</span></div><ArrowUpRight size={17} aria-hidden="true" /></a>)}</section>}
+        {feed === "latest" && data.weekly?.last_close && <details className="insight-weekly"><summary><div><span>Weekly view</span><small>{data.weekly.status === "partial" ? "Partial history" : "Daily structure"}</small></div><ArrowRight size={17} aria-hidden="true" /></summary><p>Last available daily close: {Number(data.weekly.last_close).toLocaleString("en-IN", { maximumFractionDigits: 2 })} at {stamp(data.weekly.as_of)}.</p><p>{data.weekly.reason}</p><button className="text-button" onClick={() => go("chat")}>Discuss in chat</button></details>}
+        {!!archived.length && <section className="insight-archive" aria-label={feed === "saved" ? "Saved insights" : "Earlier insights"}><h2>{feed === "saved" ? "Saved research" : "Earlier insights"}</h2>{archived.slice(0, visibleCount).map(insight => insight.kind === "idea" ? <IdeaCard key={insight.id} idea={insight as unknown as AdvisoryIdea} clock={clock} starred={starred.includes(insight.id)} onStar={() => void toggleStar(insight.id)} onDiscuss={() => discuss(insight)} request={request} onUpdated={() => refreshCurrent.current()} /> : <article className="bot-insight" key={insight.id}><div className="bot-row"><small>{stamp(insight.as_of)}</small><button className="insight-icon-button secondary" aria-label={starred.includes(insight.id) ? "Unsave insight" : "Save insight"} aria-pressed={starred.includes(insight.id)} disabled={!!starBusy} onClick={() => void toggleStar(insight.id)}><Bookmark size={17} fill={starred.includes(insight.id) ? "currentColor" : "none"} aria-hidden="true" /></button></div><h3>{insight.title}</h3><p>{insight.summary}</p><details className="insight-details"><summary>Evidence</summary><p>{insight.limitation}</p><p>{insight.facts.source}</p>{!evidence[insight.id] ? <button className="text-button" disabled={!!evidenceBusy} onClick={() => void loadEvidence(insight.id)}>View source candles</button> : <div><p>{evidence[insight.id].bars.length} candles, received {stamp(evidence[insight.id].received_at)}</p><ol>{evidence[insight.id].bars.slice(-20).map(bar => <li key={bar.evidence_id}>{stamp(bar.opens_at)}: {bar.close}</li>)}</ol></div>}</details></article>)}{archived.length > visibleCount && <button className="insight-secondary secondary" onClick={() => setVisibleCount(value => value + 100)}>Load earlier insights</button>}</section>}
+        {!!data.reported_entries?.length && <details className="insight-details"><summary>Your reported entries ({data.reported_entries.length})</summary>{data.reported_entries.map(entry => <p key={entry.idea_id}>{entry.quantity} units at INR {entry.premium}. User-reported, not broker-verified.</p>)}</details>}
+        <footer className="insight-footer"><details><summary>About this research</summary><p>Ideas are experimental, with no proven trading edge. You decide and execute every trade.</p>{!!data.evaluation?.sample_count && <p>{data.evaluation.sample_count} hypothetical ideas tracked; {data.evaluation.priced_count} priced outcomes. {data.evaluation.limitation}</p>}</details></footer>
       </>}
     </main>}
   </div>;

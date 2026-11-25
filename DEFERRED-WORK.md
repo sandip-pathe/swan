@@ -2,6 +2,17 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+26 November UI correction: Insights redesigned around research feed, compact
+market strip, Latest/Saved, linked news and one compact empty state. Settings hides
+budget/notifications/storage diagnostics; empty evaluation/context cards removed.
+Real signed-in desktop/390px mobile, settings and filter states visually inspected.
+Production offline cache v4 retained; dev stale-shell issue fixed by disabling
+root SW caching in development only, preserving private archive. Build/type/SW
+syntax passed. User Vercel deployment and production device/offline delivery remain
+pending; active eligible-idea visual acceptance awaits real supported data, not a
+fabricated card. See leading RESUME.md; do not reintroduce the status wall.
+
+
 26 November preview issue resolved: actual signed-in insights/events returned 200
 and account error disappeared after syncing the existing owner binding and local
 3200 CORS. Root cause was empty local account mapping, not AngelOne login. Preview

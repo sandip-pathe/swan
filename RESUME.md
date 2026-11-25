@@ -1,5 +1,37 @@
 # SWAN implementation checkpoint
 
+## Insights product UI simplification: 26 November 2026
+
+User rejected the operational dashboard and repeated empty-state/caveat cards.
+Used karpathy-guidelines and ui-ux-pro-max; scope is the existing Insights screen,
+not a new application or backend rewrite. Latest/Saved filters, compact market
+strip with real source timestamps (quote or historical candle fallback), current
+idea feed, short linked news rows and a collapsed weekly view now lead the page.
+One compact no-idea state replaces the stack of empty diagnostics. No fake setup,
+prices, returns or live freshness were added. Chat and single-account login kept.
+
+Budget, notification control and storage/data diagnostics are behind the Settings
+icon. Existing affordability/5% reference, entry reporting, stars, local archive,
+source evidence, sync and research boundaries remain. Empty prospective evaluation
+metrics are no longer shown; nonempty hypothetical records remain in About research.
+Idea cards show one waiting reason first and disclose remaining risk/evidence on
+request. Real dates/times remain visible alongside historical market values.
+
+Found a concrete development PWA issue during visual inspection: cached public
+shell/dev chunk URLs served old React/CSS and old API target after reload. PWA
+registration is production-only now; development unregisters only this origin's
+root SW and clears only swan-public-bot-* public caches, preserving private IDB/
+chat data. Production offline shell remains enabled, version bumped to v4.
+Hard reload loaded the current signed-in layout. This also resolved conflicting
+old/new preview appearances during the earlier login/configuration updates.
+
+Observed the real signed-in UI with hosted market/news context, Settings expanded
+and collapsed, and Latest/Saved empty states. Inspected desktop preview and 390px
+mobile layout; restored normal width and Latest afterward. Typecheck, production
+build and SW syntax checks passed; no test suites added/run. No active eligible
+idea was available for visual acceptance; no fixture performance claimed.
+Pushed bot/read-only; user Vercel deployment remains the external step.
+
 ## Local preview authorization/endpoint correction: 26 November 2026
 
 The screenshot's running localhost:3200 bundle was compiled against localhost:8002,

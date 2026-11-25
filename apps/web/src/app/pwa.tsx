@@ -72,8 +72,19 @@ export default function Pwa({ children }: { children: React.ReactNode }) {
     window.addEventListener("beforeinstallprompt", installPrompt);
     window.addEventListener("appinstalled", appInstalled);
     standalone.addEventListener("change", updateInstalled);
-    if ("serviceWorker" in navigator)
-      navigator.serviceWorker.register("/sw.js").catch(() => setFailed(true));
+    if ("serviceWorker" in navigator) {
+      if (process.env.NODE_ENV === "production") {
+        navigator.serviceWorker.register("/sw.js").catch(() => setFailed(true));
+      } else {
+        // Development chunk URLs are reused: an offline cache would hide CSS edits.
+        void navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(
+          registrations.filter(registration => registration.scope === location.origin + "/").map(registration => registration.unregister()),
+        )).catch(() => {});
+        if ("caches" in window) void caches.keys().then(keys => Promise.all(
+          keys.filter(key => key.startsWith("swan-public-bot-")).map(key => caches.delete(key)),
+        )).catch(() => {});
+      }
+    }
     return () => {
       clearTimeout(reconnectTimer);
       window.removeEventListener("online", updateConnection);
