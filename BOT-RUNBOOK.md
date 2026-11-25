@@ -181,3 +181,25 @@ No new behavioral test suite was run for this change; build/typecheck and Python
 lint/mypy passed. D34 tracks persistence, offline and multi-device acceptance,
 backup/recovery and outstanding SENSEX/swing/data-source work. Prior passing test
 counts above refer to the earlier implementation and are not current acceptance.
+
+## SENSEX and answer routing update: 25 November
+
+Collector now queries SENSEX/BSE against verified BFO sessions and NIFTY/NSE against
+NFO sessions; each is independently bounded to cash hours. One gap-repair call per
+pass is allowed, never an unbounded retry loop. Whole-pass deadline remains 55s;
+quotes are bounded to 12s and each history read to 10s. SENSEX is the default chat
+analysis; NIFTY is selected explicitly. Cached same-context interpretations do not
+reserve/spend another call. Ordinary observation questions use deterministic facts
+and interpretation; explanation/research-style questions may use the existing
+budgeted model only with current evidence. No background model loop exists.
+
+Actual provider SENSEX history access succeeds but returns 371/375 minutes today;
+a narrow retry retains the same four missing minutes (15:16-15:19 IST). NIFTY
+returns 370/375. Both remain insufficient, and the bot withholds current scans.
+This is source-access evidence, not source completeness or open-session acceptance.
+
+Explicit calendar coverage is now through 31 December 2026 for both venues; source
+links/broker-mirror qualification are recorded in config. Christmas is closed.
+Both /opt/swan-bot/config and the original auto-login /opt/swan/config use the new
+calendar. Old November-boundary statements above are historical. Renew for 2027
+from official evidence before year end; do not infer weekday sessions.

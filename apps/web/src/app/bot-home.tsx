@@ -8,11 +8,11 @@ import { clearArchive, readArchive, writeArchive } from "@/lib/bot-archive";
 
 type Quote = { underlying: string; status: string; age_seconds: number | null;
   quote: { last_price: string; timestamp: string; source: string } | null };
-type Analysis = { status: string; reason?: string; as_of?: string; last_close?: string;
+type Analysis = { status: string; underlying?: string; missing_minutes?: string[]; reason?: string; as_of?: string; last_close?: string;
   sma20?: string; range_high?: string; range_low?: string; range_state?: string; trend?: string };
 type Insight = { id: string; as_of: string; published_at?: string; title: string; summary: string; limitation: string;
   facts: Analysis & { evidence: string[]; source: string; rule: string } };
-type Snapshot = { as_of: string; quotes: Quote[]; analysis: Analysis; insights: Insight[];
+type Snapshot = { as_of: string; quotes: Quote[]; analysis: Analysis; analyses?: Record<string, Analysis>; insights: Insight[];
   worker: { status: string; detail?: string; heartbeat_current: boolean; problems?: string[] };
   calendar: { state: string; last_covered_day?: string } };
 type Evidence = { source: string; response_sha256: string; received_at: string;
@@ -157,9 +157,12 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
           {data.worker.problems?.length ? <p>Some source reads failed. Retained values may be historical.</p> : null}</aside>
         <section className="bot-quotes" aria-label="Index observations">{data.quotes.map(row => <article key={row.underlying}><div className="bot-row"><h2>{row.underlying}</h2><span>{words(row.status === "current" && row.quote && clock - Date.parse(row.quote.timestamp) > 90000 ? "historical" : row.status)}</span></div>
           <p className="bot-price">{row.quote ? Number(row.quote.last_price).toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "Unavailable"}</p><p>Observed {stamp(row.quote?.timestamp)}</p></article>)}</section>
-        <section className="bot-analysis"><h2>NIFTY candle context <small>{words(data.analysis.status === "current" && data.analysis.as_of && clock - Date.parse(data.analysis.as_of) > 180000 ? "historical" : data.analysis.status)}</small></h2>
-          {data.analysis.last_close ? <><p>Last completed close: {data.analysis.last_close} · {stamp(data.analysis.as_of)}</p><dl><div><dt>Trend</dt><dd>{words(data.analysis.trend)}</dd></div><div><dt>Opening range</dt><dd>{words(data.analysis.range_state)}</dd></div></dl></> : <p>{data.analysis.reason ?? "Waiting for validated completed candles."}</p>}
-          <p className="note">SENSEX candle scans, options and live news are not available in this first slice.</p></section>
+        {Object.entries(data.analyses ?? { SENSEX: data.analysis }).map(([name, analysis]) => <section className="bot-analysis" key={name}><h2>{name} candle context <small>{words(analysis.status === "current" && analysis.as_of && clock - Date.parse(analysis.as_of) > 180000 ? "historical" : analysis.status)}</small></h2>
+          {analysis.last_close && <p>Last received completed close: {analysis.last_close} at {stamp(analysis.as_of)}</p>}
+          {analysis.reason && <p>{analysis.reason}</p>}
+          {analysis.trend ? <dl><div><dt>Trend</dt><dd>{words(analysis.trend)}</dd></div><div><dt>Opening range</dt><dd>{words(analysis.range_state)}</dd></div></dl> : !analysis.reason && <p>Waiting for validated completed candles.</p>}
+          {!!analysis.missing_minutes?.length && <p className="note">{analysis.missing_minutes.length} missing completed minutes. Scans withheld while coverage is incomplete.</p>}
+          <p className="note">Completed-bar context only. Option contracts, live news and weekly history are not yet validated.</p></section>)}
         <section aria-labelledby="changes"><h2 id="changes">Recorded changes</h2>{!data.insights.length && <p>No validated changes have been recorded yet. This does not establish that the market is quiet.</p>}
           {data.insights.slice(0, visibleCount).map(insight => <article className="bot-insight" key={insight.id}><p className="eyebrow">{stamp(insight.as_of)} · SAVED OBSERVATION</p><h3>{insight.title}</h3><p>{insight.summary}</p><p className="note">{insight.limitation}</p>
             <button className="text-button" aria-pressed={starred.includes(insight.id)} disabled={!!starBusy} onClick={() => void toggleStar(insight.id)}>{starred.includes(insight.id) ? "Unstar" : "Star for retention"}</button>

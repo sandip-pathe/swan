@@ -1,5 +1,45 @@
 # SWAN implementation checkpoint
 
+## Answer quality and SENSEX coverage: 25 November 2026
+
+Implemented separate SENSEX/BSE and NIFTY/NSE completed-candle collection with
+independent BFO/NFO calendar checks. SENSEX is the default chat focus; explicit
+NIFTY questions select NIFTY. Both contexts appear in Insights. Correct venue/token
+pairing is enforced; default NIFTY query compatibility remains. Docker bot image
+now also overlays the updated index-history module from the source bundle.
+One shared, bounded ten-minute gap-repair request per collection pass, ten-second
+history timeouts and twelve-second quote timeout constrain load. Conflicting
+backfill OHLC is rejected, never silently overwritten. Primary and repair snapshots
+retain separate provenance. Unrepaired gaps cannot publish a current scan.
+
+Hosted real saved-session reads returned 371 SENSEX candles, missing 15:16-15:19
+IST; NIFTY returned 370, missing 15:15-15:19. A narrower SENSEX 15:14-15:24 request
+returned six candles and the same four omissions. This confirms persistent missing
+source observations in those responses, not successful recovery. Saved historical
+snapshots are in bot storage; no insights were fabricated. Open-session latency,
+SENSEX continuity and provider recovery still need actual acceptance under D34.
+
+Answers now lead with deterministic interpretation, counterevidence/invalidation
+and source limitations. Model calls require an explanation/research-style request
+and current evidence. Repeated same-context explanations are cached; daily cache
+cleanup, budget reservations and no background model calls remain. Explicit weekly/
+news questions disclose missing history/feed instead of implying current research.
+A position-loss question with a stated premium can calculate the agreed 5% using
+Decimal; no orders, holdings monitoring or automated exits. Actual hosted calls to
+answer() with saved evidence returned the SENSEX gap explanation and INR 300 loss
+reference on INR 6000 with zero model calls. This is not signed-in frontend/model
+quality acceptance. Public health sample 0.063 seconds, not a latency guarantee.
+
+Extended explicit NFO/BFO calendar through 31 December 2026 from published 2026
+holiday notices (Christmas closed), maintaining prior timing sources. BSE official
+page returned 403; the BSE-authored notice from the existing broker mirror was read
+again. Sources and retrieval basis are in calendar_source. Updated both bot config
+and the original auto-login config; backed up original calendar beside ledger dump.
+January 2027 dates were not inferred. D26 remains open for subsequent scheduled/
+open-session acceptance and renewal before the new coverage boundary.
+Frontend build/typecheck and Python Ruff/Linux mypy pass. No new test suite or
+real model request ran in this pass. Vercel deployment remains the user's task.
+
 ## Local-first insights and slim public backend: 25 November 2026
 
 Bot workspace D:\s\swan-bot, branch bot/read-only. User prioritized timing,

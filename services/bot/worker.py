@@ -5,6 +5,7 @@ import logging
 import os
 import signal
 from datetime import UTC, datetime, time, timedelta
+from typing import Literal
 
 from services.bot.analysis import analyze, insight_for
 from services.bot.session import market_context
@@ -22,19 +23,26 @@ logger = logging.getLogger(__name__)
 async def collect(store: Store, client: AngelOneClient, settings: MarketSettings,
                   now: datetime) -> None:
     calendar = SessionCalendar(settings.calendar_file)
-    market = market_context(calendar, now)
+    markets = {name: market_context(calendar, now, venue)
+               for name, venue in (("NIFTY", "NFO"), ("SENSEX", "BFO"))}
+    market = markets["SENSEX"]
     store.write("calendar", market)
-    if market["state"] != "open":
+    if not any(value["state"] == "open" for value in markets.values()):
         store.write("worker", {"heartbeat": now.isoformat(), "status": market["state"],
                                "detail": "Collection sleeps outside verified sessions."})
         return
     problems = []
-    tokens = {"NSE": settings.nifty_index_token, "BSE": settings.sensex_index_token}
+    tokens = {venue: token for venue, name, token in
+              (("NSE", "NIFTY", settings.nifty_index_token),
+               ("BSE", "SENSEX", settings.sensex_index_token)) if markets[name]["state"] == "open"}
     try:
-        rows = await client.quotes({venue: [token] for venue, token in tokens.items() if token})
+        rows = await asyncio.wait_for(
+            client.quotes({venue: [token] for venue, token in tokens.items() if token}), 12)
         for venue, underlying in (("NSE", "NIFTY"), ("BSE", "SENSEX")):
+            if venue not in tokens:
+                continue
             matched = [row for row in rows if row.get("exchange") == venue and
-                       str(row.get("symbolToken", row.get("symboltoken"))) == tokens[venue]]
+                       str(row.get("symbolToken", row.get("symboltoken"))) == tokens.get(venue)]
             if len(matched) != 1:
                 problems.append(f"{underlying}_QUOTE_UNAVAILABLE")
                 continue
@@ -45,30 +53,68 @@ async def collect(store: Store, client: AngelOneClient, settings: MarketSettings
                 problems.append(f"{underlying}_OUT_OF_ORDER")
                 continue
             store.write(f"quote:{underlying}", reference.model_dump(mode="json"))
-    except (ProviderError, ValueError, TypeError, KeyError):
+    except (ProviderError, ValueError, TypeError, KeyError, TimeoutError):
         problems.append("QUOTES_UNAVAILABLE")
-    try:
-        session = calendar.get("NFO", now.astimezone(IST).date())
-        if session is None:
-            raise ProviderError("VERIFIED_SESSION_REQUIRED")
-        # The reused derivatives calendar can extend past the underlying cash session.
-        end = min(now.replace(second=0, microsecond=0), session.closes_at,
-                  datetime.combine(session.key, time(15, 30), IST))
-        if end > session.opens_at:
-            query = IndexHistoryQuery(session=session, start=session.opens_at, end=end)
-            result = await client.index_candles(query)
-            store.write("evidence", result.model_dump(mode="json"))
-            analysis = analyze(list(result.bars), datetime.now(UTC), session.opens_at)
-            store.write("analysis", analysis)
-            previous = store.read("last_published")
+    repair_available = True
+    indices: tuple[tuple[Literal["SENSEX", "NIFTY"], str, Literal["BSE", "NSE"]], ...] = (
+        ("SENSEX", "BFO", "BSE"), ("NIFTY", "NFO", "NSE"))
+    for underlying, venue, exchange in indices:
+        if markets[underlying]["state"] != "open":
+            continue
+        try:
+            session = calendar.get(venue, now.astimezone(IST).date())
+            if session is None:
+                raise ProviderError("VERIFIED_SESSION_REQUIRED")
+            end = min(now.replace(second=0, microsecond=0), session.closes_at,
+                      datetime.combine(session.key, time(15, 30), IST))
+            if end <= session.opens_at:
+                continue
+            query = IndexHistoryQuery(underlying=underlying, exchange=exchange,
+                                      session=session, start=session.opens_at, end=end)
+            result = await asyncio.wait_for(client.index_candles(query), 10)
+            analysis = analyze(list(result.bars), datetime.now(UTC), session.opens_at, underlying)
+            # One bounded retry of the first gap, no interpolation or invented candles.
+            missing = analysis.get("missing_minutes", [])
+            if missing and repair_available:
+                repair_available = False
+                store.write(f"analysis:{underlying}", analysis)
+                store.write(f"evidence:{underlying}", result.model_dump(mode="json"))
+                gap_start = datetime.fromisoformat(missing[0])
+                gap_end = min(end, gap_start + timedelta(minutes=10))
+                repair = await asyncio.wait_for(client.index_candles(IndexHistoryQuery(
+                    underlying=underlying, exchange=exchange, session=session,
+                    start=gap_start, end=gap_end)), 10)
+                merged = {bar.opens_at: bar for bar in result.bars}
+                for bar in repair.bars:
+                    prior = merged.get(bar.opens_at)
+                    if prior and (prior.open, prior.high, prior.low, prior.close) != (
+                            bar.open, bar.high, bar.low, bar.close):
+                        raise ProviderError("INDEX_REPAIR_CONFLICT")
+                    if prior is None:
+                        merged[bar.opens_at] = bar
+                # Retain both original source snapshots; never rewrite their provenance.
+                combined = sorted(merged.values(), key=lambda bar: bar.opens_at)
+                analysis = analyze(combined, datetime.now(UTC), session.opens_at, underlying)
+                snapshot = {"primary": result.model_dump(mode="json"),
+                            "repair": repair.model_dump(mode="json"),
+                            "source": result.source, "received_at": repair.received_at.isoformat(),
+                            "response_sha256": result.response_sha256,
+                            "bars": [bar.model_dump(mode="json") for bar in combined]}
+            else:
+                snapshot = result.model_dump(mode="json")
+            store.write(f"evidence:{underlying}", snapshot)
+            store.write(f"analysis:{underlying}", analysis)
+            if analysis.get("status") != "current":
+                problems.append(f"{underlying}_COVERAGE_OR_FRESHNESS")
+            previous = store.read(f"last_published:{underlying}")
             insight = insight_for(analysis, previous, str(session.key))
             if insight:
                 insight["published_at"] = datetime.now(UTC).isoformat()
-                insight["source_snapshot"] = result.model_dump(mode="json")
+                insight["source_snapshot"] = snapshot
                 store.publish(insight)
-                store.write("last_published", {**analysis, "session": str(session.key)})
-    except (ProviderError, ValueError, TypeError, KeyError):
-        problems.append("CANDLES_UNAVAILABLE")
+                store.write(f"last_published:{underlying}", {**analysis, "session": str(session.key)})
+        except (ProviderError, ValueError, TypeError, KeyError, TimeoutError):
+            problems.append(f"{underlying}_CANDLES_UNAVAILABLE")
     store.write("worker", {"heartbeat": datetime.now(UTC).isoformat(),
                            "status": "degraded" if problems else "collecting",
                            "problems": problems})

@@ -66,9 +66,12 @@ def health():
 
 def context(store: Store, now: datetime, include_insights: bool = True) -> dict:
     try:
-        calendar = market_context(SessionCalendar(MarketSettings().calendar_file), now)
+        source_calendar = SessionCalendar(MarketSettings().calendar_file)
+        calendars = {name: market_context(source_calendar, now, venue) for name, venue in
+                     (("SENSEX", "BFO"), ("NIFTY", "NFO"))}
     except ProviderError:
-        calendar = {"state": "unknown"}
+        calendars = {name: {"state": "unknown"} for name in ("SENSEX", "NIFTY")}
+    calendar = calendars["SENSEX"]
     worker = store.read("worker", {"status": "not_started"})
     heartbeat = worker.get("heartbeat")
     worker = {**worker, "heartbeat_current": bool(heartbeat and
@@ -79,17 +82,24 @@ def context(store: Store, now: datetime, include_insights: bool = True) -> dict:
         age = (now - datetime.fromisoformat(quote["timestamp"])).total_seconds() if quote else None
         quotes.append({"underlying": underlying, "quote": quote, "age_seconds": age,
                        "status": "unavailable" if quote is None else "current" if
-                       calendar.get("state") == "open" and age is not None and 0 <= age <= 90
+                       calendars[underlying].get("state") == "open" and age is not None and 0 <= age <= 90
                        else "historical"})
-    analysis = store.read("analysis", {"status": "insufficient", "reason": "No analysis yet."})
-    if analysis.get("status") == "current":
-        analysis_age = now - datetime.fromisoformat(analysis["as_of"])
-        if calendar.get("state") != "open" or not timedelta(0) <= analysis_age <= timedelta(minutes=3):
-            analysis = {**analysis, "status": "historical"}
+    analyses = {}
+    for underlying in ("SENSEX", "NIFTY"):
+        analysis = store.read(f"analysis:{underlying}", {
+            "status": "insufficient", "reason": "No validated candle analysis yet.",
+            "underlying": underlying})
+        if analysis.get("status") == "current":
+            analysis_age = now - datetime.fromisoformat(analysis["as_of"])
+            if (calendars[underlying].get("state") != "open" or
+                    not timedelta(0) <= analysis_age <= timedelta(minutes=3)):
+                analysis = {**analysis, "status": "historical"}
+        analyses[underlying] = analysis
     return {"as_of": now.isoformat(), "calendar": calendar, "worker": worker,
-            "quotes": quotes, "analysis": analysis,
+            "quotes": quotes, "analysis": analyses["SENSEX"], "analyses": analyses,
+            "calendars": calendars,
             "insights": store.insights() if include_insights else [], "capabilities": {
-                "nifty_analysis": True, "sensex_history": False, "options": False,
+                "nifty_analysis": True, "sensex_history": True, "options": False,
                 "news": False, "trading": False}}
 
 

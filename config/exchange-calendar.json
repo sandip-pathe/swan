@@ -192,6 +192,534 @@
         "verified": true
       },
       "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-01",
+        "opens_at": "2026-12-01T09:15:00+05:30",
+        "closes_at": "2026-12-01T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-02",
+        "opens_at": "2026-12-02T09:15:00+05:30",
+        "closes_at": "2026-12-02T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-03",
+        "opens_at": "2026-12-03T09:15:00+05:30",
+        "closes_at": "2026-12-03T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-04",
+        "opens_at": "2026-12-04T09:15:00+05:30",
+        "closes_at": "2026-12-04T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-07",
+        "opens_at": "2026-12-07T09:15:00+05:30",
+        "closes_at": "2026-12-07T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-08",
+        "opens_at": "2026-12-08T09:15:00+05:30",
+        "closes_at": "2026-12-08T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-09",
+        "opens_at": "2026-12-09T09:15:00+05:30",
+        "closes_at": "2026-12-09T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-10",
+        "opens_at": "2026-12-10T09:15:00+05:30",
+        "closes_at": "2026-12-10T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-11",
+        "opens_at": "2026-12-11T09:15:00+05:30",
+        "closes_at": "2026-12-11T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-14",
+        "opens_at": "2026-12-14T09:15:00+05:30",
+        "closes_at": "2026-12-14T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-15",
+        "opens_at": "2026-12-15T09:15:00+05:30",
+        "closes_at": "2026-12-15T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-16",
+        "opens_at": "2026-12-16T09:15:00+05:30",
+        "closes_at": "2026-12-16T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-17",
+        "opens_at": "2026-12-17T09:15:00+05:30",
+        "closes_at": "2026-12-17T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-18",
+        "opens_at": "2026-12-18T09:15:00+05:30",
+        "closes_at": "2026-12-18T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-21",
+        "opens_at": "2026-12-21T09:15:00+05:30",
+        "closes_at": "2026-12-21T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-22",
+        "opens_at": "2026-12-22T09:15:00+05:30",
+        "closes_at": "2026-12-22T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-23",
+        "opens_at": "2026-12-23T09:15:00+05:30",
+        "closes_at": "2026-12-23T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-24",
+        "opens_at": "2026-12-24T09:15:00+05:30",
+        "closes_at": "2026-12-24T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-28",
+        "opens_at": "2026-12-28T09:15:00+05:30",
+        "closes_at": "2026-12-28T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-29",
+        "opens_at": "2026-12-29T09:15:00+05:30",
+        "closes_at": "2026-12-29T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-30",
+        "opens_at": "2026-12-30T09:15:00+05:30",
+        "closes_at": "2026-12-30T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "NFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-31",
+        "opens_at": "2026-12-31T09:15:00+05:30",
+        "closes_at": "2026-12-31T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.nseindia.com/static/market-data/market-timings; 2026 holidays: https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation.",
+        "verified": true
+      },
+      "official_source_url": "https://www.nseindia.com/static/market-data/market-timings"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-01",
+        "opens_at": "2026-12-01T09:15:00+05:30",
+        "closes_at": "2026-12-01T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-02",
+        "opens_at": "2026-12-02T09:15:00+05:30",
+        "closes_at": "2026-12-02T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-03",
+        "opens_at": "2026-12-03T09:15:00+05:30",
+        "closes_at": "2026-12-03T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-04",
+        "opens_at": "2026-12-04T09:15:00+05:30",
+        "closes_at": "2026-12-04T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-07",
+        "opens_at": "2026-12-07T09:15:00+05:30",
+        "closes_at": "2026-12-07T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-08",
+        "opens_at": "2026-12-08T09:15:00+05:30",
+        "closes_at": "2026-12-08T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-09",
+        "opens_at": "2026-12-09T09:15:00+05:30",
+        "closes_at": "2026-12-09T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-10",
+        "opens_at": "2026-12-10T09:15:00+05:30",
+        "closes_at": "2026-12-10T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-11",
+        "opens_at": "2026-12-11T09:15:00+05:30",
+        "closes_at": "2026-12-11T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-14",
+        "opens_at": "2026-12-14T09:15:00+05:30",
+        "closes_at": "2026-12-14T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-15",
+        "opens_at": "2026-12-15T09:15:00+05:30",
+        "closes_at": "2026-12-15T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-16",
+        "opens_at": "2026-12-16T09:15:00+05:30",
+        "closes_at": "2026-12-16T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-17",
+        "opens_at": "2026-12-17T09:15:00+05:30",
+        "closes_at": "2026-12-17T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-18",
+        "opens_at": "2026-12-18T09:15:00+05:30",
+        "closes_at": "2026-12-18T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-21",
+        "opens_at": "2026-12-21T09:15:00+05:30",
+        "closes_at": "2026-12-21T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-22",
+        "opens_at": "2026-12-22T09:15:00+05:30",
+        "closes_at": "2026-12-22T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-23",
+        "opens_at": "2026-12-23T09:15:00+05:30",
+        "closes_at": "2026-12-23T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-24",
+        "opens_at": "2026-12-24T09:15:00+05:30",
+        "closes_at": "2026-12-24T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-28",
+        "opens_at": "2026-12-28T09:15:00+05:30",
+        "closes_at": "2026-12-28T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-29",
+        "opens_at": "2026-12-29T09:15:00+05:30",
+        "closes_at": "2026-12-29T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-30",
+        "opens_at": "2026-12-30T09:15:00+05:30",
+        "closes_at": "2026-12-30T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "session": {
+        "schema_version": 1,
+        "key": "2026-12-31",
+        "opens_at": "2026-12-31T09:15:00+05:30",
+        "closes_at": "2026-12-31T15:40:00+05:30",
+        "calendar_source": "Timings: https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf; 2026 holidays: https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8; checked 2026-11-25T16:02:52.970055+00:00. Bounded coverage ends 2026-12-31. December holiday list rechecked 25 November 2026; Christmas 25 December; subsequent special circulars require reconciliation. Holiday notice authored by BSE, retrieved from broker mirror: https://www.steelcitynettrade.com/Circulars/BSE-Trading%20Holidays%20for%20the%20Calendar%20Year%202026%20for%20Equity%20and%20Equity%20Derivatives%20Segments.pdf; official holiday page unavailable.",
+        "verified": true
+      },
+      "official_source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260801-2/20260801-2.pdf"
     }
   ],
   "closed_days": [
@@ -253,6 +781,114 @@
       "exchange": "BFO",
       "day": "2026-11-29",
       "reason": "Regular weekend; no live special session imported",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-05",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-06",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-12",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-13",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-19",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-20",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-25",
+      "reason": "Christmas",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-26",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "NFO",
+      "day": "2026-12-27",
+      "reason": "Weekend",
+      "official_source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-05",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-06",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-12",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-13",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-19",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-20",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-25",
+      "reason": "Christmas",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-26",
+      "reason": "Weekend",
+      "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
+    },
+    {
+      "exchange": "BFO",
+      "day": "2026-12-27",
+      "reason": "Weekend",
       "official_source_url": "https://www.bseindia.com/markets/MarketInfo/DispNewNoticesCirculars.aspx?page=20251212-8"
     }
   ]

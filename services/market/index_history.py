@@ -21,8 +21,8 @@ class IndexHistoryQuery(BaseModel):
     """One bounded, regular-session NIFTY/NSE one-minute history request."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    underlying: Literal["NIFTY"] = "NIFTY"
-    exchange: Literal["NSE"] = "NSE"
+    underlying: Literal["NIFTY", "SENSEX"] = "NIFTY"
+    exchange: Literal["NSE", "BSE"] = "NSE"
     session: ExchangeSession
     start: AwareDatetime
     end: AwareDatetime
@@ -30,6 +30,8 @@ class IndexHistoryQuery(BaseModel):
     @model_validator(mode="after")
     def bounded_session_window(self) -> Self:
         start, end = self.start.astimezone(IST), self.end.astimezone(IST)
+        if (self.underlying, self.exchange) not in {("NIFTY", "NSE"), ("SENSEX", "BSE")}:
+            raise ValueError("INDEX_HISTORY_IDENTITY_MISMATCH")
         session_open = self.session.opens_at.astimezone(IST)
         session_close = self.session.closes_at.astimezone(IST)
         if not self.session.verified or session_open != datetime.combine(
@@ -47,7 +49,7 @@ class IndexHistoryQuery(BaseModel):
         return self
 
     def provider_body(self, settings: MarketSettings, requested_at: datetime) -> dict[str, str]:
-        token = settings.nifty_index_token
+        token = settings.nifty_index_token if self.underlying == "NIFTY" else settings.sensex_index_token
         if not token:
             raise ProviderError("INDEX_HISTORY_TOKEN_UNAVAILABLE")
         if requested_at.tzinfo is None or requested_at.utcoffset() is None:
@@ -69,8 +71,8 @@ class IndexHistoryResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     snapshot_id: str
     source: Literal["angelone-historical:getCandleData"] = "angelone-historical:getCandleData"
-    underlying: Literal["NIFTY"] = "NIFTY"
-    exchange: Literal["NSE"] = "NSE"
+    underlying: Literal["NIFTY", "SENSEX"] = "NIFTY"
+    exchange: Literal["NSE", "BSE"] = "NSE"
     received_at: AwareDatetime
     provider_request: dict[str, str]
     response_sha256: str
@@ -167,6 +169,8 @@ def normalize_index_bars(
     )
     snapshot_id = hashlib.sha256(snapshot_identity.encode()).hexdigest()
     return IndexHistoryResult(
+        underlying=query.underlying,
+        exchange=query.exchange,
         snapshot_id=snapshot_id,
         received_at=received_at,
         provider_request=provider_request,

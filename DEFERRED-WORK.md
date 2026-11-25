@@ -2,6 +2,21 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November answer-quality pass: implemented SENSEX candles/analysis as the default
+chat focus with separate venue calendars, retained NIFTY analysis, bounded gap
+backfill, explicit gap details, deterministic interpretations/invalidation, cached
+on-demand model interpretation and Decimal per-position loss scenarios. These
+supersede earlier statements that SENSEX history/calculations are unimplemented.
+Real provider SENSEX response validated 371 bars; four missing minutes persisted
+on a narrower retry. NIFTY still missing five minutes. Thus source continuity,
+open-session recovery/usefulness and latency remain unaccepted. Do not close from
+successful endpoint access. Weekly history, option-specific data/fees/liquidity,
+news feed, durable risk/health events and delivery/backups remain open as below.
+Actual saved-data answer path checked on host without model calls; signed-in UI,
+new regression coverage and real model prose quality remain unverified. Closure:
+exercise the changed routing, cache/budget, repair/conflict/timeout paths and source
+acceptance independently; no fixtures replace real-market checks.
+
 25 November local-first/slim deployment update (supersedes earlier hosted status):
 Public Caddy now serves bot-api:8000; legacy API/worker/PostgreSQL stopped after
 all-zero preflight and root-only readable pg_dump archive backup. Login timer active.
@@ -610,6 +625,15 @@ permission gates and preserve actual-market evidence separately from offline tes
 | D25 | Underlying-target and premium-stop paper execution | Reviewed ORB levels are connected to the existing dual-exit policy and ORB provenance checks; offline proof passes. Actual connected execution remains unaccepted | Complete the bounded paper lifecycle with fresh index and option data while preserving risk and account gates | [exit design](./services/paper/UNDERLYING-EXITS.md), [qualification proof](./services/paper/orb_qualification.py) |
 
 ## D26 - Oracle deployment acceptance
+
+25 November renewal: explicit NFO/BFO coverage extended through 31 December 2026,
+with Christmas and December weekends closed. Sources: NSE FAOP71777 and BSE notice
+20251212-8 (BSE-authored PDF via existing broker mirror after official page 403).
+Both bot and retained automatic-login config updated; original backed up under
+/opt/swan/backups/bot-cutover-20261125T154552Z. Calendar validation and hosted context
+now report 31 December. This supersedes the 30 November renewal deadline below;
+2027 coverage and subsequent scheduled/open-session acceptance remain open.
+
 
 Calendar-aware login now skips explicit holidays/finished sessions and missing or
 unknown coverage before reading login secrets or contacting the broker. Daily and

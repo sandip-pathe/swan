@@ -76,6 +76,8 @@ class Store:
                        (cutoff,))
             db.execute("DELETE FROM evidence WHERE insight_id NOT IN (SELECT id FROM insights)")
             db.execute("DELETE FROM insight_feed WHERE insight_id NOT IN (SELECT id FROM insights)")
+            db.execute("DELETE FROM documents WHERE key LIKE 'explanation:%' AND "
+                       "json_extract(payload, '$.day') != ?", (datetime.now(UTC).date().isoformat(),))
 
     def changes(self, after: int) -> dict:
         with self.connect() as db:

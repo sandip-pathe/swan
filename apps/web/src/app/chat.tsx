@@ -23,9 +23,9 @@ type Reply = { answer: string; as_of: string; sources: { source: string }[] };
 type Context = { id: string; label: string } | null;
 const prompts = [
   {
-    title: "What changed?",
-    detail: "Understand the saved observations",
-    question: "Explain the latest market observations and their limitations.",
+    title: "SENSEX context",
+    detail: "What changed, and what could invalidate it",
+    question: "Explain the latest SENSEX observations, counterevidence and what would invalidate the interpretation.",
     icon: "activity" as const,
   },
   {
@@ -225,8 +225,8 @@ export default function Chat({
             Your questions.
           </h1>
           <p>
-            A place to understand the market, examine the evidence,
-            <br className="desktop-break" /> and get a little better every day.
+            Understand what changed, inspect the source times,
+            <br className="desktop-break" /> and separate evidence from uncertainty.
           </p>
           <div className="chat-suggestions">
             {prompts.map((prompt) => (

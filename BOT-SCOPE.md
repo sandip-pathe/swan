@@ -31,8 +31,9 @@ makes and executes every trading decision. No account-wide daily limit is inferr
    publication/recovery notifications are not implemented.
 2. Intraday context changes: completed-bar opening-range break, return inside,
    trend confirmation/invalidation; publish state transitions, not every candle.
-   Existing slice implements NIFTY range/SMA observations only. SENSEX scans and
-   confirmed multi-timeframe conditions require implementation and source acceptance.
+   Existing slice now implements SENSEX and NIFTY range/SMA observations, with separate
+   venue calendar checks and bounded gap repair. Actual source continuity and
+   confirmed multi-timeframe conditions still require acceptance/implementation.
 3. A small watchlist of cost-aware SENSEX option opportunities or explicit no-setup
    explanations. Aim for selectivity compatible with one/two user decisions daily;
    do not suppress genuine invalidation/risk updates to satisfy an alert quota.
