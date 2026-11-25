@@ -1,18 +1,27 @@
 // The root is a static, public sign-in shell. Private data lives in account-scoped IndexedDB.
 // Never cache authenticated API responses, tokens or writes here.
-const CACHE = "swan-public-bot-v2";
-const ASSETS = ["/", "/offline.html", "/icon-192.png", "/icon-512.png", "/fonts/inter-variable.woff2"];
+const CACHE = "swan-public-bot-v3";
+const ASSETS = ["/offline.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png",
+  "/fonts/inter-variable.woff2", "/fonts/plex-sans-0.woff2", "/fonts/plex-sans-1.woff2",
+  "/fonts/plex-sans-2.woff2", "/fonts/plex-sans-3.woff2", "/fonts/plex-mono-0.woff2"];
+async function saveShell(cache, response) {
+  if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) throw new Error("Shell unavailable");
+  const html = await response.clone().text();
+  const chunks = [...new Set(html.match(/\/_next\/static\/[^"'<>\s\\]+\.(?:js|css)/g) || [])];
+  if (!chunks.length) throw new Error("Shell assets unavailable");
+  // Commit the shell only after every referenced entry script/style is available.
+  await Promise.all(chunks.map(async path => {
+    if (!(await cache.match(path))) await cache.add(path);
+  }));
+  await cache.put("/", response.clone());
+}
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     await cache.addAll(ASSETS);
-    const shell = await cache.match("/");
-    const html = shell ? await shell.text() : "";
-    // Cache the shell's entry scripts/styles before promising offline reloads.
-    const chunks = [...new Set(html.match(/\/_next\/static\/[^"'<>\s\\]+\.(?:js|css)/g) || [])];
-    await cache.addAll(chunks);
+    await saveShell(cache, await fetch("/", { cache: "reload" }));
+    await self.skipWaiting();
   })());
-  self.skipWaiting();
 });
 self.addEventListener("activate", event => {
   event.waitUntil(Promise.all([
@@ -23,11 +32,17 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== self.location.origin) return;
-  if (event.request.mode === "navigate" && url.pathname === "/" && !url.search) {
-    event.respondWith(fetch(event.request).then(async response => {
-      if (response.ok) { const cache = await caches.open(CACHE); await cache.put("/", response.clone()); }
+  if (event.request.mode === "navigate" && url.pathname === "/") {
+    // Open the downloaded UI immediately; refresh a complete shell in the background.
+    const refresh = (async () => {
+      const response = await fetch(event.request, { signal: AbortSignal.timeout(5000) });
+      const cache = await caches.open(CACHE);
+      await saveShell(cache, response);
       return response;
-    }).catch(async () => (await caches.match("/")) || (await caches.match("/offline.html")) || Response.error()));
+    })().catch(() => undefined);
+    event.waitUntil(refresh.then(() => undefined));
+    event.respondWith((async () => (await caches.match("/")) || await refresh ||
+      (await caches.match("/offline.html")) || Response.error())());
     return;
   }
   if (url.pathname.startsWith("/_next/static/") && !url.search) {

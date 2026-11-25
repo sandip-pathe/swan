@@ -78,7 +78,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
     return response.json();
   }, [user]);
   useEffect(() => {
-    const restore = () => setScreen(location.hash === "#insights" ? "insights" : "chat");
+    const restore = () => setScreen(location.hash === "#insights" || (!navigator.onLine && !location.hash) ? "insights" : "chat");
     restore(); window.addEventListener("hashchange", restore);
     return () => window.removeEventListener("hashchange", restore);
   }, []);

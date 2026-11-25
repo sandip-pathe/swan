@@ -1,5 +1,36 @@
 # SWAN implementation checkpoint
 
+## Minimal login and offline shell: 26 November 2026
+
+Full-page login now reuses Brand (existing SWAN SVG/wordmark), with just one masked
+six-digit numeric password field and bottom Login button. Removed visible email,
+Google option, card surface and introductory text; accessible labels and contextual
+errors remain. Fixed email defaults to the literal user-supplied
+`jit4xxxx@gmail.com`; NEXT_PUBLIC_BOT_LOGIN_EMAIL can override it if that address
+was redacted. Firebase validates the existing password; no code/password was
+invented, embedded, stored by application code or reset in this change. The account
+must already have its requested six-digit password. Oracle still has one authorized
+Firebase account binding; all users of that shared account share its server data.
+
+Firebase persistent session is retained; existing account-scoped IndexedDB stores
+insights, localStorage stores chat/drafts/preferences. Offline reopen defaults to
+Insights when no screen is specified, provided the device previously signed in and
+received data. First login/new data/model replies require network. Service worker
+v3 caches all local fonts/icons/manifest and page chunks, commits a new HTML shell
+only after its referenced chunks are cached, opens downloaded UI immediately and
+refreshes a complete shell in background. Password/auth API responses are not put
+in the service-worker cache. Sign-out intentionally clears this account's archive.
+Browser/site-data deletion can remove offline data.
+
+Deployment: Oracle API health 200, existing Vercel URL 200 but still serves the prior
+frontend. User previously chose to deploy Vercel; deploy bot/read-only with root
+apps/web and existing Firebase/API settings (plus email override only if needed).
+No backend deployment needed for this UI change. Frontend typecheck/build and SW
+syntax checks pass; visual preview could not run because browser access host was
+unavailable. Real authenticated six-digit sign-in, offline cold launch and device
+install behavior are not claimed verified. No password change/account creation
+was performed. D34 records remaining deployment/device acceptance.
+
 ## Source continuity fixes: 26 November 2026
 
 User explicitly requests autonomous integration and normal operation; live-market

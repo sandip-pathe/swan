@@ -2,6 +2,19 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+26 November login/PWA update: minimal full-page Brand + masked six-digit password
++ Login UI implemented; Firebase persistence and existing archive reused. SW v3
+caches complete shell/chunk pairs and all local fonts, offline opens Insights.
+User-owned Vercel deployment remains pending; current public site still serves the
+prior frontend. Existing Firebase password was not reset/created; the requested
+shared account must already use six digits. Supplied email used literally; override
+NEXT_PUBLIC_BOT_LOGIN_EMAIL only if xxxx masked the true address. One backend
+Firebase binding remains. Closure: deploy bot/read-only and observe real shared-
+account sign-in, offline cold launch after prior online use and install behavior.
+Browser preview unavailable (browser access host error); type/build/SW syntax checks
+are not visual or authenticated-device proof. No user passwords stored in code.
+
+
 26 November correction supersedes the earlier depth/news blockers below: the
 reviewed 23 November absolute-unit mapping existed; bot feasibility now reuses it
 with source provenance and no raw-quantity multiplier. D03's old explicit-broker-
