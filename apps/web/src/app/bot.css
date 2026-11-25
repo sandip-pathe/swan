@@ -145,3 +145,13 @@
   .swan-app .bot-chat .live-chat{padding:0 16px calc(12px + env(safe-area-inset-bottom));}
   .bot-chat .chat-welcome{padding:24px 0;}
 }
+
+/* The scroll surface spans the viewport; only its content is constrained. */
+.swan-app .bot-chat .live-chat{max-width:none;width:100%;padding:0;margin:0;}
+.bot-chat .chat-scroll-region{width:100%;padding:24px max(20px, calc((100% - 880px) / 2));scrollbar-gutter:stable;}
+.bot-chat .live-composer-wrap{width:100%;max-width:920px;margin:0 auto;padding:16px 20px calc(16px + env(safe-area-inset-bottom));}
+@media(max-width:640px){
+  .swan-app .bot-chat .live-chat{padding:0;}
+  .bot-chat .chat-scroll-region{padding:20px;}
+  .bot-chat .live-composer-wrap{padding:12px 16px calc(12px + env(safe-area-inset-bottom));}
+}

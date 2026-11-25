@@ -1,5 +1,19 @@
 # Project status and remaining work
 
+26 November chat correction: market-hours questions now use the exchange calendar,
+not candle-gap assessments. Greetings are short; general questions reach bounded
+OpenAI synthesis with calendar, available market/news/weekly context even when
+candles are incomplete. AI failures are explicit. Hosted configuration reports
+AI ready with model configured. One real hosted chat call returned VALIDATED
+from OpenAI with a contextual news/price-action explanation. Conversational
+answers now use a dedicated answer/evidence schema, without the research-report
+thesis/counterargument template. This is integration evidence, not trading-edge
+acceptance. Oracle API deployed and public health reports database connected.
+Removed repeated generic source warnings and per-answer Insights buttons. Chat
+scroll surface now spans the screen with centered padded content/composer.
+Frontend deployment remains user-owned; production mobile visual review remains
+pending. No tests added/run, no order permissions changed.
+
 ## D34 - Slim read-only market bot scope and acceptance
 
 26 November follow-up: removed Ask SWAN empty-state action and About this research

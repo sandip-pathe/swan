@@ -79,3 +79,9 @@ def active(idea: dict, now: datetime) -> bool:
         and idea["state"] not in {"invalidated", "expired"}
         and datetime.fromisoformat(idea["expires_at"]) > now
     )
+
+
+class ConversationAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: str = Field(min_length=1, max_length=5000)
+    evidence_ids: list[str] = Field(max_length=40)

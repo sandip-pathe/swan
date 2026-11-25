@@ -263,17 +263,11 @@ export default function Chat({
                   SWAN
                 </div>
                 <p>{message.answer}</p>
-                <details className="chat-sources">
-                  <summary>Sources · {time(message.asOf)} IST</summary>
-                  <p>{message.source || "No source records returned."}</p>
-                  <p>
-                    Answer retrieved at the time above. Market observations may
-                    be older; check the times in the answer.
-                  </p>
-                </details>
-                <button className="text-button" onClick={onMarket}>
-                  View insights <Icon name="arrow" />
-                </button>
+                {message.source && <details className="chat-sources">
+                  <summary>Sources</summary>
+                  <p>{message.source}</p>
+                  <p>{time(message.asOf)} IST</p>
+                </details>}
               </div>
             </article>
           ))}
