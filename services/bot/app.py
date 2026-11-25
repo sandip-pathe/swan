@@ -405,25 +405,15 @@ class Question(BaseModel):
 
 @app.post("/api/chat/messages")
 async def chat(body: Question, identifier: UUID = Depends(owner)):
-    from services.bot.chat import answer
+    from services.bot.orchestration import respond
 
     if app.state.chat_lock.locked():
         raise HTTPException(429, "RESEARCH_BUSY_TRY_AGAIN")
     async with app.state.chat_lock:
-        evidence = await asyncio.to_thread(
-            context, app.state.store, datetime.now(UTC), True, str(identifier)
-        )
-        if body.idea_id:
-            selected = app.state.store.idea(body.idea_id)
-            if not selected or selected.get("kind") != "idea":
-                raise HTTPException(404, "IDEA_NOT_FOUND")
-            evidence["selected_idea"] = idea_view(
-                app.state.store,
-                selected,
-                datetime.now(UTC),
-                evidence["calendar"]["state"] == "open",
-                str(identifier),
-            )
-        return await answer(
-            body.question, evidence, app.state.store, [turn.model_dump() for turn in body.history]
+        return await respond(
+            body.question,
+            [turn.model_dump() for turn in body.history],
+            app.state.store,
+            str(identifier),
+            body.idea_id,
         )

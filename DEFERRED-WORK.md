@@ -1,5 +1,66 @@
 # Project status and remaining work
 
+## Local daily curation and research limits: 26 November 2026
+
+Implemented five persisted IST update windows: 09:35, 10:30, 11:30, 13:00,
+14:30. Each has one stable insight identity. A qualified idea can take the window;
+after 15 minutes without one, publish a deterministic source-timestamped market
+brief, with zero AI usage. An idea may promote that same brief later in the window
+without increasing the daily unique insight count. No past-window backfill after
+an outage, no off-session scheduled updates and no fabricated trade to meet quota.
+Four/five useful daily deliveries depend on worker uptime and available evidence;
+missing data is reported honestly rather than turned into an entry signal.
+
+Added directional-efficiency/chop filtering, deterministic candidate ranking and
+trend-pullback strategy alongside range retests, failed breaks and existing weekly
+structure. Scores are heuristics, not win probabilities. Live reference, option
+identity/expiry/depth/spread/noise/cost checks run before new idea publication and
+research enqueue. Existing eligibility, five-percent reference and stale-research
+constraints stay; periodic fifteen-minute research re-enqueue was removed.
+
+Provider boundary atomically reserves at most five background research attempts
+per IST day and at most one per insight/day. Failures/interruption count; state
+survives restart. Blocked attempts consume neither call nor token reservation.
+Chat routing/answers remain on-demand and share the existing token budget; the
+five-call ceiling applies to automatic Insights research, not interactive chat.
+News can invalidate/suspend context but cannot bypass the paid-call ceiling.
+Brief sources now display linked headlines instead of a missing candle action.
+
+Python compile/Ruff and frontend typecheck/production build passed. No tests or
+provider/live-market checks run for this slice. Strategies and quota behavior
+have NOT been accepted on a real session. D34 remains open for observed delivery,
+latency, restart behavior and prospective outcomes. All changes are LOCAL ONLY;
+Oracle deployment remains held until explicit agreement. Latest orchestration
+and curation changes have not been pushed to trigger Vercel either.
+
+26 November correction: the hardcoded greeting remained after the previous
+"remove templates" request. Removed it from chat and the orchestration fast path.
+Greetings now use the router's natural direct_answer with sections=[]; no market
+snapshots are loaded. General replies are model-written, not scripted. Hosted
+backend remains unchanged per user's deployment hold. Static checks passed;
+real provider routing/latency remains unverified for this local slice.
+
+## Local-only chat orchestration: 26 November 2026
+
+User explicitly requires agreement before further Oracle deployments. This slice
+is local only; do not deploy it or treat earlier deployment permission as current.
+Chat now plans context before retrieval. Greetings now receive AI-written replies without market retrieval;
+AI plans session/market/news/weekly/ideas from request + bounded history. General
+education/conversation can return directly from that same AI call with no saved
+market reads. Data questions retrieve only selected sections of the worker's
+existing SQLite snapshots (same sources used by Insights), then synthesize a reply.
+No Angel One/news-fetch calls, collector triggers or full dashboard context load
+occur in this chat path. Session/quote/analysis freshness and idea personalization
+remain enforced. Selected idea lookup is lazy; only the ideas route loads it.
+Routing failure returns an explicit failure without silently reading all data.
+Both model stages reuse existing budget/lease/timeout controls; output is schema
+validated and planner results can reuse the existing content cache. Response
+includes context_sections/routing_status for diagnosis, not model reasoning.
+Static Python compilation and focused Ruff checks passed. No test suites or
+provider/live-market acceptance runs were performed for this slice. Closure:
+agree on deployment, then observe real no-context/news/market/follow-up routing
+and latency. This remains distinct from trading-edge acceptance under D34.
+
 26 November chat correction: market-hours questions now use the exchange calendar,
 not candle-gap assessments. Greetings are short; general questions reach bounded
 OpenAI synthesis with calendar, available market/news/weekly context even when

@@ -85,3 +85,10 @@ class ConversationAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid")
     answer: str = Field(min_length=1, max_length=5000)
     evidence_ids: list[str] = Field(max_length=40)
+
+
+class ChatPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    direct_answer: str = Field(max_length=4000)
+    sections: list[Literal["session", "market", "news", "weekly", "ideas"]] = Field(max_length=5)
+    instruments: list[Literal["SENSEX", "NIFTY"]] = Field(min_length=1, max_length=2)

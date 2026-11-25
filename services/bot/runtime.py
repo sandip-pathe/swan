@@ -11,6 +11,7 @@ from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from services.bot.contracts import active
+from services.bot.curation import briefing, claim, score, slot_key
 from services.bot.engine import RollingMarket
 from services.bot.feasibility import assess
 from services.bot.notifications import deliver
@@ -304,7 +305,46 @@ class Runtime:
         candidates = market.candidates(now)
         # Keep weekly watch ideas from the verified daily pipeline in the same lifecycle.
         candidates += self.store.read("weekly_candidates", [])
+        candidates.sort(key=score, reverse=True)
         for candidate in candidates:
+            quality = score(candidate)
+            if quality < 60:
+                continue
+            reference = self.cache.references.get("SENSEX")
+            if (
+                not self.cache.connected
+                or reference is None
+                or not timedelta(0) <= now - reference.timestamp <= timedelta(seconds=5)
+            ):
+                continue
+            eligible = [
+                item
+                for item in self.instruments
+                if item.option_type == candidate["direction"]
+                and (
+                    candidate["horizon"] != "weekly"
+                    or item.expiry
+                    >= datetime.fromisoformat(candidate["expires_at"]).astimezone(IST).date()
+                )
+            ]
+            instrument = (
+                min(eligible, key=lambda item: abs(item.strike - reference.last_price))
+                if eligible
+                else None
+            )
+            if instrument is None:
+                continue
+            economics, problems = assess(
+                instrument,
+                self.cache.quotes.get(instrument.id),
+                now,
+                self.noise_summary(instrument.id, now),
+            )
+            if problems or economics is None:
+                continue
+            candidate.update(
+                rank=quality, contract=instrument.model_dump(mode="json"), economics=economics
+            )
             if datetime.fromisoformat(candidate["expires_at"]) <= now:
                 continue
             prior = next(
@@ -327,6 +367,15 @@ class Runtime:
             )
             if recent_terminal or any(idea["id"] == candidate["id"] for idea in existing):
                 continue
+            slot = slot_key(now)
+            if slot is None:
+                continue
+            candidate["id"] = slot + ":insight"
+            held = self.store.idea(candidate["id"])
+            if held and held.get("kind") == "idea":
+                continue
+            if not claim(self.store, now, candidate["id"]):
+                continue
             if self.save(
                 None,
                 candidate,
@@ -347,6 +396,7 @@ class Runtime:
                 },
             ):
                 self.store.enqueue(candidate)
+        briefing(self.store, now, market.context(now), self.store.read("news", {}))
         reference = self.cache.references.get("SENSEX")
         fresh = bool(
             self.cache.connected
@@ -426,8 +476,6 @@ class Runtime:
                         research["at"]
                     ) > timedelta(minutes=15):
                         reasons.append("RESEARCH_REASSESSMENT_REQUIRED")
-                        if now - datetime.fromisoformat(research["at"]) < timedelta(minutes=16):
-                            self.store.enqueue(prior)
                     if not confirmed:
                         reasons.append("ENTRY_CONDITION_NOT_CONFIRMED")
                     value.update(
@@ -451,7 +499,7 @@ class Runtime:
                             state="watch", reasons=["OPPOSING_IDEA_REQUIRES_RESOLUTION"], rank=0
                         )
                     if value["state"] == "eligible":
-                        value["rank"] = 1
+                        value["rank"] = prior.get("rank", 60)
                         value["summary"] = (
                             "Entry conditions and one-lot checks passed. Confirm your budget and fresh pricing; this remains an experimental idea."
                         )
@@ -558,6 +606,13 @@ class Runtime:
                     continue
                 if os.environ.get("BOT_COLLECTION_ENABLED", "false").lower() != "true":
                     self.store.finish_job(job["job_id"], "paused")
+                    continue
+                if current.get("state") in {
+                    "suspended",
+                    "invalidated",
+                    "expired",
+                } or not current.get("economics"):
+                    self.store.finish_job(job["job_id"], "unqualified")
                     continue
                 try:
                     result, status = await synthesize(
@@ -677,6 +732,16 @@ class Runtime:
                     await asyncio.to_thread(deliver, self.store, idea)
                 with self.store.connect() as db:
                     db.execute("DELETE FROM documents WHERE key=? AND payload=?", (key, payload))
+            if (
+                os.environ.get("BOT_COLLECTION_ENABLED", "false").lower() == "true"
+                and market_context(self.calendar, now, "BFO")["state"] == "open"
+            ):
+                briefing(
+                    self.store,
+                    now,
+                    self.store.read("analysis:SENSEX", {}),
+                    self.store.read("news", {}),
+                )
             self.store.prune()
             try:
                 await asyncio.wait_for(stop.wait(), 15)

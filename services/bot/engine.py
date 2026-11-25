@@ -137,7 +137,10 @@ class RollingMarket:
         if recent:
             average = sum((b.close for b in recent), Decimal(0)) / 20
             atr = sum((b.high - b.low for b in recent[-14:]), Decimal(0)) / 14
+            travel = sum((abs(b.close - a.close) for a, b in zip(recent, recent[1:])), Decimal(0))
+            efficiency = abs(recent[-1].close - recent[0].close) / travel if travel else Decimal(0)
             value.update(
+                efficiency20=str(efficiency),
                 sma20=str(average),
                 range_atr14=str(atr),
                 trend="above_average" if recent[-1].close > average else "below_average",
@@ -204,6 +207,35 @@ class RollingMarket:
                         "trigger_pending",
                     )
                 )
+        # Trend pullback: directional displacement, average slope, and a reclaimed mean.
+        recent = self.window(end - timedelta(minutes=20), 20)
+        if recent and Decimal(context.get("efficiency20", "0")) >= Decimal("0.35"):
+            first_mean = sum((bar.close for bar in recent[:10]), Decimal(0)) / 10
+            last_mean = sum((bar.close for bar in recent[10:]), Decimal(0)) / 10
+            for direction, sign in (("CALL", Decimal(1)), ("PUT", Decimal(-1))):
+                touched = previous.low <= average if sign > 0 else previous.high >= average
+                reclaimed = sign * (last.close - average) > buffer
+                slope = sign * (last_mean - first_mean) > atr * Decimal("0.2")
+                inside = low < last.close < high
+                if touched and reclaimed and slope and not inside:
+                    trigger = last.high + buffer if sign > 0 else last.low - buffer
+                    stop = (
+                        min(previous.low, last.low) - buffer
+                        if sign > 0
+                        else max(previous.high, last.high) + buffer
+                    )
+                    if sign * (trigger - stop) > 0:
+                        candidates.append(
+                            make_idea(
+                                "trend-pullback-v1",
+                                direction,
+                                trigger,
+                                stop,
+                                now,
+                                context,
+                                "trigger_pending",
+                            )
+                        )
         return candidates
 
 
@@ -236,9 +268,9 @@ def make_idea(
             as_of=now,
             published_at=now,
             expires_at=expires,
-            title=f"SENSEX {direction.lower()} {'retest' if strategy == 'range-retest-v1' else 'reversal' if strategy == 'failed-break-v1' else 'weekly structure'}",
+            title=f"SENSEX {direction.lower()} {'retest' if strategy == 'range-retest-v1' else 'reversal' if strategy == 'failed-break-v1' else 'trend pullback' if strategy == 'trend-pullback-v1' else 'weekly structure'}",
             summary="Experimental conditional idea; contract and risk checks must pass before eligibility.",
-            trigger=f"Completed {'close above' if direction == 'CALL' else 'close below'} {trigger}; {'successful retest required' if strategy == 'range-retest-v1' else 'confirmed reversal required'}.",
+            trigger=f"Completed {'close above' if direction == 'CALL' else 'close below'} {trigger}; {'successful retest required' if strategy == 'range-retest-v1' else 'trend continuation required' if strategy == 'trend-pullback-v1' else 'confirmed reversal required'}.",
             invalidation=f"Underlying {'at or below' if direction == 'CALL' else 'at or above'} {invalidation}, source loss, or expiry.",
             trigger_level=trigger,
             invalidation_level=invalidation,
