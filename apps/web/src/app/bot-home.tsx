@@ -74,7 +74,17 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(35000)]) : AbortSignal.timeout(35000),
       headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) });
-    if (!response.ok) throw new Error(response.status === 401 ? "Sign in again to continue." : response.status === 403 ? "This account is not authorized." : response.status === 429 ? "Research is busy. Try again shortly." : "Unable to reach SWAN. Your question is preserved.");
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({})) as { detail?: string } | null;
+      const detail = typeof payload?.detail === "string" ? payload.detail : "";
+      if (detail === "ACCOUNT_NOT_AUTHORIZED") throw new Error("Your sign-in succeeded, but this backend has not linked your account. This is an app configuration issue.");
+      if (/^(BROKER_|DAILY_BROKER_|ANGELONE_)/.test(detail)) throw new Error("Market data is waiting for the broker session. Your app sign-in and saved records are separate.");
+      if (detail === "PROVIDER_RATE_LIMITED") throw new Error("Market data is temporarily rate limited. Saved records remain available.");
+      if (response.status === 401) throw new Error("Sign in again to continue.");
+      if (response.status === 403) throw new Error("The server refused this request. Reconnect and retry; this response does not identify a broker-login problem.");
+      if (response.status === 429) throw new Error("Research is busy. Try again shortly.");
+      throw new Error("Unable to reach SWAN. Your question is preserved.");
+    }
     return response.json();
   }, [user]);
   useEffect(() => {

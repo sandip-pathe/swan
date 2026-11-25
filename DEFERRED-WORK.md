@@ -2,6 +2,14 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+26 November preview issue resolved: actual signed-in insights/events returned 200
+and account error disappeared after syncing the existing owner binding and local
+3200 CORS. Root cause was empty local account mapping, not AngelOne login. Preview
+now points to Oracle, with exact 3200 hosted CORS allowed; hosted binding unchanged.
+Error handling now uses backend detail codes rather than labeling every 403 as an
+account problem. See leading RESUME.md. New wording awaits user Vercel deployment.
+
+
 26 November login/PWA update: minimal full-page Brand + masked six-digit password
 + Login UI implemented; Firebase persistence and existing archive reused. SW v3
 caches complete shell/chunk pairs and all local fonts, offline opens Insights.

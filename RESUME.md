@@ -1,5 +1,32 @@
 # SWAN implementation checkpoint
 
+## Local preview authorization/endpoint correction: 26 November 2026
+
+The screenshot's running localhost:3200 bundle was compiled against localhost:8002,
+despite another workspace's env pointing to Oracle. Both local .env files had no
+SWAN_ACCOUNT_BINDINGS. That local bot API rejected every signed-in account with
+403 ACCOUNT_NOT_AUTHORIZED. Saved-insights route only reads SQLite; it never calls
+AngelOne, so daily broker login was not the cause. Initial assumption that this
+was Oracle's mapping was corrected after inspecting the served bundle.
+
+Synced the existing single hosted account binding into ignored local configurations
+(same Firebase project, no new identity grant). Added exact localhost/127.0.0.1:3200
+CORS origins locally, restarted only the local bot API. Actual signed-in preview
+requests to insights/events then returned 200; embedded UI error disappeared and
+loaded its full context. Local data was empty because no local collector ran.
+Both ignored frontend env files now point to the existing Oracle API; added exact
+3200 preview CORS origins to hosted runtime config, preserving existing origins
+and account bindings. Hosted health/CORS verified. Embedded signed-in preview then showed hosted worker heartbeat, closed calendar, partial weekly history and available RBI/Mint sources with no authorization error. No broker login/order gate changed.
+
+Frontend now parses detail codes: account binding, broker-session, provider rate
+limit, generic forbidden, expired sign-in and connectivity are distinct categories.
+Unknown HTTP 403 is no longer automatically called an account authorization issue.
+Temporary private auth diagnostic deployed during investigation was removed from
+source/hosted API; no token/password was captured. Existing cloud binding unchanged.
+Frontend typecheck/build passed; no test suite run. Vercel user deployment remains
+pending for the new frontend wording. Local API remains running on port 8002 as a
+secondary dev service; the preview now targets Oracle for live saved context.
+
 ## Minimal login and offline shell: 26 November 2026
 
 Full-page login now reuses Brand (existing SWAN SVG/wordmark), with just one masked
