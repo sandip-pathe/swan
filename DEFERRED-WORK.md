@@ -1,5 +1,16 @@
 # Project status and remaining work
 
+## Daily cap correction: 26 November 2026
+
+User clarified minimum ZERO, maximum FIVE. Supersedes the scheduled-window and
+fallback-brief design below: removed all timed slots and automatic filler briefs.
+Qualified ideas can publish whenever their conditions pass, with a persistent
+atomic five-new-insight ceiling per IST day. No requirement to produce any item.
+Separate five-background-provider-attempt ceiling and all qualification gates
+remain. No positive-quality/performance claim from static checks. Python compile
+and focused Ruff passed; no tests/provider/live checks run. Local only, not pushed
+or deployed; the explicit deployment hold remains in effect.
+
 ## Local daily curation and research limits: 26 November 2026
 
 Implemented five persisted IST update windows: 09:35, 10:30, 11:30, 13:00,

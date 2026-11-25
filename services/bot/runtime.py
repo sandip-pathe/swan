@@ -11,7 +11,7 @@ from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from services.bot.contracts import active
-from services.bot.curation import briefing, claim, score, slot_key
+from services.bot.curation import claim, score
 from services.bot.engine import RollingMarket
 from services.bot.feasibility import assess
 from services.bot.notifications import deliver
@@ -367,13 +367,6 @@ class Runtime:
             )
             if recent_terminal or any(idea["id"] == candidate["id"] for idea in existing):
                 continue
-            slot = slot_key(now)
-            if slot is None:
-                continue
-            candidate["id"] = slot + ":insight"
-            held = self.store.idea(candidate["id"])
-            if held and held.get("kind") == "idea":
-                continue
             if not claim(self.store, now, candidate["id"]):
                 continue
             if self.save(
@@ -396,7 +389,6 @@ class Runtime:
                 },
             ):
                 self.store.enqueue(candidate)
-        briefing(self.store, now, market.context(now), self.store.read("news", {}))
         reference = self.cache.references.get("SENSEX")
         fresh = bool(
             self.cache.connected
@@ -732,16 +724,6 @@ class Runtime:
                     await asyncio.to_thread(deliver, self.store, idea)
                 with self.store.connect() as db:
                     db.execute("DELETE FROM documents WHERE key=? AND payload=?", (key, payload))
-            if (
-                os.environ.get("BOT_COLLECTION_ENABLED", "false").lower() == "true"
-                and market_context(self.calendar, now, "BFO")["state"] == "open"
-            ):
-                briefing(
-                    self.store,
-                    now,
-                    self.store.read("analysis:SENSEX", {}),
-                    self.store.read("news", {}),
-                )
             self.store.prune()
             try:
                 await asyncio.wait_for(stop.wait(), 15)
