@@ -1,4 +1,4 @@
-"""Private local session storage. PINs and TOTP seeds are never persisted."""
+"""Private session storage. Optional daily-login secrets use a separate private file."""
 
 import base64
 import json

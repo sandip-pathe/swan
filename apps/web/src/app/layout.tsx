@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
+import { validAppearance } from "@/lib/browser-preferences";
 import "./globals.css";
+import "./workspace.css";
+import "./native.css";
 import Pwa from "./pwa";
 
 export const metadata: Metadata = {
@@ -11,6 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#ffffff", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}<Pwa /></body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const appearance = (await cookies()).get("swan_appearance")?.value;
+  return <html lang="en" data-theme={validAppearance(appearance) && appearance !== "system" ? appearance : undefined} suppressHydrationWarning><body><Pwa>{children}</Pwa></body></html>;
 }

@@ -17,6 +17,7 @@ dependencies = [
     "google-auth>=2.0,<3",
     "cachecontrol>=0.14,<1",
     "requests>=2.0,<3",
+    "pyotp==2.9.0",
 ]
 
 [dependency-groups]

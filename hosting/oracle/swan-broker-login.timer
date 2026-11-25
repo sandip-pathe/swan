@@ -1,0 +1,11 @@
+[Unit]
+Description=Authenticate SWAN before market opens and after host boot
+
+[Timer]
+OnCalendar=*-*-* 08:55:00 Asia/Kolkata
+OnBootSec=2min
+Persistent=true
+Unit=swan-broker-login.service
+
+[Install]
+WantedBy=timers.target

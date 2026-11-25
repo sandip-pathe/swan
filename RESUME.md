@@ -1,5 +1,523 @@
 # SWAN implementation checkpoint
 
+## GitHub checkpoint and product hold: 25 November 2026
+
+User requested preserving the complete current project on GitHub, then explicitly
+withdrew undeployment. Oracle services, the worker and automatic login are retained;
+no hosted change is authorized by this checkpoint. A smaller read-only market bot
+was discussed but is not implemented, and existing trading code is not removed.
+Frontend production build/typecheck and 15 chart tests pass; 13 isolated automatic
+login tests and Ruff on changed Python files pass. The broader backend selection
+encountered database-dependent fixture errors and was interrupted; full database
+regression remains unverified. Staged credential-pattern scan found no private keys
+or provider/GitHub tokens; local environments, keys and private artifacts are ignored.
+
+## Backend follow-up: 25 November 2026
+
+Resumed D33 with read-only Oracle diagnostics at 09:08-09:10 UTC. OCI metadata
+identified VM.Standard.E2.1.Micro (1 GiB RAM; shape config reports 1 OCPU/2 vCPUs).
+OCI documents this Micro shape receives less than a full OCPU and cannot burst.
+Load rose from 3.63 to 5.48, with 350 MiB available RAM and 379 MiB swap in use.
+Four vmstat intervals showed 94-95% CPU steal. Docker working sets were API 100 MiB,
+worker 113 MiB, PostgreSQL 97 MiB and Caddy 25 MiB; the worker sampled at 206% CPU.
+The API container was unhealthy after repeated 8-second health-check timeouts;
+three external unauthenticated `/health` calls returned 200 in 1.09-3.47 seconds.
+The VM is constrained by CPU availability during this sample; root quota/entitlement
+is not established, and worker CPU is not proven causal. This is consistent with
+the severe CPU limit observed, though the guest's exact current CPU entitlement is
+not measured. Memory pressure/swap was also observed. No host service was
+restarted or changed. Authenticated latency and
+provider quota diagnosis remain open under D33. Broker and live-market acceptance
+remain paused.
+
+Backend chat now short-circuits a strict allowlist of greeting-only messages to a
+source-free informational reply, avoiding planner/answer model calls and DB context
+reads. This is a local D29 improvement; it has not been run against the hosted API.
+Grounded-question latency, recovery behavior, authentication timing, and p50/p95
+evidence remain open. No tests were run in this pass.
+
+Worker quote/reference publication is now revision-gated locally: accepted cache
+observations and a completed metrics refresh trigger persistence; unchanged cache
+state no longer scans every contract and republishes references every second. The
+1-second heartbeat and 250 ms execution watchdog are unchanged. This reduces idle
+work without relaxing exit or permission checks; active-market CPU impact is not
+measured. Not tested or deployed.
+
+Static refresh-path review: authenticated quote refresh is a synchronous API route;
+it holds a global advisory transaction lock/DB transaction while awaiting provider
+calls (bounded at 80 seconds), with a 30-second cooldown. This can occupy a request
+thread and DB connection during slow refreshes; causal impact on ordinary reads is
+not measured. No quote refresh or provider call was made because live-market checks
+remain paused. Review implementation and refresh semantics when that acceptance is
+resumed.
+
+## Trade page learner-focused pass: 25 November 2026
+
+Trade now uses **Options / Watchlist / Find** with a quiet underline state. Find
+starts with a short search and market selector; call/put and expiry are tucked under
+Filters. Contract rows use readable strikes and plain Call/Put plus View chart labels.
+The watchlist, option chain and underlying price context use simpler language, while
+saved quote times remain explicit. Added a nearby, optional explanation for bid,
+ask, open interest and volume. Fixed generic primary-button styling that had turned
+every contract and option-chain row bright blue. Option-chain loading now shows
+row-shaped skeletons. Charts open without VWAP/DEMA lines; optional controls
+and a short explanation live under Indicators. The paper-order planner leads with
+cash needed, available cash, planned loss and usable quantity; fee math stays in an
+expandable breakdown. On phones the planner is a bottom sheet. All existing server
+validation, review and trading permission gates remain in place.
+
+Frontend typecheck, all 15 chart-data tests, diff checks and the isolated browser
+workspace suite pass. That fixture suite verified Find-to-chart navigation, mobile
+order-sheet display, Back/Escape dismissal and overflow; it made no order calls.
+The local signed-in app showed hosted saved market observations. Its Find catalog was
+marked stale, so we did not open a stale contract or test broker/live-market actions.
+Actual-market and installed-device acceptance stay open in D28.
+
+Follow-up after visual review: removed the always-visible desktop watchlist column
+from Options/Find. Watchlist content now renders only when its own tab is selected;
+the Options/Find view uses the full available width on desktop and mobile. Removed
+stale CSS that had hidden the Watchlist tab on desktop. Typecheck, all 15 chart tests,
+and the isolated browser suite pass after the correction. Fixture tests do not
+establish fresh hosted option data or actual-market acceptance.
+
+Spacing follow-up from owner review: restored a 28px desktop inset and 16px phone
+inset between Trade content and the app edge/sidebar. Removed the optional Bid/Ask/OI
+glossary disclosure from the Options chain. Verified the desktop inset and removed
+glossary with an isolated browser assertion; typecheck and chart suite pass.
+
+Chart/order follow-up: the candlestick chart is now the main full-width surface, with
+its chart tools below the plot. Removed the persistent buy form; one Buy button opens
+a responsive native dialog containing the existing estimate, review and paper-order
+flow. Its copy now explains that the estimate is informational until the user
+confirms the paper order. Replaced "practice session" wording with plain paper-buying
+status and controls. No order permissions or server checks changed. Typecheck, build,
+15 chart tests and isolated desktop/mobile dialog, Escape and browser-Back checks pass.
+Browser tests use fixtures only; hosted data and actual-market acceptance remain open.
+
+## Trades and History presentation refinement: 25 November 2026
+
+Trades now leads with available cash and a proportional cash-availability bar;
+accounting detail and sale-release reasons are disclosed on demand. Empty order and
+position states use plain explanations, and past orders/fills are collapsed until
+requested. History uses beginner-friendly daily result labels, a compact key-metric
+set, expandable accounting detail, and skeleton loading for reports and closed
+trades. Journal errors have an inline retry. Removed the full-width Dashboard view
+rule and decorative borders below application panels/disclosures across SWAN;
+retained separators inside dense tables and market rows. Tightened spacing after
+removing those rules.
+
+Typecheck, Dashboard spacing check, and isolated browser fixture/navigation/mobile
+suite pass. No hosted account checks or live-market acceptance.
+
+## Dashboard views: 25 November 2026
+
+Kept Overview intact and replaced the Dashboard subnavigation with four views:
+Overview, Trades, Decisions and History. Trades reuses the account-backed open
+position, pending order, funds, order and fill components. Decisions combines the
+saved cited decision view with recorded agent/risk decisions; malformed activity
+responses now show an unavailable state instead of crashing the dashboard. History
+groups the daily report, closed positions and expandable cash movements; incomplete
+report/journal responses are handled as unavailable. Removed technical Activity from
+Dashboard navigation and linked Discover to Decisions. Legacy URL hashes resolve to
+the new destinations.
+
+Typecheck and isolated browser fixture suite pass for the four tabs, their routes,
+Overview return behavior, mobile overflow, chat and trade navigation. Fixtures do not
+establish hosted backend acceptance. No hosted changes, broker checks or order actions.
+
+## Cross-screen content and icon proposal: 25 November 2026
+
+User requested brainstorming before extending dashboard simplification across the
+important screens. SWAN-SCREEN-PLAN.md now specifies navigation, exact copy, show/
+detail/hide priorities, icons/emoji/illustration choices, order/permission/recovery
+semantics, state messages and capability limits. Standalone design-playground/
+screen-plan.html is an interactive review board with 19 proposed views and inline
+icons from the installed Lucide package; it makes no API requests. Dashboard strip
+proposal: Overview / Trades / Decisions / History; technical Activity moves out of
+routine navigation into relevant stories/operator maintenance. Native bottom tabs,
+original blue/neutral identity and existing authority gates remain constraints.
+
+No application/backend code changed in this planning pass. Board interactions and
+320/390px overflow checked; light desktop/dark mobile screenshots inspected. This
+is review-artifact verification, not learner research or completed implementation.
+Existing D27/D28 cover design/journey review and actual UI migration/acceptance.
+
+## Loading, saved snapshots and server diagnosis: 25 November 2026
+
+Immediate route/auth/workspace/portfolio skeletons replace the text-loading waterfall.
+Dashboard portfolio reads start independently of workspace. Owner-scoped display
+snapshots (workspace, portfolio, linked agent evidence) persist in localStorage, bounded
+to 1 MB each/24h and cleared on sign-out. They render as historical previews; cached
+workspace does not establish monitoring/readiness/entry permission. Portfolio expiry
+now advances independently of successful requests (the prior clock could freeze).
+Failed/background reads preserve visible values; historical buying power is labeled.
+Removed the duplicate workspace error/stale notices, unused Dashboard chain fetch,
+workspace refetch on navigation and chain-filter changes. Chain polling now runs only
+on Trade > chain. Hidden/offline reads pause; workspace failure retries back off
+10/20/40/60s, portfolio 20/40/60s. Successful polling remains workspace 5s/portfolio
+10s after completion, with no overlapping reads. Refresh balance activity is manual;
+background reads do not toggle its label or disable it. Agent refresh retains records.
+
+Read-only OCI diagnosis: health took 9.59s; uptime load 5.71, 422 MB swap; vmstat
+measured 74?94% CPU steal in two interval samples. Containers healthy, zero restarts.
+API error scan had no matching exception; Caddy recorded /api/workspace response
+aborted after 15.70s with writing: http2: stream closed. CPU availability is a major
+observed issue, not proof of a specific Oracle quota/root configuration. No server
+changes, broker login, provider checks or trading changes. D33 tracks host follow-up.
+
+Verification: production build/typecheck pass; isolated held-response browser check
+passes immediate skeleton, parallel reads, cached reload, historical labels, retained
+values after 503, no Dashboard chain requests, mobile overflow and sign-out cleanup.
+The broader isolated workspace/native regression suite also passes after updating
+its old dashboard heading assertion. Initial workspace revision arrival no longer
+cancels a parallel portfolio request.
+Evidence: .local/design/check-dashboard-loading.mjs. Real backend timing/logs are
+read-only observations, not actual-market acceptance; D28 remains open.
+
+## Dashboard surface alignment: 25 November 2026
+
+Resolved legacy zero-side-padding panel rules and global details bottom borders
+for the beginner dashboard. Cards now own consistent 28px desktop/20px mobile
+insets, neutral surface backgrounds, borderless disclosures and aligned headers.
+Dark desktop and mobile fixture screenshots inspected; spacing/overflow assertions
+and typecheck pass. Local frontend running on port 3100 against existing hosted
+API configuration; no local backend launched. Actual data acceptance remains D28.
+
+## Beginner dashboard experiment: 25 November 2026
+
+Local real Dashboard now uses plain labels, a cash available/held visual bar with
+accessible text, expandable agent reasoning and source timing, simple agent role
+names, friendly empty states and a static three-part trading lesson (idea, downside,
+cost). Existing real GET data and permission gates retained. Emoji are decorative;
+no trading streaks, reward loops, made-up returns or fabricated agent conclusions.
+The cash bar is shown only for valid nonnegative cash/available values and describes
+cash only. Advanced accounting remains expandable. Design is an experiment pending
+user feedback, not validated learner research. Typecheck and isolated 390/1440px
+render/overflow checks pass; screenshots inspected. No deployment or live checks.
+
+## Dashboard evidence and account overview: 24 November 2026
+
+Real local app overview now surfaces available cash, realized P&L and fees alongside
+equity, exposure and session P&L; missing baseline is explained rather than zeroed.
+Removed generic insight filler. DashboardIntelligence reads existing account-owned
+agent activity (12 records) and up to three linked output evidence records, showing
+rationale, concerns, saved headlines with publisher/date/provider delay and saved
+contract prices. These are historical cited observations, not a live news feed.
+Worker mode, readiness, heartbeat and account snapshot time are separate. Empty,
+loading and error states preserve the rest of the overview; refresh issues GETs only.
+Typecheck/build and isolated browser checks passed populated/empty/failure states,
+attribution and 320?1440px overflow checks; broader workspace fixture suite passes.
+No deployment, real broker/model checks or trading gate changes. D32 tracks live
+news/index/learning expansion; D28 actual hosted/device acceptance remains open.
+
+## Native PWA foundations: 24 November 2026
+
+Implemented locally in the real Next app. Chat is a fixed-height app screen with
+an independent conversation scroller, pinned auto-growing composer, remembered
+per-thread reading position and Jump to latest. Incoming replies do not force a
+reader away from older messages. VisualViewport/resize/focus events adapt available
+height for the soft keyboard; bottom tabs hide while keyboard editing, then return.
+Safe areas, touch manipulation, reduced-motion-aware drawer/sheet transitions and
+native date/search/select/details controls remain part of the interface.
+
+Navigation remembers per-screen scroll, Dashboard/Account subviews during the
+session, owner-scoped Trade search filters and chart logical zoom by contract/day/
+timeframe. Mobile browser Back dismisses navigation/Discover/order overlays first.
+Native install prompt or browser-specific help and optional StorageManager.persist
+request are in Account > More settings > On this device, alongside storage/privacy
+copy. No installation/storage permission is requested automatically.
+
+Storage choices: a host-only swan_appearance cookie stores only system/light/dark,
+SameSite=Lax, Secure on HTTPS, 1-year expiry. Root layout reads it before rendering
+(Next root now renders dynamically); localStorage provides fallback. Existing
+owner-scoped conversations/drafts stay localStorage, with debounced writes/pagehide
+flush; temporary positions/filters use sessionStorage. Firebase sign-in is unchanged.
+Sign-out clears owner UI caches without clearing existing command/recovery state.
+Service worker v2 caches exactly offline.html, 192/512 icons and Inter font. Account
+HTML/API responses/writes stay network-only; there is no offline command queue.
+Cold offline launches show the public offline screen, not an authenticated workspace.
+
+Offline/reconnect notices distinguish connectivity from account freshness; offline
+requests are blocked before authentication/fetch, order preview controls disabled,
+chat draft preserved and reconnect triggers account refresh. Last received portfolio
+snapshot remains separately labeled historical; current valuation freshness rules,
+permission gates and request deduplication stay intact. Initial portfolio reads say
+Loading rather than pretending missing data is zero. Manifest adds Chat/Dashboard/
+Trade shortcuts; browser status theme follows app theme where supported.
+
+Verification: production build/typecheck and 15 chart-data tests pass. Extended
+isolated browser harness passes scroll/filter return, stored chart viewport, cookies
+including SSR first render, install help, simulated keyboard geometry, incoming reply
+scroll preservation, offline blocking/reconnect, Back/Escape/Tab drawer/order behavior,
+mobile widths and sign-out recovery-cache preservation. Separate real service-worker
+browser check verifies only four public cached assets and offline navigation fallback.
+Inspected desktop and mobile screenshots. Private evidence harnesses:
+.local/design/check-live-workspace.mjs, native-extras.mjs, check-native-offline.mjs.
+These use fixtures/block external services, not actual-market acceptance. No backend,
+broker/model calls, permission changes or deployments performed. Physical Android/
+iOS installed-PWA tests remain D28; latency D29 and cross-device sessions D30 remain.
+
+
+## Outline/filled navigation states: 24 November 2026
+
+Removed the selected full-tab/primary-sidebar background. Inactive destinations
+use Lucide outlines; active destinations use matching custom solid SVG variants,
+with the existing adaptive purple/blue/teal/amber colors and slightly stronger text.
+Trade fills candle bodies while preserving wick detail. Conversation-history rows
+retain their separate faint selection tint. Browser/typecheck checks pass, including
+one active filled tab and transparent selected-tab background. Mobile screenshot
+inspected. Physical installed-PWA acceptance remains D28; backend unchanged.
+
+## Colored icons and four-tab PWA bar: 24 November 2026
+
+Primary icons now use purple Chat, royal-blue Dashboard, teal Trade and amber
+Account with lighter dark-theme variants. Mobile bottom bar is an equal-width grid
+of exactly Chat, Dashboard, Trade and Account, each with a Lucide icon and stable
+label; Account uses UserRound and opens Account & workspace. Account selection is
+shown for settings views. Existing fixed placement and safe-area bottom padding
+remain. Isolated browser checks assert four labels/icons and responsive behavior;
+typecheck passed and mobile screenshot inspected. Real installed-PWA acceptance
+remains D28; backend untouched.
+
+## Navigation icons and responsive labels: 24 November 2026
+
+Added lucide-react for the primary navigation: MessageSquare (Chat), LayoutDashboard
+(Dashboard), ChartCandlestick (Trade), and Plus (New conversation), with matching
+21px/1.65 stroke styling. Other existing inline SVGs remain unchanged. Sidebar rows
+share fixed-icon/flexible-label grid sizing and single-line, ellipsis-safe labels;
+New conversation no longer wraps in the narrow desktop sidebar. Touch targets and
+flat styling retained. Typecheck, production build and isolated responsive/browser
+checks pass, including single-line label assertions at tested desktop/mobile widths.
+Inspected mobile drawer screenshot. Installed-PWA device acceptance stays in D28.
+
+## Quiet sidebar rows and static brand: 24 November 2026
+
+Chat/Dashboard/Trade navigation, New conversation and the account footer now share
+flat edge-to-edge square rows, regular-weight text, faint selected/hover tints and
+no borders, shadows or press translation. Mobile bottom destinations use the same
+quiet selection treatment. Logo is a noninteractive div, not a button: no navigation,
+hover background or keyboard stop. Desktop/mobile isolated regression and typecheck
+passed; real-phone/installed-PWA acceptance stays under D28. No backend changes.
+
+## Mobile-first navigation drawer: 24 November 2026
+
+Conversation rows now span sidebar edge-to-edge with square corners, no external
+row padding/gaps and a subtle 5% foreground tint for selection. Added a light close
+cross above the logo at sidebar top-right, revealed by hover or keyboard focus on
+pointer desktops. Touch devices retain a visible 44px target. Desktop sidebar can
+collapse and reopen from the screen top-left. Mobile now uses the full navigation
+and conversation list in a fixed drawer, replacing the compact session picker.
+Drawer has a dim backdrop, close/Escape, focus containment/return, inert background,
+body-scroll lock, safe-area padding and closes after choosing a destination/chat.
+Existing bottom navigation remains for primary mobile destinations.
+
+Build/typecheck and isolated browser checks pass, including desktop collapse/reopen,
+mobile conversation selection, Escape/backdrop dismissal, focus return and responsive
+widths. Inspected mobile drawer and desktop session screenshots. Installed-PWA/real
+phone keyboard and safe-area acceptance remain in D28; no broker/live checks run.
+
+
+## Multiple local conversation sessions: 24 November 2026
+
+Replaced the single clearing thread with an owner-scoped session index and sidebar
+chat list. First message supplies a bounded title; New conversation preserves prior
+threads. Separate per-session drafts/history survive navigation and reload. Existing
+owner-scoped single-thread storage migrates into the first session. Thread components
+remain mounted while switching so an in-flight response completes in its original
+thread. Mobile offers a conversation picker and new-chat control. Unique textarea
+IDs preserve accessible labels with multiple mounted threads. Sign-out clears the
+owner's session index/history/drafts, preserving prior device-privacy behavior.
+
+Typecheck/build and isolated browser checks passed: three sessions, failed question
+and draft retention, switching while a response is in flight, reload restoration,
+mobile switching, navigation and sign-out cleanup. No model/broker calls were made
+by these fixture checks. Backend still accepts history through its stateless chat
+endpoint: durable cross-device sessions are D30, not claimed complete. User's real
+slow/failed greeting is recorded under D29 backend fixes, with timeout mismatch and
+routing/provider/resource investigation targets; root cause not yet established.
+
+
+## Local frontend connected to Oracle: 24 November 2026
+
+Configured the real apps/web/.env.local API base to the hosted HTTPS origin,
+preserving Firebase settings. Hosted SWAN_WEB_ORIGINS now includes exact local
+localhost/127.0.0.1 origins on ports 3000 and 3100, plus the existing Vercel origin.
+Backed up remote runtime.env privately and recreated only the API container.
+Health returned 200/database connected; CORS preflights passed local and Vercel
+origins, rejected an unrelated origin, and unauthenticated workspace requests still
+returned 401 with correct local CORS headers.
+
+Refreshed the actual signed-in VS Code integrated browser at localhost:3100.
+Dashboard loaded hosted records: paper equity 99,766.55 INR, zero open positions,
+and two closed-trade records. This is observed authenticated UI integration, not
+a fixture run. Session P&L remains unavailable per its response. Existing Trade
+components already reuse candles, indicators, watchlist/search and order preview.
+No broker login, provider probes, live-market acceptance or trades performed;
+worker observation-only settings and permission gates unchanged. Vercel frontend
+was not redeployed. Remaining hosted journeys stay under D28.
+
+
+## Chat chrome simplification: 24 November 2026
+
+Removed conversation/session labels from the top area: only the Discover toggle
+remains within the screen. Workspace fetch errors are a slim top strip with a blue
+Retry text control and a close icon. The strip now floats at the top of the app
+frame above screen chrome, without shifting the conversation or sitting below the
+Discover toggle. Isolated browser checks confirm top positioning and dismissal. Dismissal persists through the same outage and
+resets after a successful workspace fetch. Removed the chat footnote, conversation
+controls/session-stop shortcut and global explanatory footer; existing dashboard
+and permission controls remain. Mobile account access is in bottom navigation.
+Production build and isolated browser checks pass, including retry/dismiss and
+absence of old header/footer elements. No live acceptance or deployment performed.
+
+## Account and Discover refinement: 24 November 2026
+
+Removed the Paper workspace / Virtual funds labels. The bottom-left entry shows
+only the authenticated user's name (email fallback), without an avatar/account icon
+or generic workspace subtitle. It opens Account & workspace, including General,
+risk limits and existing trading controls. More settings contains System/Light/Dark
+buttons; appearance remains device-local and independent of account data loading.
+The right Discover panel is reserved for news, account insights and learning links.
+News currently has an explicit unavailable state; no headline feed is claimed.
+Desktop content reserves space for the open panel. Settings padding, responsive
+navigation, identity truncation and panel spacing refined. Typecheck, build and
+isolated browser checks passed; no hosted deployment or market checks performed.
+
+## Real frontend workspace migration: 24 November 2026
+
+User approved the larger-text white/royal-blue playground and requested carrying
+it into the real app. Local Next.js frontend now has Chat as default, three primary
+destinations, shared sidebar/mobile navigation, neutral light/dark themes, original
+logo, Discover panel and self-hosted Inter variable font with OFL license.
+
+Chat reuses the authenticated endpoint, truthful request/response loading, preserved
+failed questions, owner-scoped bounded local history/drafts, and the existing audited
+session-stop control. It stays mounted across navigation and usable during workspace
+fetch failure. Sign-out clears owner-scoped local data. Legacy unscoped history is
+not imported into another identity. No streaming/background-task service is invented.
+
+Dashboard uses the reconciled portfolio API for equity, session P&L and exposure;
+missing baselines stay unavailable. Trade reuses watchlist/search, Lightweight Charts,
+indicators and existing paper preview/placement, with selected-contract chat context,
+desktop panes and a mobile order sheet. Server permission gates/execution unchanged.
+No prototype fixtures enter production application source.
+
+Typecheck, production build and all 15 existing chart-data tests passed. Local Chrome
+authenticated checks used isolated Firebase/API fixtures and blocked external traffic;
+covered API answers, failure recovery, account-load independence, navigation/drafts,
+context, themes, mobile sheet/Escape, sign-out cleanup and responsive overflow.
+Inspected desktop Chat/Dashboard/Trade, dark Chat and mobile Chat/order screenshots.
+Private harness: `.local/design/check-live-workspace.mjs`; fixtures are not actual
+market acceptance. Playground regression checks also pass with the shared font.
+
+Not pushed or deployed. Hosted backend/worker untouched; no broker/model/live-data
+checks or trades made. Owner review, full accessibility and hosted integration remain
+under D28; market-acceptance holds and trading gates persist.
+
+## Calendar-aware isolated login: 24 November 2026
+
+Daily-login job now checks the verified local NFO/BFO calendar before reading
+credentials or constructing a broker client. Any verified session remaining today
+allows pre-open login; both known closed/finished sessions skip. Missing/invalid or
+unknown coverage skips explicitly instead of guessing weekdays. Boot/catch-up runs
+use this same gate. Timer changed to every day at 08:55 IST so verified special
+weekend sessions are possible; ordinary weekends skip via calendar. Current calendar
+coverage ends 30 November; extending verified coverage remains necessary.
+
+Job container capped at 0.1 CPU, CPU shares 128, 192 MiB RAM / 256 MiB including
+swap, 64 PIDs; API/worker have no startup dependency on the job. No in-process
+authentication loop or app restart was added. Broker-dependent features still
+require authentication; unrelated app work does not wait on this scheduled job.
+13 focused tests passed, including no credential read/client creation on skip;
+Ruff/mypy and Compose configuration checks pass. Hosted image caf368fc7263 built;
+the real systemd job completed SKIPPED_MARKET_CLOSED on today's holiday at
+08:46:33 UTC and exited successfully. API /health remained database connected;
+existing API/worker were not restarted. Timer verified active with daily schedule.
+
+## First hosted automatic login verified: 24 November 2026
+
+User entered credentials privately and ran the scheduled-login service manually.
+Service completed NEW_SESSION_VERIFIED at 08:39:33 UTC (14:09:33 IST), confirming
+fresh login/profile match. Timer next run remains 25 November 08:55 IST. Remote
+worker check: OBSERVATION_ONLY/OBSERVATION, heartbeat age 0 seconds, no problem,
+no open positions. Quote projection still contains prior-session data (latest
+23 November 10:16:42 UTC); no fresh market stream acceptance claimed. Today is
+the configured and officially documented Guru Nanak holiday:
+https://nsearchives.nseindia.com/content/circulars/FAOP71777.pdf.
+Subsequent scheduled renewal and next-open-session data remain unverified.
+
+## Scheduled broker authentication: 24 November 2026
+
+Implemented services.market.autologin and isolated Compose broker-login job.
+It accepts PIN/TOTP seed privately through getpass; writes mode-0600 JSON into a
+separate mode-0700 UID-10001 .private-broker directory, mounted only by this job.
+API/worker only share resulting session tokens. Uses PyOTP 2.9.0 (broker legacy
+seed compatibility), current-day profile-verified reuse, fresh login/profile match,
+exclusive Linux file lock, max three transient attempts 35 seconds apart, no retry
+on invalid credentials. Safe outcome/status file and exit code; no trading gate
+changes. Six focused tests, Ruff, targeted mypy, merged Compose validation passed.
+
+Installed/enabled swan-broker-login.timer/service on Oracle: weekdays 08:55 IST
+plus boot, persistent catch-up, 600-second job timeout, no automatic restart loop.
+Server reports NTPSynchronized=yes. Missing secret file correctly skips the job.
+User must configure credentials privately then start the service for first real
+authentication. Real PIN/seed login, subsequent daily renewal and live stream
+acceptance are still unverified. See hosting/oracle/README.md for wiring commands.
+Hosted image f4adb0b7cc92 built successfully; the isolated Compose login job's
+--help command executed successfully without any broker requests. Existing
+API/worker containers remained running throughout the image build.
+
+## Public HTTPS backend: 24 November 2026
+
+User supplied the deployed frontend https://swan-one.vercel.app and opened OCI
+ingress TCP 80/443. Opened the same ports in the VM INPUT firewall and saved with
+netfilter-persistent. Configured Caddy and obtained a Let's Encrypt certificate for
+https://swan-api.137-23-62-124.sslip.io. External Python requests with normal TLS
+verification returned /health 200 and database connected; CORS preflight allowed
+exactly https://swan-one.vercel.app and rejected an unrelated origin (400, no allow
+origin). No credentials were exposed. API startup after recreation took roughly
+two minutes under CPU contention; added 180-second healthcheck start_period in
+the Micro overlay for future recreation (uploaded, existing container unchanged).
+
+Next frontend step: set Vercel Production NEXT_PUBLIC_API_BASE_URL to
+https://swan-api.137-23-62-124.sslip.io and redeploy. No Vercel CLI/session was
+available locally to perform this setting change. Frontend integration, hosted
+broker login/data, authenticated chat, backups/restart and paper acceptance remain
+open under D26. Worker remains observation-only and account entries disabled.
+
+## Oracle Micro experiment resumed: 24 November 2026
+
+Connected over SSH to the user's Ubuntu 24.04 x86_64 Micro VM. Observed 952 MiB
+RAM, 706 MiB initially available, 45 GB root disk with 42 GB free, and no swap.
+Restricted the local SSH private-key ACL; keys remain excluded from Git. Installed
+Ubuntu's Docker/Compose packages and enabled Docker at boot. Added a 2 GiB swapfile
+with persistent fstab entry. Uploaded the allowlisted source bundle and private
+runtime configuration with bootstrap disabled and explicit existing owner binding.
+No public API hostname or Vercel deployment exists yet; allowed web origins are
+empty until the frontend URL is known. Caddy is not started.
+
+Added optional hosting/oracle/compose.micro.yaml PostgreSQL tuning (64 MB buffers,
+2 MB work memory, 40 connections, no parallel query workers/JIT). The local managed
+API, web and worker were stopped before exporting the flat/inactive ledger to
+`.local/release/swan-database-20261124T065942Z.dump`. It was transferred privately
+and restored into the new hosted database without pg_restore errors.
+
+Initial database-only sample: approximately 57 MiB container memory, 584 MiB host
+available, 108 MiB swap occupied. Busy setup samples showed 90–91% CPU steal time;
+do not interpret Docker's transient CPU percentage as sustainable allocated CPU.
+Docker image build and Alembic migration completed successfully. API, observation
+worker and PostgreSQL are running; hosted /health returns database connected.
+After startup, three health samples took 3/7/2 ms. Container working-set samples:
+API 92 MiB, worker 77 MiB, database 57 MiB. Host available memory was about 451 MiB;
+later vmstat samples showed 97–98% idle CPU, zero steal and no active swap I/O.
+The initial 2.7-second successful health request was during startup. The worker
+record shows OBSERVATION_ONLY/OBSERVATION, heartbeat age 1 second, no problem;
+account enabled=false, no open positions, all three containers zero restarts and
+OOM=false. These short idle observations support continuing on one VM, not live
+market performance acceptance. Broker login/data, HTTPS, Vercel, restart recovery
+and sustained resource acceptance remain pending. No broker orders were placed.
+Do not restart local and hosted account workers concurrently. D26 remains open.
+
 ## Hosting decision: 24 November 2026, after VM creation
 
 The user reports that the 1 GB Oracle VM has been created after A1 Flex requests
@@ -144,3 +662,12 @@ assessment expired and must not be executed. Provider checks and broker login ar
 day-scoped or short-lived. Refresh them through existing controls as needed.
 The user resumed provider and actual-market paper checks. Do not relax permission,
 freshness, depth or risk gates. Exact broker fee parity remains unverified.
+
+Trade chart presentation follow-up, 25 November 2026: removed the chart-level
+“Ask SWAN about this” prompt and decluttered the chart to candles, timeframe, date
+and the explicit history update action. Removed optional indicators, RSI, zoom
+buttons, raw candle tables, chart trade overlays and their five-second polling
+request. These presentation-only changes do not change order safeguards or the
+separate Dashboard trade history. Frontend typecheck, chart-data tests, and the
+isolated responsive workspace/browser suite pass. No broker login, live-market
+refresh or order action was performed.

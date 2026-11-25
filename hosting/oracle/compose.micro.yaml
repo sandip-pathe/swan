@@ -1,0 +1,22 @@
+# Optional small-VM overlay. Limits are starting settings, not measured capacity.
+# Usage: hosting/oracle/swan -f hosting/oracle/compose.micro.yaml up -d db api
+services:
+  api:
+    healthcheck:
+      start_period: 180s
+  db:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=40
+      - -c
+      - max_parallel_workers_per_gather=0
+      - -c
+      - jit=off
+    shm_size: 64m

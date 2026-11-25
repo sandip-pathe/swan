@@ -1,5 +1,10 @@
-export type IconName = "home" | "markets" | "orders" | "history" | "account" | "arrow" | "refresh" | "shield" | "wallet" | "download" | "logout" | "signal" | "star" | "remove";
+export type IconName = "home" | "markets" | "orders" | "history" | "account" | "arrow" | "refresh" | "shield" | "wallet" | "download" | "logout" | "signal" | "star" | "remove" | "activity" | "chat" | "book" | "arrowUp" | "panel";
 const paths: Record<IconName, string> = {
+  activity: "M3 12h4l3-8 4 16 3-8h4",
+  chat: "M21 11a9 9 0 0 1-9 9H4l-2 2V11a9 9 0 0 1 19 0Z",
+  book: "M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1v15",
+  arrowUp: "M12 20V4m-6 6 6-6 6 6",
+  panel: "M3 4h18v16H3ZM15 4v16",
   star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z",
   remove: "M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7m4-7v7",
   home: "m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z",

@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { User } from "firebase/auth";
 import type { Readiness } from "@/lib/readiness";
-import Icon, { type IconName } from "./icons";
+import Icon from "./icons";
+import { Plus } from "lucide-react";
+import NavigationIcon, { type NavigationIconName } from "./navigation-icon";
 import ContractChart from "./candles";
 import InstrumentSearch, { type SelectedContract } from "./instrument-search";
 import Watchlist, { useWatchlist } from "./watchlist";
@@ -12,10 +14,17 @@ import SystemSetup from "./system-setup";
 import ValidationPanel from "./validation";
 import PaperControls from "./paper-controls";
 import { PaperActionProvider, PaperActionStatus } from "./paper-action";
+import DashboardIntelligence from "./dashboard-intelligence";
+import DashboardSkeleton from "./dashboard-skeleton";
 import AgentActivity from "./agent-activity";
-import StrategyIntelligence from "./strategy-intelligence";
+import { readSnapshot, saveSnapshot, clearSnapshots } from "@/lib/display-snapshot";
 import Chat from "./chat";
-import AgentUsage from "./agent-usage";
+import DeviceSettings from "./device-settings";
+import { useScreenMemory } from "@/lib/navigation-memory";
+import { useOverlayBack } from "@/lib/overlay-back";
+import { readAppearance, saveAppearance, validAppearance } from "@/lib/browser-preferences";
+import { useChatSessions } from "./chat-sessions";
+import Brand from "./brand";
 import DailyReport from "./daily-report";
 import ClosedJournal from "./closed-journal";
 import PortfolioPanel from "./portfolio";
@@ -34,24 +43,24 @@ type Workspace = ExecutionData & {
   events: { id: string; timestamp: string; kind: string; details: unknown }[];
 };
 const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Execution", history: "Journal", strategies: "Strategy intelligence", chat: "Chat", account: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation", activity: "Activity" };
+const pages: Record<string, string> = { home: "Overview", markets: "Option chain", orders: "Trades", history: "History", strategies: "Decisions", chat: "Chat", account: "Account & workspace", diagnostics: "System setup", risk: "Risk settings", permissions: "Paper controls", trial: "Paper validation" };
 const errors: Record<string, string> = {
   PAPER_PLAN_REQUEST_CONFLICT: "This save request was already used with different inputs. Preview again before saving.",
   PREVIEW_ACCOUNT_CHANGED: "Your account changed. Preview again before saving or placing this plan.",
-  MANUAL_MARKET_CLOSED: "The market is closed or its session is unverified. You can still save a plan.",
+  MANUAL_MARKET_CLOSED: "The market is closed or today's hours aren't confirmed. You can still save a plan.",
   MANUAL_ADMISSION_CHANGED: "Order checks changed. Calculate a fresh preview before trying again.",
   MANUAL_QUOTE_UNAVAILABLE: "A current stored quote is required before placing a paper order.",
   MANUAL_REQUEST_CONFLICT: "This order request belongs to different inputs. Check Orders before trying again.",
   MANUAL_CONTRACT_CHANGED: "Contract details changed. Load the contract and make a new plan.",
-  ENTRY_SOURCE_MISMATCH: "Another entry mode owns this session. Stop it before starting a manual session.",
-  CONTROLLED_VALIDATION_REQUIRED: "Start a manual paper session before placing this order.",
-  MANUAL_VALIDATION_REQUIRED: "Manual orders need an explicit manual paper session.",
+  ENTRY_SOURCE_MISMATCH: "Another paper trading mode is active. Turn it off before placing this order.",
+  CONTROLLED_VALIDATION_REQUIRED: "Turn on paper buying in the order window before placing this order.",
+  MANUAL_VALIDATION_REQUIRED: "Turn on paper buying in the order window before placing this order.",
   MANUAL_RISK_LIMIT: "This order exceeds the remaining risk budget. Review quantity and stop price.",
   INSUFFICIENT_EXECUTABLE_DEPTH: "Usable depth no longer covers this order. Preview again.",
   INSUFFICIENT_UNRESERVED_CASH: "Available cash no longer covers this order and its costs.",
-  VALIDATION_ENTRY_LIMIT: "This session already has its one entry. Track it in Orders.",
-  VALIDATION_SCOPE_EXCEEDED: "This session supports one lot of its selected contract.",
-  VALIDATION_STOPPING: "The session is stopping. Existing exposure is still being managed.",
+  VALIDATION_ENTRY_LIMIT: "This paper-buying window has used its one order. Track it in Trades.",
+  VALIDATION_SCOPE_EXCEEDED: "This paper-buying window is for one option and one lot. Finish or turn it off before switching.",
+  VALIDATION_STOPPING: "Paper buying is turning off. Any open trade will still be managed.",
   PAPER_PLAN_LIMIT: "You have 50 saved paper plans. Archive an older plan before saving another.",
   PAPER_PLAN_NOT_FOUND: "This saved plan is unavailable for your account.",
   ORDER_PRICES_OFF_TICK: "Use prices that are multiples of the contract tick size shown in Details.",
@@ -113,18 +122,53 @@ const errors: Record<string, string> = {
 };
 
 export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState("Chat");
+  const internalNavigation = useRef(false);
+  const pageRestored = useRef(false);
+  const contextTrigger = useRef<HTMLButtonElement>(null);
+  const sidebarTrigger = useRef<HTMLButtonElement>(null);
+  const sidebarElement = useRef<HTMLElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const sync = () => { setMobileSidebar(media.matches); setSidebarOpen(!media.matches); };
+    sync(); media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+  useEffect(() => {
+    if (!mobileSidebar || !sidebarOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    sidebarElement.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setSidebarOpen(false); }
+      if (event.key !== "Tab") return;
+      const nodes = Array.from(sidebarElement.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],select,input,textarea,[tabindex="0"]') ?? []).filter(node => node.getClientRects().length);
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", keys);
+    return () => { document.body.style.overflow = previous; document.removeEventListener("keydown", keys); requestAnimationFrame(() => sidebarTrigger.current?.focus()); };
+  }, [mobileSidebar, sidebarOpen]);
+  const chats = useChatSessions(user.uid);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [theme, setTheme] = useState("system");
   const [settingsTab, setSettingsTab] = useState("System setup");
-  const [data, setData] = useState<Workspace | null>(null);
+  const [data, setData] = useState<Workspace | null>(() => readSnapshot<Workspace>(user.uid, "workspace"));
+  const [confirmed, setConfirmed] = useState(false);
+  const [workerNow, setWorkerNow] = useState(Date.now);
   const [chain, setChain] = useState<Chain | null>(null);
   const [underlying, setUnderlying] = useState("NIFTY");
   const [chainExpiry, setChainExpiry] = useState("");
   const [offset, setOffset] = useState(0);
-  const [marketView, setMarketView] = useState("chain");
+  const [marketView, setMarketView] = useState("search");
   const [chartRecord, setChartRecord] = useState<SelectedContract | null>(null);
   const [chartError, setChartError] = useState<string | null>(null);
   const [chartId, setChartId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadErrorDismissed, setLoadErrorDismissed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [chainSort, setChainSort] = useState<"latest" | "strike">("latest");
   const [chainError, setChainError] = useState<string | null>(null);
@@ -132,6 +176,16 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   const [refresh, setRefresh] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [feedback, setFeedback] = useState<string | null>(null);
+  const rememberScreen = useScreenMemory(user.uid, tab, data !== null);
+  const dashboardDestination = useRef("Overview");
+  const accountDestination = useRef("Account & workspace");
+  useOverlayBack(mobileSidebar && sidebarOpen, () => setSidebarOpen(false));
+  useOverlayBack(mobileSidebar && contextOpen, () => setContextOpen(false));
+  useEffect(() => {
+    if (["Overview", "Trades", "History", "Decisions"].includes(tab)) dashboardDestination.current = tab;
+    if (["Account & workspace", "System setup", "Risk settings", "Paper controls", "Paper validation"].includes(tab)) accountDestination.current = tab;
+  }, [tab]);
+
 
   useEffect(() => { setChainExpiry(""); setOffset(0); setChain(null); }, [underlying]);
 
@@ -139,13 +193,15 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     const restorePage = () => {
       const [section, query] = window.location.hash.slice(1).split("?");
       const params = new URLSearchParams(query);
-      const page = pages[section] ?? "Overview";
-      setMarketView(["search", "watchlist"].includes(params.get("view") ?? "") ? params.get("view")! : "chain");
-      setChartId(section === "markets" ? params.get("instrument") : null);
+      const page = pages[section] ?? "Chat";
+      if (section === "markets") setMarketView(["search", "watchlist", "chain"].includes(params.get("view") ?? "") ? params.get("view")! : "search");
+      if (section === "markets") setChartId(params.get("instrument"));
       const market = params.get("underlying");
       if (market === "NIFTY" || market === "SENSEX") setUnderlying(market);
+      if (pageRestored.current && !internalNavigation.current) rememberScreen();
+      pageRestored.current = true; internalNavigation.current = false;
       setTab(page); setFeedback(null);
-      if (["System setup", "Risk settings", "Paper controls", "Paper validation", "Activity"].includes(page)) setSettingsTab(page);
+      if (["Account & workspace", "System setup", "Risk settings", "Paper controls", "Paper validation"].includes(page)) setSettingsTab(page);
     };
     restorePage();
     window.addEventListener("hashchange", restorePage);
@@ -153,8 +209,10 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   }, []);
 
   const request = useCallback(async (path: string, method = "GET", signal?: AbortSignal, body?: unknown) => {
+    if (!navigator.onLine) throw new Error("You are offline. Reconnect before sending requests.");
     const token = await user.getIdToken();
-    const response = await fetch(base + path, { method, signal, cache: "no-store", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const boundedSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000);
+    const response = await fetch(base + path, { method, signal: boundedSignal, cache: "no-store", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const result = await response.json();
     if (!response.ok) {
       const code = typeof result.detail === "string" ? result.detail : result.detail?.code;
@@ -164,7 +222,13 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
     return result;
   }, [user]);
 
-  const watchlist = useWatchlist(request, tab === "Option chain", tab === "Option chain" && marketView === "watchlist" && !chartId);
+  useEffect(() => {
+    const refreshAfterReconnect = () => setRefresh(value => value + 1);
+    window.addEventListener("swan:refresh", refreshAfterReconnect);
+    return () => window.removeEventListener("swan:refresh", refreshAfterReconnect);
+  }, []);
+
+  const watchlist = useWatchlist(request, tab === "Option chain", tab === "Option chain");
 
   useEffect(() => {
     if (!chartId || tab !== "Option chain") return;
@@ -198,30 +262,50 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   }, [chartId, request, tab]);
 
   useEffect(() => {
-    let active = true;
+    let active = true, pending = false, failures = 0;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     async function load() {
+      clearTimeout(timer);
+      if (!active || pending) return;
+      if (document.hidden || !navigator.onLine) { timer = setTimeout(load, 5000); return; }
+      pending = true;
       try {
-        const workspace: Workspace = await request("/api/workspace", "GET", controller.signal);
-        if (active) { setData(workspace); setError(null); setNow(Date.now()); }
-        if (tab === "Option chain" || tab === "Overview") {
-          try {
-            const options: Chain = await request(`/api/chain?underlying=${underlying}&offset=${offset}&sort=${chainSort}${chainExpiry ? `&expiry=${encodeURIComponent(chainExpiry)}` : ""}`, "GET", controller.signal);
-            if (active) { setChain(options); setChainError(null); }
-          } catch { if (active) { setChainError("Option observations could not be loaded. Account data is still available."); setChain(null); } }
+        const workspace = await request("/api/workspace", "GET", controller.signal) as Workspace;
+        if (active) {
+          setData(workspace); setConfirmed(true); setError(null); setLoadErrorDismissed(false); setNow(Date.now());
+          saveSnapshot(user.uid, "workspace", workspace); failures = 0;
         }
       } catch (cause) {
-        if (active) { setError(cause instanceof Error ? cause.message : "Connection unavailable."); setChain(null); }
+        if (active) { failures++; setError(cause instanceof Error ? cause.message : "Connection unavailable."); }
       } finally {
-        if (active) timer = setTimeout(load, 5000);
+        pending = false;
+        if (active) timer = setTimeout(load, failures ? Math.min(60000, 5000 * 2 ** failures) : 5000);
       }
+    }
+    const resume = () => { if (!document.hidden) void load(); };
+    void load(); document.addEventListener("visibilitychange", resume);
+    return () => { active = false; controller.abort(); clearTimeout(timer); document.removeEventListener("visibilitychange", resume); };
+  }, [request, user.uid, refresh]);
+
+  useEffect(() => {
+    if (tab !== "Option chain" || marketView !== "chain") return;
+    const controller = new AbortController();
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    async function load() {
+      try {
+        if (document.hidden || !navigator.onLine) return;
+        const options = await request(`/api/chain?underlying=${underlying}&offset=${offset}&sort=${chainSort}${chainExpiry ? `&expiry=${encodeURIComponent(chainExpiry)}` : ""}`, "GET", controller.signal) as Chain;
+        if (active) { setChain(options); setChainError(null); }
+      } catch { if (active) setChainError("Option observations could not be updated. Previous observations are still shown."); }
+      finally { if (active) timer = setTimeout(load, 5000); }
     }
     void load();
     return () => { active = false; controller.abort(); clearTimeout(timer); };
-  }, [request, tab, underlying, offset, chainExpiry, chainSort, refresh]);
+  }, [request, tab, marketView, underlying, offset, chainExpiry, chainSort, refresh]);
 
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  useEffect(() => { const timer = setInterval(() => setWorkerNow(Date.now()), 5000); return () => clearInterval(timer); }, []);
 
   async function control(action: "pause" | "resume") {
     if (busy) return;
@@ -290,76 +374,106 @@ export default function Dashboard({ user, onSignOut }: { user: User; onSignOut: 
   }
 
   const heartbeat = data?.runtime?.heartbeat;
-  const workerOnline = heartbeat != null && now - Date.parse(heartbeat) >= 0 && now - Date.parse(heartbeat) <= 10000;
-  const stale = data != null && (error !== null || now - Date.parse(data.as_of) > 15000);
-  const ready = data?.readiness;
+  const workerOnline = confirmed && heartbeat != null && workerNow - Date.parse(heartbeat) >= 0 && workerNow - Date.parse(heartbeat) <= 15000;
+  const stale = data != null && (!confirmed || error !== null || workerNow - Date.parse(data.as_of) > 20000);
+  const ready = confirmed && !stale ? data?.readiness : undefined;
 
   const marketLabel = ready?.market_state === "open" ? "Market open" : ready?.market_state === "closed" ? "Market closed" : ready?.market_state === "partial" ? "Limited trading hours" : "Market hours unavailable";
-  const settingsPage = ["System setup", "Risk settings", "Paper controls", "Paper validation", "Activity"].includes(tab);
+  const settingsPage = ["Account & workspace", "System setup", "Risk settings", "Paper controls", "Paper validation"].includes(tab);
   const navigate = (name: string) => {
+    rememberScreen();
     setTab(name); setFeedback(null);
-    const hash = Object.keys(pages).find(key => pages[key] === name) ?? "home";
-    if (window.location.hash !== `#${hash}`) window.location.hash = hash;
-    window.scrollTo({ top: 0, behavior: "instant" });
+    if (mobileSidebar) setSidebarOpen(false);
+    const hash = name === "Option chain" ? `markets?${new URLSearchParams({ view: marketView, ...(chartId ? { instrument: chartId, underlying } : {}) })}` : Object.keys(pages).find(key => pages[key] === name) ?? "chat";
+    if (window.location.hash !== `#${hash}`) { internalNavigation.current = true; window.location.hash = hash; }
   };
   const selectedContract = chartRecord?.instrument.id === chartId ? chartRecord : chain?.rows.find(row => row.instrument.id === chartId);
-  const returnToMarket = () => { setChartId(null); window.location.hash = marketView === "chain" ? "markets" : `markets?view=${marketView}`; };
+  const returnToMarket = () => { setChartId(null); window.location.hash = `markets?view=${marketView}`; };
   const openChart = (item: ChainRow["instrument"]) => {
     setChartId(item.id);
     window.location.hash = `markets?${new URLSearchParams({ instrument: item.id, underlying: item.underlying, ...(marketView !== "chain" ? { view: marketView } : {}) })}`;
     window.scrollTo({ top: 0, behavior: "instant" });
   };
-  const nextStep = !workerOnline ? "Connect your trading service" : !ready?.configuration_complete ? "Finish setting up your paper account" : !ready.connections_verified ? "Check your market connections" : "Explore the market";
-  const nextDetail = !workerOnline ? "Your account is available, but automatic position monitoring is offline." : !ready?.configuration_complete ? "A few trading and risk settings still need review before you can place paper trades." : !ready.connections_verified ? "Verify your broker and market data before starting a paper session." : "View option prices and available contracts. Paper trading stays paused until you choose to start.";
 
-  return <main className="workspace"><PaperActionProvider key={user.uid} ownerKey={user.uid} revision={data?.account.revision} request={request} onRefresh={() => setRefresh(value => value + 1)}>
-    <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 22 15 9l3 8 7-5-9 13-3-8Z" fill="currentColor"/></svg></span><div><p className="brand-name">swan<span className="brand-period">.</span></p></div></div><div className="header-actions"><button className="avatar-button" aria-label="Open account settings" onClick={() => navigate("System setup")}>{(user.displayName ?? user.email ?? "S").slice(0, 1).toUpperCase()}</button></div></header>
-    <nav className="tabs" aria-label="Main navigation">{([["Overview", "Home", "home"], ["Chat", "Chat", "activity"], ["Option chain", "Markets", "markets"], ["Execution", "Orders", "orders"], ["Journal", "History", "history"], ["Strategy intelligence", "Strategies", "activity"], ["System setup", "Account", "account"]] as [string, string, IconName][]).map(([name, label, icon]) => <button key={name} aria-current={(name === "System setup" ? settingsPage : tab === name) ? "page" : undefined} onClick={() => navigate(name === "System setup" ? settingsTab : name)}><Icon name={icon} /><span>{label}</span></button>)}</nav>
-    {settingsPage && <div className="account-heading"><div><h1>Account</h1><p>{user.email ?? user.displayName}</p></div><button className="text-button" onClick={onSignOut}><Icon name="logout" />Sign out</button></div>}
-    {settingsPage && <nav className="settings-tabs" aria-label="Account settings">{[["System setup", "Connections & setup"], ["Risk settings", "Risk limits"], ["Paper controls", "Trading permissions"], ["Paper validation", "Trial sessions"], ["Activity", "Account activity"]].map(([name, label]) => <button className="secondary" key={name} aria-current={tab === name ? "page" : undefined} onClick={() => { setSettingsTab(name); navigate(name); }}>{label}</button>)}</nav>}
-    {error && <div className="notice error" role="alert">{error}<button className="secondary" onClick={() => setRefresh(value => value + 1)}>Retry</button></div>}
+  const dashboardPage = ["Overview", "Trades", "History", "Decisions"].includes(tab);
+  useEffect(() => {
+    const stored = readAppearance();
+    setTheme(stored);
+    if (stored === "dark" || stored === "light") document.documentElement.dataset.theme = stored;
+    else delete document.documentElement.dataset.theme;
+  }, []);
+  useEffect(() => {
+    if (!contextOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") { setContextOpen(false); contextTrigger.current?.focus(); } };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [contextOpen]);
+  function changeTheme(value: string) {
+    setTheme(value); if (value === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = value;
+    if (validAppearance(value)) saveAppearance(value);
+  }
+  function signOut() {
+    clearSnapshots(user.uid);
+    try { for (const key of Object.keys(localStorage)) { if (key === `swan.chat.sessions.v1.${user.uid}` || key.startsWith(`swan.chat.history.v2.${user.uid}.`) || key.startsWith(`swan.chat.draft.v1.${user.uid}.`)) localStorage.removeItem(key); } localStorage.removeItem(`swan.chat.history.v2.${user.uid}`); localStorage.removeItem(`swan.chat.draft.v1.${user.uid}`); localStorage.removeItem("swan.chat.history.v1"); } catch { /* Continue sign-out. */ }
+    try { for (const key of Object.keys(sessionStorage)) { if (key === `swan.navigation.v1.${user.uid}` || key.startsWith(`swan.market.filters.v1.${user.uid}.`) || key.startsWith(`swan.chat.scroll.v1.${user.uid}.`)) sessionStorage.removeItem(key); } } catch { /* Continue sign-out. */ }
+    onSignOut();
+  }
+  const primaryNavigation = <>{([ ["Chat", "Chat", "chat"], ["Overview", "Dashboard", "dashboard"], ["Option chain", "Trade", "trade"] ] as [string, string, NavigationIconName][]).map(([name, label, icon]) => { const active = name === "Overview" ? dashboardPage : tab === name; return <button key={name} aria-current={active ? "page" : undefined} onClick={() => navigate(name === "Overview" ? dashboardDestination.current : name)}><NavigationIcon name={icon} active={active} /><span>{label}</span></button>; })}</>;
+  return <main className={`workspace swan-app ${sidebarOpen ? "sidebar-is-open" : "sidebar-is-closed"}`}><PaperActionProvider key={user.uid} ownerKey={user.uid} revision={data?.account.revision} request={request} onRefresh={() => setRefresh(value => value + 1)}>
+    {mobileSidebar && sidebarOpen && <button className="sidebar-backdrop text-button" aria-label="Close navigation overlay" onClick={() => setSidebarOpen(false)} />}
+    <aside id="swan-navigation" ref={sidebarElement} className="app-sidebar" role={mobileSidebar && sidebarOpen ? "dialog" : undefined} aria-modal={mobileSidebar && sidebarOpen ? true : undefined} aria-label="Navigation"><button className="sidebar-close text-button" aria-label="Close sidebar" onClick={() => { setSidebarOpen(false); requestAnimationFrame(() => sidebarTrigger.current?.focus()); }}>&times;</button><div className="app-brand-label" aria-label="SWAN"><Brand /></div><button className="app-new-chat secondary" onClick={() => { chats.create(); navigate("Chat"); }}><Plus className="icon nav-icon-dashboard" size={21} strokeWidth={1.65} aria-hidden="true" /><span className="nav-label">New conversation</span></button><nav className="app-navigation" aria-label="Main navigation">{primaryNavigation}</nav><nav className="chat-session-list" aria-label="Conversations"><p className="eyebrow">CHATS</p>{[...chats.sessions].sort((a, b) => b.updated - a.updated).map(session => <button key={session.id} className="text-button" title={session.title} aria-current={tab === "Chat" && chats.activeId === session.id ? "page" : undefined} onClick={() => { chats.select(session.id); navigate("Chat"); }}><span>{session.title}</span></button>)}</nav><div className="app-sidebar-bottom"><button className="app-profile" aria-label="Open account and workspace settings" title={user.displayName?.trim() || user.email || "Account"} onClick={() => navigate("Account & workspace")}><span>{user.displayName?.trim() || user.email || "Account"}</span></button></div></aside>
+    <div inert={mobileSidebar && sidebarOpen} className={`app-frame ${contextOpen ? "context-open" : ""}`}>
+    {error && !loadErrorDismissed && <div className="workspace-load-strip" role="alert"><span>{data ? `Could not update. Showing saved account from ${time(data.as_of)} IST.` : "Could not load your account."}</span><button className="text-button retry-link" onClick={() => { setRefresh(value => value + 1); }}>Retry</button><button className="text-button dismiss-load-error" aria-label="Dismiss workspace error" onClick={() => setLoadErrorDismissed(true)}>&times;</button></div>}
+    {contextOpen && <aside className="app-context" aria-label="Workspace context"><div className="panelhead"><h2>Discover</h2><button className="text-button" aria-label="Close workspace context" onClick={() => { setContextOpen(false); contextTrigger.current?.focus(); }}>&times;</button></div><section><p className="eyebrow">NEWS</p><h3>Market headlines</h3><p>Headlines are not available in this panel yet.</p><button className="text-button" onClick={() => { setContextOpen(false); navigate("Chat"); }}>Ask SWAN about market news <Icon name="arrow" /></button></section><section><p className="eyebrow">INSIGHTS</p><h3>{data ? data.account.enabled ? "Following your mandate" : "New entries are paused" : "Account insights unavailable"}</h3><p>Review the evidence behind recorded decisions.</p><button className="text-button" onClick={() => { setContextOpen(false); navigate("Decisions"); }}>Explore decisions <Icon name="arrow" /></button></section><section><p className="eyebrow">LEARNING</p><h3>Learn through the market</h3><p>Open a contract to explore its chart, indicators and risk with SWAN.</p><button className="text-button" onClick={() => { setContextOpen(false); navigate("Option chain"); }}>Explore Trade <Icon name="arrow" /></button></section></aside>}
+    <div className={`app-content ${tab === "Chat" ? "app-content-chat" : tab === "Option chain" ? "app-content-trade" : ""}`}>
+    <header className="app-topbar"><button ref={sidebarTrigger} className="sidebar-open text-button" aria-label="Open sidebar" aria-controls="swan-navigation" aria-expanded={sidebarOpen} onClick={() => { setContextOpen(false); setSidebarOpen(true); }}><Icon name="panel" /></button><button ref={contextTrigger} className="app-context-button text-button" aria-label={contextOpen ? "Close workspace context" : "Open workspace context"} aria-expanded={contextOpen} onClick={() => setContextOpen(value => !value)}><Icon name="panel" /></button></header>
+    {dashboardPage && <nav className="workspace-subnav" aria-label="Dashboard views">{[ ["Overview", "Overview"], ["Trades", "Trades"], ["Decisions", "Decisions"], ["History", "History"] ].map(([name,label]) => <button key={name} className="text-button" aria-current={tab === name ? "page" : undefined} onClick={() => navigate(name)}>{label}</button>)}</nav>}
+    {settingsPage && <div className="account-heading"><div><h1>Account &amp; workspace</h1><p>{user.email ?? user.displayName}</p></div><button className="text-button" onClick={signOut}><Icon name="logout" />Sign out</button></div>}
+    {settingsPage && <nav className="settings-tabs" aria-label="Account settings">{[["Account & workspace", "General"], ["Risk settings", "Risk limits"], ["Paper controls", "Trading permissions"], ["Paper validation", "Paper order access"]].map(([name, label]) => <button className="secondary" key={name} aria-current={tab === name ? "page" : undefined} onClick={() => { setSettingsTab(name); navigate(name); }}>{label}</button>)}</nav>}
+    {tab === "Account & workspace" && <section className="panel account-preferences"><h2>Your account</h2><p>{user.displayName?.trim() || user.email || "Account"}</p>{user.displayName && user.email && <p className="muted">{user.email}</p>}<details className="more-settings"><summary>More settings</summary><div className="appearance-settings"><h3>Appearance</h3><p>Choose how SWAN looks on this device.</p><div className="theme-options" role="group" aria-label="Appearance">{["system", "light", "dark"].map(value => <button key={value} className="secondary" aria-pressed={theme === value} onClick={() => changeTheme(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div></div><DeviceSettings /></details></section>}
+
     {actionError && <p className="notice error" role="alert">{actionError}</p>}
     {feedback && <p className="notice" role="status">{feedback}</p>}
     <PaperActionStatus />
-    {!data ? <section className="panel"><h2>{error ? "Workspace unavailable" : "Loading your workspace…"}</h2><p>Your balances and positions will appear here once your account is connected.</p></section> : <>
-      <div className="statusline"><span className={`dot ${workerOnline ? "online" : ""}`} /><span>{workerOnline ? "Monitoring connected" : "Monitoring offline"}</span><span className="status-pill">{data.account.enabled && workerOnline ? "Entries enabled" : "Entries paused"}</span><span className="updated">Updated {time(data.as_of)} IST</span><button className="text-button refresh-button" aria-label="Refresh account" onClick={() => setRefresh(value => value + 1)}><Icon name="refresh" /></button></div>
-      {stale && <p className="notice error" role="status">Account data is stale. Refresh to check current holdings. Cancellation and exit requests are checked against the latest account records.</p>}
-      {!workerOnline && data.positions.length > 0 && <p className="notice error" role="alert">Your open positions are not being monitored. Restore the trading connection to manage automatic exits.</p>}
+    <div hidden={tab !== "Chat"} className="chat-mount">{chats.ready && chats.sessions.map(session => <div key={session.id} hidden={chats.activeId !== session.id}><Chat request={request} ownerKey={user.uid} sessionId={session.id} active={tab === "Chat" && chats.activeId === session.id} onTitle={text => chats.title(session.id, text)} onMarket={() => navigate("Option chain")} /></div>)}</div>
       {tab === "Overview" && <>
-        <div className="page-heading"><div><p className="eyebrow">YOUR PORTFOLIO</p><h1>Overview</h1></div><span className="market-badge">{marketLabel}</span></div>
-        <div className="metrics"><article className="balance-card"><p><Icon name="wallet" /> Available to trade</p><strong>{money(data.funds?.available_cash)}</strong><span>Paper balance &middot; INR</span></article><article><p>Open positions</p><strong>{data.positions.length}</strong><span>{data.positions.length ? "Positions currently held" : "No market exposure"}</span></article><article><p>Pending orders</p><strong>{data.order_summary?.active_count ?? "Unavailable"}</strong><span>Awaiting a fill</span></article><article><p>Daily loss limit</p><strong>{Number(data.account.config.max_daily_loss_pct) * 100}%</strong><span>{data.account.daily_blocked ? "Limit reached - trading paused" : "Of your paper capital"}</span></article></div>
-        <PortfolioPanel revision={data.account.revision} />
-        <div className="overview-grid">
-          <section className="panel getting-started"><p className="eyebrow">{data.account.enabled ? "TRADING STATUS" : "YOUR NEXT STEP"}</p><h2>{data.account.enabled ? "Paper trading is active" : nextStep}</h2><p>{data.account.enabled ? "New entries are enabled. You can pause them while existing positions continue to be monitored." : nextDetail}</p><div className="actions">{data.account.enabled ? <button disabled={busy || stale} onClick={() => control("pause")}>Pause new trades</button> : <button onClick={() => navigate(ready?.configuration_complete && ready.connections_verified ? "Option chain" : "System setup")}>{ready?.configuration_complete && ready.connections_verified ? "Explore markets" : "Continue setup"}<Icon name="arrow" /></button>}<button className="text-button" onClick={() => navigate("Risk settings")}>Review risk limits</button></div></section>
-          <section className="panel market-summary"><div className="panelhead"><h2>Market watch</h2><button className="text-button" onClick={() => navigate("Option chain")}>View chain <Icon name="arrow" /></button></div><div className="market-switch" aria-label="Market watch underlying">{["NIFTY", "SENSEX"].map(name => <button key={name} aria-pressed={underlying === name} onClick={() => {setUnderlying(name);setChainExpiry("");setOffset(0);setChain(null);}}>{name}</button>)}</div>{chainError ? <p className="empty-state">Market prices are unavailable. Check your connection in Account.</p> : chain == null ? <p className="empty-state">Loading market prices...</p> : chain.rows.length ? <div className="watch-list">{chain.rows.slice(0,3).map(({instrument,quote}) => <div className="watch-row" key={instrument.id}><div><strong>{instrument.strike} {instrument.option_type === "CALL" ? "CE" : "PE"}</strong><small>{instrument.expiry}</small></div><div><span>Bid / Ask</span><strong>{quote.bid == null ? "Unavailable" : money(quote.bid)} / {quote.ask == null ? "Unavailable" : money(quote.ask)}</strong><small>{time(quote.timestamp)} IST</small></div></div>)}</div> : <div className="market-empty"><Icon name="markets" /><strong>No quotes yet</strong><p>{ready?.market_state === "closed" ? "The market is closed. Quotes appear here when your market connection receives prices." : "Check your market connection to receive option prices."}</p></div>}</section>
-        </div>
-        <section className="panel"><div className="panelhead"><div><h2>Open positions</h2><p>{data.positions.length ? "Your current paper holdings and exit levels." : "You have no open positions. Your funds are ready when you are."}</p></div><button className="text-button" onClick={() => navigate("Execution")}>View all</button></div>{data.positions.length > 0 && <Positions rows={data.positions} data={data} workerOnline={workerOnline} stale={stale} empty="No open positions." />}</section>
+        {confirmed && !workerOnline && data && data.positions.length > 0 && <p className="notice error" role="alert">Open trades are not being monitored. Check the background service before relying on automatic exits.</p>}
+        {stale && !error && data && <p className="saved-data-strip" role="status">Saved values from {time(data.as_of)} IST · Checking for updates.</p>}
+        <div className="page-heading beginner-heading"><div><p className="eyebrow">YOUR DAILY CHECK-IN</p><h1>Money. Moves. Lessons.</h1><p>See where you stand. Understand the why.</p></div><span className="market-badge">{marketLabel}</span></div>
+        <PortfolioPanel ownerKey={user.uid} revision={data?.account.revision ?? 0} />
+        {data ? <><DashboardIntelligence ownerKey={user.uid} request={request} readiness={ready} runtime={data.runtime} enabled={data.account.enabled} blocked={data.account.daily_blocked} stale={stale} snapshot={data.as_of} onNavigate={navigate} />
+        <section className="panel"><div className="panelhead"><div><h2>Your open trades</h2><p>{data.positions.length ? "Trades still running, with their exit levels." : "No trades running right now. Take your time."}</p></div><button className="text-button" onClick={() => navigate("Trades")}>View all</button></div>{data.positions.length > 0 && <Positions rows={data.positions} data={data} workerOnline={workerOnline} stale={stale} empty="No open positions." />}</section>
         {(data.order_summary?.active_count ?? 0) > 0 && <ActiveOrders data={data} />}
+        </> : <DashboardSkeleton />}
       </>}
-      {tab === "Execution" && <><FundsPanel funds={data.funds} /><ActiveOrders data={data} /><section className="panel"><h2>Open positions</h2><Positions rows={data.positions} data={data} workerOnline={workerOnline} stale={stale} empty="No open paper positions." /></section><ExecutionHistory data={data} /></>}
-      {tab === "Strategy intelligence" && <StrategyIntelligence request={request} onNavigate={navigate} />}
-      {tab === "Chat" && <Chat request={request} />}
+    {tab !== "Chat" && tab !== "Account & workspace" && tab !== "Overview" && (!data ? <DashboardSkeleton /> : <>
+      {stale && !error && <p className="saved-data-strip" role="status">Saved values from {time(data.as_of)} IST · {confirmed ? "Waiting for an update." : "Checking for updates."}</p>}
+      {confirmed && !workerOnline && data.positions.length > 0 && <p className="notice error" role="alert">Your open positions are not being monitored. Restore the trading connection to manage automatic exits.</p>}
+      {tab === "Trades" && <><FundsPanel data={data} /><ActiveOrders data={data} /><section className="panel"><div className="panelhead"><div><p className="eyebrow">YOUR OPEN TRADES</p><h2>Open trades</h2></div>{data.positions.length > 0 && <span className="status-pill">{data.positions.length} open</span>}</div><Positions rows={data.positions} data={data} workerOnline={workerOnline} stale={stale} empty="No open trades. When an order fills, you’ll see the position and its exit levels here." /></section><ExecutionHistory data={data} /></>}
+      {tab === "Decisions" && <><DashboardIntelligence ownerKey={user.uid} request={request} readiness={ready} runtime={data.runtime} enabled={data.account.enabled} blocked={data.account.daily_blocked} stale={stale} snapshot={data.as_of} onNavigate={navigate} /><AgentActivity /></>}
       {tab === "Paper controls" && <PaperControls request={request} report={ready} />}
       {tab === "Paper validation" && <ValidationPanel request={request} report={ready} />}
       {tab === "System setup" && (ready ? <SystemSetup report={ready} request={request} onRefresh={() => setRefresh(value => value + 1)} /> : <section className="panel"><h2>Readiness checks unavailable</h2><p>Refresh to retrieve the backend setup report.</p></section>)}
+      {tab === "Option chain" && <div className="live-market-content">
       {tab === "Option chain" && chartId && selectedContract && <ContractChart key={`${user.uid}:${chartId}`} instrument={selectedContract.instrument} reference={"reference" in selectedContract ? selectedContract.reference : chain?.reference} quoteDate={selectedContract.quote?.timestamp} quote={selectedContract.quote} statistics={"statistics" in selectedContract ? selectedContract.statistics : undefined} quoteError={chartError} quoteMaxAge={Number(data.account.config.quote_max_age_seconds)} request={request} quoteBusy={busy} onRefreshQuote={() => void refreshSelectedPrices([chartId])} marketLabel={marketLabel} onBack={returnToMarket} backLabel={marketView === "watchlist" ? "Watchlist" : marketView === "search" ? "Search" : "Option chain"} />}
       {tab === "Option chain" && chartId && !selectedContract && <section className="panel"><p>{chartError ?? "Loading contract..."}</p><button className="secondary" onClick={returnToMarket}>Back to markets</button></section>}
-      {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Option chain"], ["watchlist", "Watchlist"], ["search", "Search"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = value === "chain" ? "markets" : `markets?view=${value}`; }}>{label}</button>)}</div>}
-      {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
+      {tab === "Option chain" && !chartId && <div className="market-switch market-views" aria-label="Market view">{[["chain", "Options"], ["watchlist", "Watchlist"], ["search", "Find"]].map(([value, label]) => <button key={value} aria-pressed={marketView === value} onClick={() => { setMarketView(value); window.location.hash = `markets?view=${value}`; }}>{label}</button>)}</div>}
+      {tab === "Option chain" && marketView === "search" && <div hidden={chartId != null}><InstrumentSearch key={underlying} ownerKey={user.uid} watchlist={watchlist} request={request} underlying={underlying} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onOpen={result => { setChartRecord(result); openChart(result.instrument); }} /></div>}
       {tab === "Option chain" && !chartId && watchlist.feedback && <p className="chart-feedback" role="status">{watchlist.feedback}</p>}
       {tab === "Option chain" && !chartId && marketView === "watchlist" && <Watchlist refreshing={busy} onRefresh={() => void refreshSelectedPrices(watchlist.data?.rows.filter(row => row.status === "listed").map(row => row.instrument.id) ?? [])} state={watchlist} now={now} quoteAge={Number(data.account.config.quote_max_age_seconds)} onOpen={row => { setChartRecord(row); openChart(row.instrument); }} onSearch={() => { setMarketView("search"); window.location.hash = "markets?view=search"; }} />}
       {tab === "Option chain" && !chartId && marketView === "chain" && <OptionChain sort={chainSort} onSort={value => { setChainSort(value); setOffset(0); setChain(null); }} chain={chain} error={chainError} underlying={underlying} expiry={chainExpiry} busy={busy} stale={stale} offset={offset} now={now} maxAge={Number(data.account.config.quote_max_age_seconds)} onMarket={value => { setUnderlying(value); setChainExpiry(""); setOffset(0); setChain(null); }} onExpiry={value => { setChainExpiry(value); setOffset(0); setChain(null); }} onRefresh={() => { setChainExpiry(""); setOffset(0); void refreshPrices(); }} onPage={value => { setOffset(value); setChain(null); }} onOpen={openChart} />}
-      {tab === "Journal" && <><DailyReport /><section className="panel"><div className="panelhead"><h2>Closed positions</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>Newest first. Browse older closed positions without a fixed page limit. Realized P&amp;L includes recorded execution costs.</p><ClosedJournal /></section><section className="panel"><h2>Cash ledger</h2>{!data.ledger.length ? <p>No ledger entries recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Category</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</section></>}
-      {tab === "Activity" && <><AgentUsage /><AgentActivity /></>}
-      {tab === "Activity" && <section className="panel"><details><summary>Other account activity</summary><p className="muted">Recent account and control changes.</p>{data.events.filter(event => !["AI_OUTPUT", "AI_CONTEXT", "AI_RESERVATION", "AI_RESPONSE_USAGE", "AI_STAGE_CHECK", "AGENT_EVALUATION", "DURABLE_RISK_DECISION", "ENTRY_REJECTED"].includes(event.kind)).map(event => <details key={event.id}><summary>{time(event.timestamp)} {"\u00b7"} {event.kind.replaceAll("_", " ").toLowerCase()}</summary><p className="muted">Recorded in your account history.</p></details>)}</details></section>}
+      </div>}
+      {tab === "History" && <><DailyReport /><section className="panel"><div className="panelhead"><h2>Closed trades</h2><button className="secondary" disabled={busy} onClick={downloadJournal}>Export CSV</button></div><p>See how each trade ended, including recorded costs.</p><ClosedJournal /></section><section className="panel"><details><summary>Cash movements</summary><p className="muted">Deposits, adjustments and other recorded account movements.</p>{!data.ledger.length ? <p>No cash movements recorded.</p> : <div className="tablewrap"><table><thead><tr><th>Time (IST)</th><th>Type</th><th>Amount</th></tr></thead><tbody>{data.ledger.map(item => <tr key={item.id}><td>{time(item.timestamp)}</td><td>{item.category}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}</details></section></>}
       {tab === "Risk settings" && <section className="panel"><h2>Review your complete risk policy</h2><p>Pause entries and resolve pending orders and positions before saving. Capital is preserved in the ledger; changing it requires a separate funding operation.</p><form onSubmit={saveRisk} key={data.account.revision}><fieldset disabled={busy || stale || data.account.enabled || data.positions.length > 0 || (data.order_summary?.active_count ?? 1) > 0 || data.runtime?.resume_requested}><p>Configured paper capital: <strong>{money(String(data.account.config.capital))}</strong></p><div className="riskform">
         <label>Trade risk (% of capital)<input name="trade" type="number" required min="0.01" max="100" step="0.01" defaultValue={Number(data.account.config.max_trade_risk_pct) * 100} /></label>
         <label>Daily loss limit (% of capital)<input name="daily" type="number" required min="0.01" max="100" step="0.01" defaultValue={Number(data.account.config.max_daily_loss_pct) * 100} /></label>
         <label>Maximum holding (seconds)<input name="holding" type="number" required min="1" max="300" step="1" defaultValue={Number(data.account.config.max_holding_seconds)} /></label>
         {([ ["Maximum open positions", "max_positions", 1, undefined], ["Quote maximum age (seconds)", "quote_max_age_seconds", 1, 10], ["Stop new entries before close (minutes)", "entry_cutoff_minutes", 1, undefined], ["Request flatten before close (minutes)", "flatten_minutes", 1, undefined], ["Maximum fill quantity (units)", "max_fill_quantity", 1, undefined], ["Minimum observed volume", "min_volume", 0, undefined], ["Minimum open interest", "min_oi", 0, undefined], ["Maximum spread (basis points)", "max_spread_bps", 0.01, 10000] ] as const).map(([label, key, min, max]) => <label key={key}>{label}<input name={key} type="number" required min={min} max={max} step={key === "max_spread_bps" ? "0.01" : "1"} defaultValue={Number(data.account.config[key])} /></label>)}
         </div><p className="muted">Maximum quantity must accommodate an actual whole option lot. Entry cutoff must be earlier than flatten time. Execution policy and reviewed fees are configured separately.</p><label className="checkbox-label"><input name="reviewed" type="checkbox" required />I reviewed all limits, including quantity, liquidity and session cutoffs.</label><button type="submit">Save and review policy</button></fieldset></form></section>}
-    </>}
-    <footer>Paper execution only · NIFTY &amp; SENSEX · All times Asia/Kolkata</footer>
+    </>)}
+    {settingsPage && <details className="operator-tools"><summary>Advanced operator tools</summary><p>Configuration diagnostics are intended for maintenance, not routine trading.</p><button className="secondary" onClick={() => navigate("System setup")}>Open diagnostics</button></details>}
+
+    </div></div><nav inert={mobileSidebar && sidebarOpen} className="app-mobile-nav" aria-label="Mobile navigation">{primaryNavigation}<button aria-label="Open account and workspace settings" aria-current={["Account & workspace", "Risk settings", "Paper controls", "Paper validation", "System setup"].includes(tab) ? "page" : undefined} onClick={() => navigate(accountDestination.current)}><NavigationIcon name="account" active={["Account & workspace", "Risk settings", "Paper controls", "Paper validation", "System setup"].includes(tab)} /><span>Account</span></button></nav>
   </PaperActionProvider></main>;
 }
 

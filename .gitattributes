@@ -3,3 +3,5 @@ hosting/oracle/*.sh text eol=lf
 hosting/oracle/Dockerfile text eol=lf
 hosting/oracle/Caddyfile text eol=lf
 hosting/oracle/*.yaml text eol=lf
+hosting/oracle/*.service text eol=lf
+hosting/oracle/*.timer text eol=lf

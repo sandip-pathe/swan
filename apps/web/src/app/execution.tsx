@@ -10,17 +10,38 @@ function ContractLabel({ id, instruments }: { id: string; instruments?: Record<s
   return <span className="contract-label">{item ? <><strong>{item.underlying} {item.strike} {item.option_type}</strong><small>{item.expiry} · {item.exchange} · lot {item.lot_size}</small></> : <><strong>Contract details unavailable</strong><small>Refresh to load the contract name</small></>}</span>;
 }
 
-export function FundsPanel({ funds }: Pick<ExecutionData, "funds">) {
-  return <section className="panel"><h2>Paper funds</h2><p className="muted">Reserved cash backs pending entries. Restricted sale proceeds stay unavailable until their release is verified.</p><dl className="funds-grid">{([
-    ["Cash balance", funds?.cash], ["Reserved for entries", funds?.reserved_cash], ["Restricted proceeds", funds?.restricted_proceeds], ["Available to trade", funds?.available_cash], ["Pending risk allocation", funds?.reserved_pending_risk],
-  ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{money(value)}</dd></div>)}</dl></section>;
+export function FundsPanel({ data }: { data: ExecutionData }) {
+  const funds = data.funds;
+  const cash = Number(funds?.cash);
+  const available = Number(funds?.available_cash);
+  const validSplit = Number.isFinite(cash) && cash > 0 && Number.isFinite(available) && available >= 0 && available <= cash;
+  const availablePercent = validSplit ? Math.max(0, Math.min(100, available / cash * 100)) : 0;
+  const held = validSplit ? Math.max(0, cash - available) : null;
+  return <section className="panel funds-overview" aria-labelledby="funds-heading">
+    <div className="funds-primary">
+      <p className="eyebrow">YOUR CASH</p>
+      <h2 id="funds-heading">Available to trade</h2>
+      <p className="funds-amount">{money(funds?.available_cash)}</p>
+      {validSplit ? <>
+        <div className="funds-track" role="img" aria-label={`${availablePercent.toFixed(0)} percent of your paper cash is available to trade`}><span style={{ width: `${availablePercent}%` }} /></div>
+        <p className="funds-caption">{availablePercent.toFixed(0)}% of your paper cash is available. {held! > 0 ? `${money(String(held))} is held or waiting for a release check.` : "No cash is currently held."}</p>
+      </> : <p className="funds-caption">The latest cash breakdown is unavailable.</p>}
+    </div>
+    <details className="funds-details"><summary>See your cash breakdown</summary>
+      <dl className="funds-grid">{([
+        ["Total paper cash", funds?.cash], ["Held for open orders", funds?.reserved_cash], ["Sale money waiting for release", funds?.restricted_proceeds], ["Risk set aside for pending orders", funds?.reserved_pending_risk],
+      ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{money(value)}</dd></div>)}</dl>
+      {data.funds_holds?.length ? <details><summary>Why is sale money held?</summary><ul className="funds-hold-list">{data.funds_holds.map(hold => <li key={hold.id}><strong>{money(hold.amount)}</strong><span>{hold.released_at ? `Released ${time(hold.released_at)} IST` : "Release not verified yet"}</span><small>{words(hold.reason)}</small></li>)}</ul></details> : null}
+      <p className="muted">Money from a sale stays unavailable until its release is verified. Available cash is a balance, not permission to place an order.</p>
+    </details>
+  </section>;
 }
 
 export function ActiveOrders({ data }: { data: ExecutionData }) {
-  return <section className="panel"><div className="panelhead"><h2>Pending orders</h2><span className="status-pill">{data.order_summary ? `${data.order_summary.active_count} active` : "Count unavailable"}</span></div>
-    <p className="muted">An accepted order is not a fill. Orders can wait for later depth, fill partially, expire or be cancelled.</p>
+  return <section className="panel"><div className="panelhead"><div><p className="eyebrow">WAITING TO FILL</p><h2>Orders in progress</h2></div>{(data.order_summary?.active_count ?? 0) > 0 && <span className="status-pill">{data.order_summary!.active_count} waiting</span>}</div>
+    <p className="muted">An order only becomes a trade when it fills. It can fill in parts, expire, or be cancelled.</p>
     {data.order_summary?.active_truncated && <p className="notice error" role="status">Showing the oldest 200 active orders. Additional pending orders exist; exit coverage cannot be fully assessed here.</p>}
-    {data.active_orders == null ? <p>Pending order data is unavailable. Refresh the workspace.</p> : !data.active_orders.length ? <p className="empty-state">No pending paper orders.</p> : <div className="order-list">{data.active_orders.map(order => <OrderCard key={order.id} order={order} instruments={data.instruments} />)}</div>}
+    {data.active_orders == null ? <p className="empty-state">Orders in progress could not be loaded. Try refreshing your account.</p> : !data.active_orders.length ? <p className="empty-state">Nothing waiting to fill. New orders will show here while they’re being matched.</p> : <div className="order-list">{data.active_orders.map(order => <OrderCard key={order.id} order={order} instruments={data.instruments} />)}</div>}
   </section>;
 }
 
@@ -46,9 +67,8 @@ export function Positions({ rows, empty, data = {}, workerOnline = false, stale 
 
 export default function ExecutionHistory({ data }: { data: ExecutionData }) {
   return <>
-    <section className="panel"><h2>Recent orders</h2><p className="muted">Most recent 50 orders. Pending orders are listed separately above.</p>{data.orders == null ? <p>Order history unavailable.</p> : !data.orders.length ? <p className="empty-state">No recorded paper orders.</p> : <details><summary>View recent order history</summary><div className="order-list">{data.orders.map(order => <OrderCard key={order.id} order={order} instruments={data.instruments} />)}</div></details>}</section>
-    <section className="panel"><h2>Recent fills and fees</h2><p className="muted">Your latest completed paper trades, including fees.</p>{data.fills == null ? <p>Fill history unavailable.</p> : !data.fills.length ? <p className="empty-state">No recorded paper fills.</p> : <div className="tablewrap" tabIndex={0} role="region" aria-label="Paper fills"><table><caption className="sr-only">Paper fills and itemized fees</caption><thead><tr><th>Time (IST)</th><th>Instrument</th><th>Side</th><th>Units</th><th>Fill price</th><th>Fees</th><th>Fee details</th></tr></thead><tbody>{data.fills.map(fill => <tr key={fill.id}><td>{time(fill.timestamp)}</td><td><ContractLabel id={fill.instrument_id} instruments={data.instruments} /></td><td>{fill.side}</td><td>{fill.quantity}</td><td>{money(fill.price)}</td><td>{money(fill.fees)}</td><td><details><summary>Fee breakdown</summary><dl>{Object.entries(fill.fee_breakdown).map(([code, amount]) => <div key={code}><dt>{words(code)}</dt><dd>{money(amount)}</dd></div>)}</dl></details></td></tr>)}</tbody></table></div>}</section>
-    <section className="panel"><h2>Sale proceeds holds</h2><p className="muted">Up to 100 holds, with unreleased holds first. The funds summary includes all current restrictions.</p>{data.funds_holds == null ? <p>Funds hold records unavailable.</p> : !data.funds_holds.length ? <p className="empty-state">No recorded sale proceeds holds.</p> : <div className="tablewrap" tabIndex={0} role="region" aria-label="Sale proceeds holds"><table><caption className="sr-only">Restricted sale proceeds and release status</caption><thead><tr><th>Created (IST)</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>{data.funds_holds.map(hold => <tr key={hold.id}><td>{time(hold.created_at)}</td><td>{money(hold.amount)}</td><td>{words(hold.reason)}</td><td>{hold.released_at ? `Released ${time(hold.released_at)} IST` : "Restricted · release not verified"}</td></tr>)}</tbody></table></div>}</section>
+    <section className="panel"><details className="history-disclosure"><summary>Past orders <span>{data.orders?.length ?? "Unavailable"}</span></summary><p className="muted">Your latest orders. Orders still waiting to fill are listed above.</p>{data.orders == null ? <p>Past orders could not be loaded.</p> : !data.orders.length ? <p className="empty-state">No orders yet. Your first order will show up here.</p> : <div className="order-list">{data.orders.map(order => <OrderCard key={order.id} order={order} instruments={data.instruments} />)}</div>}</details></section>
+    <section className="panel"><details className="history-disclosure"><summary>Filled trades and fees <span>{data.fills?.length ?? "Unavailable"}</span></summary><p className="muted">Only filled orders appear here. Costs are included with each fill.</p>{data.fills == null ? <p>Fill history could not be loaded.</p> : !data.fills.length ? <p className="empty-state">No filled trades yet.</p> : <div className="tablewrap" tabIndex={0} role="region" aria-label="Paper fills"><table><caption className="sr-only">Paper fills and itemized fees</caption><thead><tr><th>Time (IST)</th><th>Instrument</th><th>Side</th><th>Units</th><th>Fill price</th><th>Fees</th><th>Fee details</th></tr></thead><tbody>{data.fills.map(fill => <tr key={fill.id}><td>{time(fill.timestamp)}</td><td><ContractLabel id={fill.instrument_id} instruments={data.instruments} /></td><td>{fill.side}</td><td>{fill.quantity}</td><td>{money(fill.price)}</td><td>{money(fill.fees)}</td><td><details><summary>Fee breakdown</summary><dl>{Object.entries(fill.fee_breakdown).map(([code, amount]) => <div key={code}><dt>{words(code)}</dt><dd>{money(amount)}</dd></div>)}</dl></details></td></tr>)}</tbody></table></div>}</details></section>
 
   </>;
 }

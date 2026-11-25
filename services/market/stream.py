@@ -32,6 +32,7 @@ class QuoteCache:
         self.references: dict[str, IndexReference] = {}
         self.connected = False
         self.generation = 0
+        self.observation_revision = 0
         self.last_tick_monotonic: float | None = None
         self.changed = asyncio.Event()
         self.problem: str | None = "NOT_CONNECTED"
@@ -59,6 +60,7 @@ class QuoteCache:
         if previous and previous.timestamp > reference.timestamp:
             return
         self.references[reference.underlying] = reference
+        self.observation_revision += 1
         self.last_tick_monotonic = time.monotonic()
         self.changed.set()
 
@@ -95,6 +97,7 @@ class QuoteCache:
         self.rejected.pop(quote.instrument_id, None)
         self.source_quotes[(quote.instrument_id, quote.source)] = quote
         self.quotes[quote.instrument_id] = quote
+        self.observation_revision += 1
         if (
             quote.bid is not None
             and quote.ask is not None

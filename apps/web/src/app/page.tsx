@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import Dashboard from "./dashboard";
+import DashboardSkeleton from "./dashboard-skeleton";
 
 function errorMessage(error: unknown, method: "google" | "password" = "google"): string {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
@@ -88,6 +89,8 @@ export default function Home() {
       setBusy(false);
     }
   }
+
+  if (loading) return <DashboardSkeleton shell />;
 
   if (user && !loading) return <Dashboard key={user.uid} user={user} onSignOut={authenticate} />;
 

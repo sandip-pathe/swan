@@ -14,6 +14,7 @@ export default function ClosedJournal() {
   const [busy, setBusy] = useState(false);
   const [pageBusy, setPageBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const [pageError, setPageError] = useState(false);
   const generation = useRef(0);
   const olderController = useRef<AbortController | null>(null);
@@ -24,11 +25,14 @@ export default function ClosedJournal() {
     olderController.current?.abort();
     setPage(null); setBusy(true); setError(false); setPageError(false); setPageBusy(false);
     request("/api/paper/journal", "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]))
-      .then(result => { if (current === generation.current) setPage(result as Page); })
+      .then(result => {
+        if (!Array.isArray((result as Partial<Page>).rows)) throw new Error("Journal response is incomplete.");
+        if (current === generation.current) setPage(result as Page);
+      })
       .catch(() => { if (current === generation.current) setError(true); })
       .finally(() => { if (current === generation.current) setBusy(false); });
     return () => { generation.current++; controller.abort(); olderController.current?.abort(); };
-  }, [request]);
+  }, [request, refresh]);
   async function loadOlder() {
     if (!request || !page?.next_before || pageBusy) return;
     const current = generation.current;
@@ -40,13 +44,13 @@ export default function ClosedJournal() {
     } catch { if (current === generation.current) setPageError(true); }
     finally { if (current === generation.current) setPageBusy(false); }
   }
-  return <section aria-label="Closed paper positions">
-    {busy && <p role="status">Loading closed positions…</p>}
-    {error && <p className="notice error" role="alert">Journal history could not be loaded. Refresh the page to retry.</p>}
-    {!busy && page && !page.rows.length && <p className="empty-state">No closed paper positions.</p>}
+  return <section aria-label="Closed trades">
+    {busy && <div role="status" aria-label="Loading past trades" className="history-skeleton"><i /><i /><i /></div>}
+    {error && <p className="journal-inline-error" role="alert">Past trades aren’t available right now. <button className="text-button" onClick={() => setRefresh(value => value + 1)}>Try again</button></p>}
+    {!busy && page && !page.rows.length && <p className="empty-state">No closed trades yet. Finished trades will show here.</p>}
     {page?.rows.length ? <div className="position-list">{page.rows.map(row => <article className="execution-card" key={row.id}>
       <div className="execution-card-head"><strong>{row.instrument ? `${row.instrument.underlying ?? "Contract"} ${row.instrument.strike ?? ""} ${row.instrument.option_type ?? ""} / ${row.instrument.expiry ?? ""}` : "Contract details unavailable"}</strong><span className="status-pill">Closed</span></div>
-      <dl className="execution-values"><div><dt>Closed units</dt><dd>{row.closed_quantity} / {row.quantity}</dd></div><div><dt>Average entry</dt><dd>{money(row.average_price)}</dd></div><div><dt>Realized P&amp;L</dt><dd>{money(row.realized_pnl)}</dd></div></dl>
+      <dl className="execution-values"><div><dt>Units closed</dt><dd>{row.closed_quantity} of {row.quantity}</dd></div><div><dt>Average buy price</dt><dd>{money(row.average_price)}</dd></div><div><dt>Profit / loss after costs</dt><dd>{money(row.realized_pnl)}</dd></div></dl>
       <p className="muted">Opened {time(row.opened_at)} IST · Closed {time(row.closed_at)} IST</p>
       <OrderHistory orderId={row.entry_order_id} label="Entry and exit history" />
     </article>)}</div> : null}

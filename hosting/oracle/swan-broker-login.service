@@ -1,0 +1,13 @@
+[Unit]
+Description=SWAN daily broker authentication (no trading authorization)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+ConditionPathExists=/opt/swan/.private-broker/credentials.json
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/swan
+ExecStart=/opt/swan/hosting/oracle/swan -f hosting/oracle/compose.micro.yaml run --rm --no-deps broker-login
+TimeoutStartSec=600
+UMask=0077

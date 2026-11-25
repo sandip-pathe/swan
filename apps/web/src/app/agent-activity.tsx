@@ -27,22 +27,23 @@ export default function AgentActivity() {
     const current = ++generation.current; setBusy(true); setError(false);
     if (!before) setData(null);
     try {
-      const result = await request(`/api/paper/agent-activity?${new URLSearchParams({ category, ...(before ? { before } : {}) })}`, "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)])) as Page;
-      if (generation.current === current) setData(previous => before && previous ? { ...result, rows: [...previous.rows, ...result.rows.filter(row => !previous.rows.some(old => old.id === row.id))] } : result);
+      const result = await request(`/api/paper/agent-activity?${new URLSearchParams({ category, ...(before ? { before } : {}) })}`, "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)])) as Partial<Page>;
+      if (!Array.isArray(result.rows) || typeof result.as_of !== "string") throw new Error("Activity response is incomplete.");
+      if (generation.current === current) setData(previous => before && previous ? { ...result, rows: [...previous.rows, ...result.rows!.filter(row => !previous.rows.some(old => old.id === row.id))], next_before: result.next_before ?? null, as_of: result.as_of!, mode: result.mode ?? "OBSERVATION" } : { as_of: result.as_of!, mode: result.mode ?? "OBSERVATION", rows: result.rows!, next_before: result.next_before ?? null });
     } catch { if (generation.current === current) setError(true); }
     finally { if (generation.current === current) setBusy(false); }
   }
   useEffect(() => { load(); return () => { generation.current++; active.current?.abort(); }; }, [request, category, refresh]); // Selection changes replace the complete page.
-  return <section className="panel agent-activity" aria-label="Agent activity">
-    <div className="panelhead"><div><h2>Agent activity</h2><p>Recorded analysis, proposals, review and risk checks.</p></div><button className="text-button" disabled={busy} onClick={() => setRefresh(value => value + 1)}>Refresh activity</button></div>
-    <label>Activity type<select value={category} onChange={event => setCategory(event.target.value)}><option value="all">All stages</option><option value="agents">Models and evaluations</option><option value="risk">Risk checks</option></select></label>
+  return <section className="panel agent-activity" aria-label="Recorded decisions">
+    <div className="panelhead"><div><h2>Recorded decisions</h2><p>Ideas, reviews and risk checks SWAN actually saved.</p></div><button className="text-button" disabled={busy} onClick={() => setRefresh(value => value + 1)}>Refresh decisions</button></div>
+    <label>Show<select value={category} onChange={event => setCategory(event.target.value)}><option value="all">All recorded decisions</option><option value="agents">Ideas and reviews</option><option value="risk">Risk checks</option></select></label>
     {data?.mode === "OBSERVATION" && <p className="notice">Observation mode: automated analysis is idle. Records below are history.</p>}
     <p className="muted">A proposal or review is not an executed trade. Risk permission, order acceptance and actual fills are separate stages.</p>
     {busy && <p role="status">Loading recorded activity…</p>}
-    {error && <p className="notice error" role="alert">Activity could not be loaded. <button className="secondary" disabled={busy} onClick={() => load(data?.next_before ?? undefined)}>Retry activity</button></p>}
+    {error && <p className="notice error" role="alert">Saved decisions could not be loaded. <button className="text-button" disabled={busy} onClick={() => load(data?.next_before ?? undefined)}>Try again</button></p>}
     {data && <>
       <p className="muted">Newest first · Snapshot {time(data.as_of)} IST</p>
-      {!data.rows.length ? <p className="empty-state">No recorded activity in this view. Analysis appears after a permitted agent session runs; refreshing this page does not start one.</p> : <ol className="agent-activity-list">{data.rows.map(row => <li key={row.id} className="execution-card">
+      {!data.rows.length ? <p className="empty-state">No decisions saved yet. When SWAN records an idea or review, it will show up here.</p> : <ol className="agent-activity-list">{data.rows.map(row => <li key={row.id} className="execution-card">
         <div className="execution-card-head"><div><p className="activity-stage">{stageNames[row.stage] ?? "Recorded stage"}</p><h3>{row.title}</h3></div><span className={`status-pill activity-state ${["wait", "blocked", "failed", "ready"].includes(row.state) ? row.state : ""}`}>{stateNames[row.state] ?? "Recorded"}</span></div>
         <time dateTime={row.timestamp}>{time(row.timestamp)} IST</time>
         {row.instrument && <p><strong>{row.instrument.underlying} {row.instrument.strike} {row.instrument.option_type}</strong> · {row.instrument.expiry}</p>}

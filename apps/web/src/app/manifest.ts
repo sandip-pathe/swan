@@ -9,9 +9,14 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     id: "/",
-    background_color: "#f5f6fa",
+    background_color: "#ffffff",
     theme_color: "#ffffff",
-    categories: ["finance"],
+    categories: ["finance", "education"],
+    shortcuts: [
+      { name: "Chat with SWAN", short_name: "Chat", url: "/#chat" },
+      { name: "Your dashboard", short_name: "Dashboard", url: "/#home" },
+      { name: "Trade workspace", short_name: "Trade", url: "/#markets" },
+    ],
     lang: "en-IN",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

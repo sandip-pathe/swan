@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>SWAN — design playground</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to workspace</a>
+    <div class="prototype-bar">
+      <span
+        ><b>DESIGN PLAYGROUND</b>
+        <span class="demo-description"
+          >Fictional session · sample data · no trading or AI connections</span
+        ></span
+      >
+      <div>
+        <label for="scenario">Scenario</label
+        ><select id="scenario">
+          <option value="normal">Open session</option>
+          <option value="holiday">Market holiday</option>
+          <option value="stale">Stale prices</option>
+          <option value="failure">Chat unavailable</option>
+          <option value="exposure">Exposure alert</option></select
+        ><button id="reset" class="plain">Reset</button>
+      </div>
+    </div>
+    <div class="shell">
+      <aside class="sidebar">
+        <a class="brand" href="#chat" aria-label="SWAN home"
+          ><span class="brand-mark" aria-hidden="true"
+            ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <path
+                d="M7 22 15 9l3 8 7-5-9 13-3-8Z"
+                fill="currentColor"
+              /></svg></span
+          >swan<span class="brand-dot">.</span></a
+        ><button class="new-chat" id="new-chat">
+          <span aria-hidden="true">＋</span> New conversation
+        </button>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="#chat" data-page="chat"
+            ><span data-icon="chat"></span><span>Chat</span><kbd>1</kbd></a
+          ><a href="#dashboard" data-page="dashboard"
+            ><span data-icon="dashboard"></span><span>Dashboard</span
+            ><kbd>2</kbd></a
+          ><a href="#trade" data-page="trade"
+            ><span data-icon="chart"></span><span>Trade</span><kbd>3</kbd></a
+          >
+        </nav>
+        <div class="history">
+          <div class="eyebrow">RECENT CONVERSATIONS</div>
+          <button data-prompt="Why hasn't SWAN traded today?">
+            Why we’re waiting today</button
+          ><button data-prompt="Explain VWAP">Making sense of VWAP</button
+          ><button data-prompt="Review my last paper trade">
+            A closer look at yesterday
+          </button>
+        </div>
+        <div class="sidebar-bottom">
+          <div class="paper-note">
+            <span class="status-dot"></span> Paper workspace
+            <span>Virtual funds</span>
+          </div>
+          <button class="profile" id="profile">
+            <span class="avatar">S</span
+            ><span>My workspace<small>Personal account</small></span
+            ><span data-icon="settings"></span>
+          </button>
+        </div>
+      </aside>
+      <div class="workspace">
+        <header class="topbar">
+          <div class="breadcrumb">
+            <span class="mobile-brand">swan.</span
+            ><span id="page-title">Your conversation</span>
+          </div>
+          <div class="top-actions">
+            <span class="session" id="session-label"
+              ><span class="status-dot"></span> Market open
+              <span class="muted">· sample session</span></span
+            ><button
+              id="context-toggle"
+              class="icon-button"
+              aria-label="Open context panel"
+              aria-expanded="false"
+            >
+              <span data-icon="panel"></span>
+            </button>
+          </div>
+        </header>
+        <div class="global-alert" id="global-alert" role="status" hidden></div>
+        <main id="main" tabindex="-1">
+          <section class="page chat-page" id="page-chat" aria-label="Chat">
+            <div class="chat-content">
+              <div class="welcome" id="welcome">
+                <span class="intro-mark" aria-hidden="true"
+                  ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                    <path
+                      d="M7 22 15 9l3 8 7-5-9 13-3-8Z"
+                      fill="currentColor"
+                    /></svg
+                ></span>
+                <div class="eyebrow">A LITTLE CLARITY GOES A LONG WAY</div>
+                <h1>Your market.<br />Your questions.</h1>
+                <p>
+                  A place to understand the market, follow your trades,<br
+                    class="desktop-only"
+                  />
+                  and get a little better every day.
+                </p>
+                <div class="suggestions">
+                  <button data-prompt="Why hasn't SWAN traded today?">
+                    <span data-icon="activity"></span
+                    ><b>What is SWAN watching?</b
+                    ><small>Understand today’s decisions</small
+                    ><span class="suggest-arrow">↗</span></button
+                  ><button data-prompt="Explain VWAP">
+                    <span data-icon="book"></span><b>Help me understand VWAP</b
+                    ><small>Learn with a market example</small
+                    ><span class="suggest-arrow">↗</span></button
+                  ><button data-action="inspect">
+                    <span data-icon="chart"></span><b>Explore a contract</b
+                    ><small>Take a closer look at NIFTY</small
+                    ><span class="suggest-arrow">↗</span>
+                  </button>
+                </div>
+              </div>
+              <div
+                id="messages"
+                class="messages"
+                aria-live="polite"
+                aria-relevant="additions"
+              ></div>
+              <div class="composer-wrap">
+                <form class="composer" id="chat-form">
+                  <div class="attached-context" id="attached-context" hidden>
+                    <span data-icon="chart"></span
+                    ><span>NIFTY · example call · 5 min</span
+                    ><button
+                      type="button"
+                      id="remove-context"
+                      aria-label="Remove instrument context"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <textarea
+                    id="chat-input"
+                    aria-label="Message SWAN"
+                    placeholder="Ask about the market, your trades, or a new idea…"
+                    rows="2"
+                  ></textarea>
+                  <div class="composer-bottom">
+                    <span
+                      >Paper workspace <span class="separator">/</span> Ask.
+                      Explore. Understand.</span
+                    ><button
+                      type="submit"
+                      class="send"
+                      aria-label="Send message"
+                    >
+                      <span data-icon="arrow-up"></span>
+                    </button>
+                  </div>
+                </form>
+                <p class="composer-caption">
+                  Designed to inform your judgment. Sample responses in this
+                  playground.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section
+            class="page dashboard-page"
+            id="page-dashboard"
+            aria-label="Dashboard"
+            hidden
+          >
+            <div class="page-heading">
+              <div>
+                <div class="eyebrow">THE BIG PICTURE</div>
+                <h1>Your paper account</h1>
+                <p>
+                  Your capital, your exposure, and the decisions behind them.
+                </p>
+              </div>
+              <button class="secondary" id="stop-entries">
+                <span data-icon="pause"></span>Stop new entries today
+              </button>
+            </div>
+            <div class="period-row">
+              <div class="segmented" aria-label="Report period">
+                <button data-period="today" aria-pressed="true">Today</button
+                ><button data-period="all" aria-pressed="false">
+                  Since start
+                </button>
+              </div>
+              <span class="muted small">Illustrative session · 10:05 IST</span>
+            </div>
+            <div class="account-metrics">
+              <div class="metric">
+                <span>Paper equity</span
+                ><strong id="equity-value">₹1,00,000<span>.00</span></strong
+                ><small>Virtual funds · reconciled example</small>
+              </div>
+              <div class="metric">
+                <span id="pnl-label">Session net P&amp;L</span
+                ><strong id="pnl-value">₹0<span>.00</span></strong
+                ><small>After modeled trading costs</small>
+              </div>
+              <div class="metric">
+                <span>Open exposure</span
+                ><strong id="exposure-value">No positions</strong
+                ><small id="exposure-note"
+                  >No capital currently at market risk</small
+                >
+              </div>
+            </div>
+            <div class="dashboard-grid">
+              <section class="activity-panel">
+                <div class="section-heading">
+                  <h2>What SWAN is doing</h2>
+                  <span class="tag" id="entry-state">Observing</span>
+                </div>
+                <div class="watching-state">
+                  <span class="activity-orbit" data-icon="activity"></span>
+                  <div>
+                    <h3 id="activity-title">Waiting is a decision, too.</h3>
+                    <p id="activity-copy">
+                      Watching NIFTY for an eligible opening-range setup. No
+                      qualifying entry has been recorded.
+                    </p>
+                    <button
+                      class="text-button"
+                      data-prompt="Why hasn't SWAN traded today?"
+                    >
+                      Understand the decision <span>↗</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="activity-timeline">
+                  <div>
+                    <span class="timeline-dot"></span><time>10:05</time>
+                    <p>
+                      Conditions checked<small
+                        >No eligible setup in this example</small
+                      >
+                    </p>
+                  </div>
+                  <div>
+                    <span class="timeline-dot"></span><time>09:30</time>
+                    <p>
+                      Opening range observed<small
+                        >Source records available in the example</small
+                      >
+                    </p>
+                  </div>
+                </div>
+                <div class="section-heading positions-heading">
+                  <h2>Positions &amp; orders</h2>
+                  <button class="text-button" data-action="inspect">
+                    Open Trade ↗
+                  </button>
+                </div>
+                <div id="account-records" class="empty-record">
+                  <span data-icon="layers"></span>
+                  <h3>A clear desk.</h3>
+                  <p>No open positions or working orders.</p>
+                </div>
+              </section>
+              <aside class="review-panel">
+                <div class="eyebrow">YOUR NEXT INSIGHT</div>
+                <h2>Look beyond the result.</h2>
+                <p>
+                  A useful review starts with the decision, then follows the
+                  execution and costs.
+                </p>
+                <div class="review-example">
+                  <span class="small muted"
+                    >Previous fictional paper trade</span
+                  >
+                  <div class="row between">
+                    <b>NIFTY · long call</b><span class="positive">+₹560</span>
+                  </div>
+                  <small>₹600 price gain − ₹40 modeled costs</small>
+                </div>
+                <button
+                  class="secondary"
+                  data-prompt="Review my last paper trade"
+                >
+                  Review with SWAN <span>↗</span>
+                </button>
+                <div class="learning-note">
+                  <span data-icon="book"></span>
+                  <p>
+                    A profitable trade isn’t necessarily a good decision. One
+                    result doesn’t establish a strategy.
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </section>
+          <section
+            class="page trade-page"
+            id="page-trade"
+            aria-label="Trade"
+            hidden
+          >
+            <div class="trade-layout">
+              <aside class="watchlist">
+                <div class="section-heading">
+                  <h2>Watchlist</h2>
+                  <span class="tag">3</span>
+                </div>
+                <label class="search-box"
+                  ><span data-icon="search"></span
+                  ><input
+                    id="instrument-search"
+                    placeholder="Find a contract"
+                    aria-label="Search example contracts"
+                /></label>
+                <div class="watch-items" id="watch-items"></div>
+                <p id="search-empty" class="small muted" hidden>
+                  No example contracts match.<br />Try NIFTY or SENSEX.
+                </p>
+                <div class="watch-foot">
+                  <span data-icon="info"></span
+                  ><span
+                    >Fictional contracts and prices.<br />Not trading
+                    recommendations.</span
+                  >
+                </div>
+              </aside>
+              <div class="trade-center">
+                <div class="instrument-heading">
+                  <div>
+                    <div class="row">
+                      <h1 id="instrument-name">NIFTY 25,400 CE</h1>
+                      <span class="tag">NFO</span>
+                    </div>
+                    <p>Example expiry · 60 units / lot · tick ₹0.05</p>
+                  </div>
+                  <div class="instrument-price">
+                    <strong id="instrument-price">₹120.00</strong
+                    ><span class="positive">+4.20 (3.63%)</span>
+                  </div>
+                </div>
+                <div class="trade-tools">
+                  <div class="segmented">
+                    <button data-view="chart" aria-pressed="true">Chart</button
+                    ><button data-view="depth" aria-pressed="false">
+                      Market depth</button
+                    ><button data-view="chain" aria-pressed="false">
+                      Option chain
+                    </button>
+                  </div>
+                  <button class="text-button" data-action="ask-contract">
+                    Ask SWAN <span>↗</span>
+                  </button>
+                </div>
+                <div id="chart-view">
+                  <div class="chart-toolbar">
+                    <span class="tag">5 min</span><span>Candles</span
+                    ><span class="study-legend"><i></i> DEMA 9</span
+                    ><span class="quote-age" id="quote-age"
+                      >Sample observation · 10:05:02 IST</span
+                    >
+                  </div>
+                  <div id="price-chart" class="price-chart"></div>
+                  <div class="chart-caption">
+                    <span>09:15</span><span>09:30</span><span>09:45</span
+                    ><span>10:00 IST</span>
+                  </div>
+                  <div class="chart-disclaimer">
+                    Illustrative candle sequence · no real market observations
+                  </div>
+                </div>
+                <div id="depth-view" class="data-view" hidden></div>
+                <div id="chain-view" class="data-view" hidden></div>
+                <div class="trade-bottom">
+                  <div class="section-heading">
+                    <h2>Your orders &amp; positions</h2>
+                    <span class="small muted">Shared paper account</span>
+                  </div>
+                  <div id="trade-records">
+                    <div class="quiet-empty">
+                      Your next paper order will appear here, followed by its
+                      actual fill state.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <aside class="order-panel" id="order-panel">
+                <div class="section-heading">
+                  <h2>Paper order</h2>
+                  <button
+                    class="icon-button mobile-only"
+                    id="close-ticket"
+                    aria-label="Close order ticket"
+                  >
+                    ×</button
+                  ><span class="tag">Manual</span>
+                </div>
+                <div class="segmented order-side">
+                  <button data-side="buy" aria-pressed="true">Buy</button
+                  ><button data-side="sell" aria-pressed="false">
+                    Sell / exit
+                  </button>
+                </div>
+                <div id="order-edit">
+                  <label class="field"
+                    >Quantity <span class="muted">in whole lots</span>
+                    <div class="stepper">
+                      <button
+                        type="button"
+                        data-step="-1"
+                        aria-label="Remove one lot"
+                      >
+                        −</button
+                      ><input
+                        id="lots"
+                        type="number"
+                        min="1"
+                        max="2"
+                        value="1"
+                        aria-label="Number of lots"
+                      /><button
+                        type="button"
+                        data-step="1"
+                        aria-label="Add one lot"
+                      >
+                        ＋
+                      </button>
+                    </div></label
+                  >
+                  <div class="units-line" id="units-line">1 lot = 60 units</div>
+                  <label class="field"
+                    >Limit premium <span class="muted">₹</span
+                    ><input
+                      id="limit"
+                      type="number"
+                      value="120"
+                      min="1"
+                      step="0.05"
+                  /></label>
+                  <div class="protection-label">
+                    <span data-icon="shield"></span>Plan your protection
+                  </div>
+                  <div class="two-fields">
+                    <label class="field"
+                      >Stop ₹<input
+                        id="stop"
+                        type="number"
+                        value="115"
+                        min="1"
+                        step="0.05" /></label
+                    ><label class="field"
+                      >Target ₹<input
+                        id="target"
+                        type="number"
+                        value="130"
+                        min="1"
+                        step="0.05"
+                    /></label>
+                  </div>
+                  <p class="small muted">
+                    Illustrative manual levels. A saved stop is not a guaranteed
+                    execution price.
+                  </p>
+                </div>
+                <div id="order-preview" hidden></div>
+                <div class="ticket-footer">
+                  <dl>
+                    <dt>Available paper funds</dt>
+                    <dd id="available-funds">₹1,00,000</dd>
+                  </dl>
+                  <div id="order-error" class="field-error" role="status"></div>
+                  <button class="primary" id="preview-order">
+                    Review paper order <span>→</span></button
+                  ><button class="primary" id="submit-order" hidden>
+                    Submit example paper buy</button
+                  ><button class="text-button" id="edit-order" hidden>
+                    ← Edit order
+                  </button>
+                  <p class="ticket-caption">
+                    Design simulation. No real order is sent.
+                  </p>
+                </div>
+              </aside>
+            </div>
+            <button id="mobile-ticket" class="primary mobile-trade-button">
+              Open paper order
+            </button>
+          </section>
+        </main>
+        <aside
+          class="context-drawer"
+          id="context-drawer"
+          hidden
+          aria-label="Market context"
+        >
+          <div class="section-heading">
+            <h2>Around your workspace</h2>
+            <button
+              class="icon-button"
+              id="close-context"
+              aria-label="Close context"
+            >
+              ×
+            </button>
+          </div>
+          <div class="eyebrow">INDIAN MARKETS</div>
+          <div class="context-market">
+            <span>NIFTY 50</span><b>25,380.40</b
+            ><small class="positive">+0.42% · fictional observation</small>
+          </div>
+          <div class="context-market">
+            <span>SENSEX</span><b>82,640.20</b
+            ><small class="positive">+0.36% · fictional observation</small>
+          </div>
+          <div class="context-section">
+            <div class="eyebrow">WORTH UNDERSTANDING</div>
+            <h3>The price of getting in.</h3>
+            <p>
+              Bid–ask spread affects your outcome before the market even moves.
+            </p>
+            <button class="text-button" data-prompt="Explain bid-ask spread">
+              Explore with SWAN ↗
+            </button>
+          </div>
+          <div class="context-section">
+            <div class="eyebrow">NEWS CONTEXT</div>
+            <p class="muted">
+              No news source connected in this playground. Headlines won’t be
+              invented to fill this space.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <a href="#chat" data-page="chat"><span data-icon="chat"></span>Chat</a
+      ><a href="#dashboard" data-page="dashboard"
+        ><span data-icon="dashboard"></span>Dashboard</a
+      ><a href="#trade" data-page="trade"
+        ><span data-icon="chart"></span>Trade</a
+      >
+    </nav>
+    <dialog id="detail-dialog">
+      <div class="dialog-heading">
+        <h2 id="dialog-title">Details</h2>
+        <button
+          class="icon-button"
+          id="close-dialog"
+          aria-label="Close details"
+        >
+          ×
+        </button>
+      </div>
+      <div id="dialog-body"></div>
+    </dialog>
+    <div class="toast" id="toast" role="status" hidden></div>
+  </body>
+</html>

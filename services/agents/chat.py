@@ -1,6 +1,7 @@
 """Bounded conversational agent over named, read-only application tools."""
 
 import asyncio
+import re
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
@@ -26,6 +27,29 @@ class ChatPlan(Output):
 class ChatAnswer(Output):
     answer: str = Field(min_length=1, max_length=6000)
     evidence_ids: list[str] = Field(min_length=1, max_length=4)
+
+
+_GREETING_ONLY = {
+    "hi", "hello", "hey", "hi there", "hello there", "hey there",
+    "good morning", "good afternoon", "good evening", "how are you",
+}
+
+
+def greeting_reply(question: str) -> dict | None:
+    """Answer a greeting without spending model or database work."""
+    normalized = re.sub(r"\s+", " ", question.casefold()).strip(" \t\r\n.!?,;:")
+    if normalized not in _GREETING_ONLY:
+        return None
+    return {
+        "answer": (
+            "Hi! I can help explain your account, saved market data, indicators, and "
+            "recorded strategy decisions. What would you like to check?"
+        ),
+        "as_of": datetime.now(UTC).isoformat(),
+        "sources": [],
+        "actions_taken": [],
+        "order_created": False,
+    }
 
 
 def read_tool(name: str, request, owner: UUID, plan: ChatPlan) -> dict:
@@ -84,6 +108,10 @@ def read_tool(name: str, request, owner: UUID, plan: ChatPlan) -> dict:
 
 
 async def answer_question(request, owner: UUID, question: str, history: list[dict]) -> dict:
+    greeting = greeting_reply(question)
+    if greeting is not None:
+        return greeting
+
     provider = StructuredProvider(request.app.state.engine, owner, AgentSettings())
     objective = (
         "You are SWAN's conversational research assistant. Choose read-only tools, then answer "

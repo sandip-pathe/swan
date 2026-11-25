@@ -7,15 +7,15 @@ type Receipt = { order_id: string; status: string; quantity: number; filled_quan
 type Status = { account_id: string; revision: number; ready: boolean; reason: string | null; worker_mode: string | null; session: { id: string; instrument_id: string; entry_source: string; status: string; max_quantity: number; expires_at: string } | null; order: Receipt | null };
 type Command = { plan: string; request_id: string; expected_account_revision: number };
 const messages: Record<string,string> = {
-  MANUAL_ENTRY_CUTOFF: "New entries have closed for this session. You can still save a plan for later.",
-  MANUAL_MARKET_CLOSED: "The market is closed or its session is unverified. Save a plan and return during market hours.",
-  VALIDATION_WORKER_REQUIRED: "Manual paper trading is not prepared. Open Account, then Paper controls to prepare the trading monitor.",
-  MANUAL_SESSION_REQUIRED: "Start a five-minute manual session when you are ready. It permits one entry of one lot for this contract.",
-  ENTRY_SOURCE_MISMATCH: "Another entry mode owns the active session. Stop it in Account before starting a manual session.",
-  MANUAL_ENTRY_USED: "This session has used its one entry. Track orders and positions in Orders.",
-  MANUAL_WAITING: "Waiting for the trading monitor to finish session checks. Preview again once it is ready.",
-  VALIDATION_SCOPE_EXCEEDED: "A session is active for another contract. Finish or stop that session first.",
-  VALIDATION_STOPPING: "Session stopping. Existing exposure is still being managed.",
+  MANUAL_ENTRY_CUTOFF: "New paper buys are paused for now. You can save this plan and come back later.",
+  MANUAL_MARKET_CLOSED: "The market is closed, or today's hours haven't been confirmed. Save your plan and come back during market hours.",
+  VALIDATION_WORKER_REQUIRED: "Paper order checks aren't ready yet. See Account → Paper controls.",
+  MANUAL_SESSION_REQUIRED: "Paper buying is off. Turn it on for 5 minutes to place one order for this option.",
+  ENTRY_SOURCE_MISMATCH: "Another paper order mode is active. Turn it off in Account settings before placing this order.",
+  MANUAL_ENTRY_USED: "This paper-buying window has used its one order. Track it in Trades.",
+  MANUAL_WAITING: "Your paper order checks are still running. Check again in a moment.",
+  VALIDATION_SCOPE_EXCEEDED: "Paper buying is already on for another option. Turn it off there before switching.",
+  VALIDATION_STOPPING: "Paper buying is turning off. Any open trade will still be managed.",
 };
 export default function ManualPlacement({ instrument, request, plan, visible, onLock, onSessionChange, onOrderRecorded }: { instrument: { id: string; underlying: string; strike: string; option_type: string; lot_size: number }; request: Request; plan: PlacementPlan | null; visible: boolean; onLock: (locked: boolean) => void; onSessionChange: () => void; onOrderRecorded: () => void }) {
   const [status,setStatus] = useState<Status | null>(null);
@@ -130,15 +130,15 @@ export default function ManualPlacement({ instrument, request, plan, visible, on
       setRefresh(v=>v+1);
     } finally { if (mounted.current) setBusy(false); }
   }
-  return <section className="manual-placement" aria-label="Manual paper trading">
-    <h4>Manual paper trading</h4>
-    <p className="catalog-status" role="status">{status ? ready ? `Session ready · one entry, up to ${status.session!.max_quantity} units · ends ${new Date(status.session!.expires_at).toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"})} IST` : messages[status.reason ?? ""] ?? "Manual session checks are not met. Review Account, then Paper controls before trying again." : "Checking session availability. Placement stays disabled until checks are current."}</p>
+  return <section className="manual-placement" aria-label="Paper order">
+    <h4>Paper order access</h4>
+    <p className="catalog-status" role="status">{status ? ready ? `Ready for one paper order · up to ${status.session!.max_quantity} units · ends ${new Date(status.session!.expires_at).toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"})} IST` : messages[status.reason ?? ""] ?? "Paper orders aren't ready yet. Check Account → Paper controls." : "Checking whether paper orders are available…"}</p>
     {error && <p className="notice error" role="alert">{error}</p>}
     {currentOrder && <div className="manual-order-receipt" role="status"><strong>Paper order recorded</strong><p>{currentOrder.quantity} units · Last confirmed: {currentOrder.status.toLowerCase().replaceAll("_"," ")} · {currentOrder.filled_quantity} filled</p><small>Order {currentOrder.order_id}</small><p>Track current fills and protection in Orders. Acceptance does not guarantee a fill.</p></div>}
-    {!status?.session && <button className="secondary" disabled={busy || !!pending || !status || status.reason!=="MANUAL_SESSION_REQUIRED"} onClick={()=>void start()}>{busy ? "Starting..." : startCommand.current ? "Retry session request" : "Start manual session"}</button>}
-    {human && <button className="secondary" disabled={busy || status?.session?.status==="STOPPING"} onClick={()=>void stop()}>{busy ? "Working..." : "Stop manual session"}</button>}
+    {!status?.session && status?.reason==="MANUAL_SESSION_REQUIRED" && <button className="secondary" disabled={busy || !!pending} onClick={()=>void start()}>{busy ? "Turning on…" : startCommand.current ? "Retry" : "Turn on paper buying"}</button>}
+    {human && <button className="secondary" disabled={busy || status?.session?.status==="STOPPING"} onClick={()=>void stop()}>{busy ? "Turning off…" : "Turn off paper buying"}</button>}
     {plan && !currentOrder && !pending && <><button className="preview-action" disabled={busy || !canReview} onClick={()=>setReview(true)}>Review paper order</button>{!canReview && ready && <p className="catalog-status">Preview and save one lot with current costs and all planning checks met before reviewing.</p>}</>}
-    {review && plan && !pending && !currentOrder && <div className="manual-order-review" aria-label="Review paper order"><h4 tabIndex={-1} ref={reviewHeading}>Review your paper order</h4><p>{instrument.underlying} {instrument.strike} {instrument.option_type==="CALL" ? "CE" : "PE"} · Buy limit</p><dl className="instrument-values"><div><dt>Quantity</dt><dd>{plan.inputs.lots} lot · {plan.preview.quantity} units</dd></div><div><dt>Limit</dt><dd>{money(plan.inputs.entry)}</dd></div><div><dt>Stop</dt><dd>{money(plan.inputs.stop_loss)}</dd></div><div><dt>Target</dt><dd>{money(plan.inputs.target)}</dd></div><div><dt>Cash including allowance</dt><dd>{plan.preview.cash_required==null ? "Unavailable" : money(plan.preview.cash_required)}</dd></div><div><dt>Planned loss including costs</dt><dd>{plan.preview.planned_stop_loss==null ? "Unavailable" : money(plan.preview.planned_stop_loss)}</dd></div></dl><p className="catalog-status">Simulated funds only. The server checks prices, fees and risk again. Stops and targets do not guarantee an exit price.</p><div className="actions"><button disabled={busy || !canReview} onClick={()=>void place()}>Place paper order</button><button className="secondary" disabled={busy} onClick={()=>setReview(false)}>Back</button></div>{!fresh && <p role="status">Preview expired. Calculate and save a fresh preview.</p>}</div>}
+    {review && plan && !pending && !currentOrder && <div className="manual-order-review" aria-label="Review paper order"><h4 tabIndex={-1} ref={reviewHeading}>Review your paper order</h4><p>{instrument.underlying} {instrument.strike} {instrument.option_type==="CALL" ? "Call (CE)" : "Put (PE)"} · Buy limit</p><dl className="instrument-values"><div><dt>Quantity</dt><dd>{plan.inputs.lots} lot · {plan.preview.quantity} units</dd></div><div><dt>Entry price</dt><dd>{money(plan.inputs.entry)}</dd></div><div><dt>Stop-loss</dt><dd>{money(plan.inputs.stop_loss)}</dd></div><div><dt>Target price</dt><dd>{money(plan.inputs.target)}</dd></div><div><dt>Cash needed</dt><dd>{plan.preview.cash_required==null ? "Unavailable" : money(plan.preview.cash_required)}</dd></div><div><dt>Planned loss if stop is reached</dt><dd>{plan.preview.planned_stop_loss==null ? "Unavailable" : money(plan.preview.planned_stop_loss)}</dd></div></dl><p className="catalog-status">Practice funds only. Prices, fees and checks can change. A stop-loss is a plan, not a guaranteed exit price.</p><div className="actions"><button disabled={busy || !canReview} onClick={()=>void place()}>Place paper order</button><button className="secondary" disabled={busy} onClick={()=>setReview(false)}>Back</button></div>{!fresh && <p role="status">This check is out of date. Check again before you continue.</p>}</div>}
     {pending && !currentOrder && <button disabled={busy} onClick={()=>void place()}>{busy ? "Confirming order..." : "Retry same order request"}</button>}
   </section>;
 }

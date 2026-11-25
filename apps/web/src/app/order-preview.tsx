@@ -1,4 +1,5 @@
 "use client";
+import { usePwa } from "./pwa";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ChartContract } from "./candles";
@@ -13,6 +14,7 @@ type SavedPlan = { id: string; created_at: string; inputs: { instrument_id: stri
 type Plans = { rows: SavedPlan[]; next_offset: number | null };
 
 export default function OrderPreview({ instrument, quote, request, visible }: { instrument: ChartContract; quote: MarketQuote | null; request: Request; visible: boolean }) {
+  const { offline } = usePwa();
   const [submissionLocked, setSubmissionLocked] = useState(false);
   const [placementPlan, setPlacementPlan] = useState<SavedPlan | null>(null);
   const [lots, setLots] = useState("1");
@@ -85,27 +87,28 @@ export default function OrderPreview({ instrument, quote, request, visible }: { 
     setResult(null); setSaved(null); setSaveKey(null); setError(null); setSaveMessage("Saved inputs loaded. Preview again for current costs and checks.");
   }
   const amount = (value: string | null) => value == null ? "Unavailable" : money(value);
-  return <div className="order-preview" aria-label="Paper order preview">
-    <div className="depth-heading"><h3>Manual paper order</h3><span>Buy {instrument.option_type === "CALL" ? "CE" : "PE"} · Limit</span></div>
-    <p className="catalog-status">Intraday long option. Preview calculates costs and checks only; it does not place an order.</p>
+  return <fieldset disabled={offline} className="order-preview" aria-label="Paper order preview"><legend className="sr-only">Paper order preview</legend>{offline && <p role="status">Reconnect before editing or submitting a paper order.</p>}
+    <div className="depth-heading"><h3>Your order</h3><span>{instrument.option_type === "CALL" ? "Call · CE" : "Put · PE"} · Limit price</span></div>
+    <p className="catalog-status">Add your price, stop and target to see the estimate.</p>
     <form onSubmit={preview}>
       <fieldset disabled={busy || submissionLocked}><legend className="sr-only">Order inputs</legend>
         <label className="order-lots">Lots<input aria-label="Number of lots" type="number" min="1" max="1000" step="1" required value={lots} onChange={event => change(setLots,event.target.value)} /><small>{Number.isInteger(Number(lots)) && Number(lots)>0 ? `${Number(lots)*instrument.lot_size} units · ${instrument.lot_size} per lot` : `Lot size ${instrument.lot_size}`}</small></label>
-        <div className="order-price-fields">{[["Limit price",entry,setEntry],["Stop price",stop,setStop],["Target price",target,setTarget]].map(([label,value,setter]) => <label key={String(label)}>{String(label)}<input aria-label={String(label)} type="number" inputMode="decimal" step={instrument.tick_size ?? "0.01"} min={instrument.tick_size ?? "0.01"} required value={String(value)} onChange={event => change(setter as (value: string) => void,event.target.value)} /></label>)}</div>
+        <div className="order-price-fields">{[["Entry price",entry,setEntry],["Stop-loss",stop,setStop],["Target price",target,setTarget]].map(([label,value,setter]) => <label key={String(label)}>{String(label)}<input aria-label={String(label)} type="number" inputMode="decimal" step={instrument.tick_size ?? "0.01"} min={instrument.tick_size ?? "0.01"} required value={String(value)} onChange={event => change(setter as (value: string) => void,event.target.value)} /></label>)}</div>
         {quote?.ask != null && <button className="secondary use-ask" type="button" onClick={() => change(setEntry,quote.ask!)}>Use saved ask {money(quote.ask)}</button>}
-        <button className="preview-action" type="submit">{busy ? "Calculating…" : "Preview costs & risk"}</button>
+        <button className="preview-action" type="submit">{busy ? "Checking…" : "Show my estimate"}</button>
       </fieldset>
     </form>
     {saveMessage && <p className="catalog-status" role="status">{saveMessage}</p>}
     {error && <p className="notice error" role="alert">{error}</p>}
     {result && <div className="order-preview-result" aria-label="Order estimate">
-      <p role="status">{expired ? "This preview has expired. Calculate again for current checks." : `Estimate for ${result.quantity} units · ${new Date(result.as_of).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit" })} IST`}</p>
-      <dl className="instrument-values">{[["Premium at limit",result.premium],["Entry fee allowance",result.entry_fee_allowance],["Cash required",result.cash_required],["Available cash",result.available_cash],["Gross stop loss",result.gross_stop_loss],["Gross target gain",result.gross_target_gain],["Stop exit fee allowance",result.stop_exit_fee_allowance],["Planned stop loss incl. costs",result.planned_stop_loss],["Remaining risk budget",result.remaining_risk_budget]].map(([label,value]) => <div key={label!}><dt>{label}</dt><dd>{amount(value)}</dd></div>)}<div><dt>Usable depth at limit</dt><dd>{result.available_depth_lots == null ? "Unavailable" : `${result.available_depth_lots} ${result.available_depth_lots === 1 ? "lot" : "lots"}`}</dd></div></dl>
-      <p className="catalog-status">Fee allowances use reviewed schedules. Planned stop loss includes modeled slippage and costs when available; a stop is not a guaranteed fill price.</p>
+      <p role="status">{expired ? "This check is out of date. Check again before you continue." : `Estimate for ${result.quantity} units · checked ${new Date(result.as_of).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })} IST`}</p>
+      <dl className="instrument-values">{[["Cash needed",result.cash_required],["Cash available",result.available_cash],["Planned loss if stop is reached",result.planned_stop_loss],["Usable at this price",result.available_depth_lots == null ? null : `${result.available_depth_lots} ${result.available_depth_lots === 1 ? "lot" : "lots"}`]].map(([label,value]) => <div key={label!}><dt>{label}</dt><dd>{label === "Usable at this price" ? value ?? "Unavailable" : amount(value as string | null)}</dd></div>)}</dl>
+      <details className="order-cost-details"><summary>See the full cost breakdown</summary><dl className="instrument-values">{[["Premium at your price",result.premium],["Entry fee estimate",result.entry_fee_allowance],["Stop loss before costs",result.gross_stop_loss],["Target gain before costs",result.gross_target_gain],["Estimated exit fee",result.stop_exit_fee_allowance],["Risk budget left",result.remaining_risk_budget]].map(([label,value]) => <div key={label!}><dt>{label}</dt><dd>{amount(value as string | null)}</dd></div>)}</dl></details>
+      <p className="catalog-status">A stop-loss is a plan, not a guaranteed exit price. Costs and available quantity can change.</p>
       <p className="catalog-status">{result.available_depth_lots == null ? "Usable depth could not be verified. Calculate a new preview after prices update." : result.available_depth_lots === 0 ? "No whole lots are currently usable at this limit under the fill policy. Review your limit or wait for depth to change." : "Usable depth accounts for participation limits and prior paper fills. It can change before an order fills."}</p>
       <h4>Planning checks</h4><ul className="order-checks">{result.checks.filter(check => check.code !== "MANUAL_SUBMISSION").map(check => <li key={check.code}><span>{check.label}</span><strong>{check.status === "passed" ? "Met" : "Not met"}</strong></li>)}</ul>
       <button className="secondary save-paper-plan" disabled={busy || submissionLocked || expired || !!saved} onClick={() => void savePlan()}>{saved ? "Plan saved" : busy ? "Saving..." : "Save paper plan"}</button>
-      <p className="depth-notice">A preview does not place an order, reserve funds or enable trading.</p>
+      <p className="depth-notice">Estimate only. Nothing is placed until you review and confirm the paper order.</p>
     </div>}
     <ManualPlacement instrument={instrument} request={request} visible={visible} plan={placementPlan} onLock={setSubmissionLocked} onOrderRecorded={()=>{setResult(null);setPlacementPlan(null);setSaved(null);setSaveKey(null);setSaveMessage(null);setPlansRefresh(value=>value+1);}} onSessionChange={()=>{setResult(null);setPlacementPlan(null);setSaved(null);setSaveKey(null);setSaveMessage(null);}} />
     <details className="saved-paper-plans"><summary>Saved paper plans</summary>
@@ -113,5 +116,5 @@ export default function OrderPreview({ instrument, quote, request, visible }: { 
       {!plans && !plansError ? <p className="catalog-status">Loading saved plans...</p> : plans?.rows.length === 0 ? <p className="catalog-status">No saved plans for this contract.</p> : plans?.rows.map(plan => <article key={plan.id}><strong>{plan.inputs.lots} lots at {money(plan.inputs.entry)}</strong><p>Stop {money(plan.inputs.stop_loss)} · Target {money(plan.inputs.target)}</p><small>Saved {new Date(plan.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} IST · {plan.order_id ? "Order recorded - track in Orders" : "No order placed"}</small><div className="actions"><button className="secondary" disabled={busy || planBusy || submissionLocked} onClick={() => restorePlan(plan)}>Load inputs</button><button className="secondary" disabled={busy || planBusy || submissionLocked} onClick={() => void archivePlan(plan)}>Archive</button></div></article>)}
       {(offset>0 || plans?.next_offset != null) && <div className="actions"><button className="secondary" disabled={offset===0 || busy || planBusy} onClick={() => setOffset(Math.max(0,offset-25))}>Previous</button><button className="secondary" disabled={plans?.next_offset==null || busy || planBusy} onClick={() => setOffset(plans?.next_offset ?? 0)}>Next</button></div>}
     </details>
-  </div>;
+  </fieldset>;
 }

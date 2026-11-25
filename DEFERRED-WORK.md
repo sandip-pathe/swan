@@ -1,5 +1,335 @@
 # Project status and remaining work
 
+25 November GitHub checkpoint: user withdrew undeployment; retain Oracle worker,
+automatic login and existing services. Read-only bot direction remains a discussion,
+not delivered scope or authorization to remove trading code. D29/D33 remain open.
+Full backend database regression was not completed: the broad non-integration test
+selection still reached database fixtures, encountered setup errors and was stopped.
+Closure: rerun the relevant database suite against an isolated local test database;
+never substitute hosted provider/market acceptance. Frontend build/typecheck/15 chart
+tests, 13 isolated login tests and changed-Python lint pass for this checkpoint.
+
+25 November cross-screen planning: [SWAN-SCREEN-PLAN.md](./SWAN-SCREEN-PLAN.md)
+and [review board](./design-playground/screen-plan.html) cover 19 proposed views.
+Dashboard Overview / Trades / Decisions / History are now implemented locally,
+with isolated fixture/browser verification recorded in RESUME.md. Hosted/device
+acceptance remains open under D28; fixtures do not close it. Remaining screens from
+the broader plan are still out of scope for this Dashboard pass. D29-D33 backend/
+persistence/feed/host dependencies remain separately open. No broker acceptance
+was resumed.
+
+Beginner dashboard experiment (25 November 2026): plain-language summaries,
+visual cash breakdown and expandable reasoning implemented locally. Real learner
+comprehension/usability evaluation is pending under D27/D28. Detailed saved agent
+rationales retain their original wording; reliable plain-language paraphrasing would
+need a grounded backend contract and evaluation, not guessed frontend explanations.
+
+## D32 - Dashboard live market briefing and learning expansion
+
+Open. Current local dashboard uses existing account-owned activity/evidence GETs
+for real saved decisions, cited historical news and contract observations. Dedicated
+current NIFTY/SENSEX index snapshots, a browsable current news feed, and personalized
+learning recommendations are not exposed by those APIs. Do not label saved evidence
+as live, fabricate agent activity, or start broker/model work on dashboard load.
+Closure: scoped read-only backend contracts with timestamps, provider attribution,
+delay/session status, bounded caching and independent failures; wire and verify the
+resulting dashboard sections. Current fixtures verify rendering, not actual-market
+acceptance. Signed-in hosted payload and physical mobile acceptance remain D28;
+broker/login/live-market checks stay on hold until explicitly resumed.
+Evidence: apps/web/src/app/dashboard-intelligence.tsx; private fixture harness
+.local/design/check-dashboard-data.mjs. No deployment performed.
+
+## D33 - OCI CPU availability and authenticated latency
+
+Open. Follow-up read-only VM sample on 25 November at 09:08-09:10 UTC: OCI metadata
+identifies VM.Standard.E2.1.Micro (1 GiB RAM; shape config reports 1 OCPU/2 vCPUs).
+Load average rose from 3.63 to 5.48, 350 MiB memory available,
+379 MiB swap occupied, and vmstat showed 94-95% CPU steal in four consecutive
+samples. CPU pressure was high; memory pressure and swap I/O were also present.
+Docker reported API 100 MiB, worker 113 MiB, PostgreSQL 97 MiB and Caddy 25 MiB;
+worker CPU was 206% in the sample. API container health checks repeatedly exceeded
+their 8s timeout, while three external unauthenticated /health requests returned
+200 in 1.09-3.47s. This is fresh evidence of severe host CPU scheduling pressure;
+it does not identify the provider quota/entitlement or prove worker CPU is the cause.
+OCI documentation says the Always Free E2.1.Micro receives less than a full OCPU
+and cannot burst, consistent with the observed CPU constraint but not a measurement
+of this guest's exact entitlement: https://docs.oracle.com/en-us/iaas/Content/Compute/References/burstable-instances.htm
+Local code now gates quote/reference publication on accepted cache revisions or a
+completed metrics refresh, avoiding unchanged-data scans and write attempts. The
+heartbeat and 250 ms execution watchdog stay unchanged. CPU benefit is unmeasured;
+the change is local, untested and not deployed. This cannot correct the Micro shape's
+CPU entitlement or substitute for authenticated endpoint/recovery measurements.
+Authenticated endpoint latency remains unmeasured. No services were restarted or
+reconfigured; broker, provider and live-market checks remain on hold.
+Static review found the explicit quote-refresh route holds its global advisory
+transaction lock and database transaction while awaiting provider calls (up to
+80 seconds), with a 30-second cooldown. No refresh was invoked; review this path
+without provider access first, then preserve the market-acceptance hold for any
+provider validation.
+
+Earlier read-only diagnosis on 25 November: /health returned 200 in 9.59s,
+load average 5.71, swap 422 MB; vmstat 1-second interval samples reported CPU
+steal 94% and 74%. Containers healthy/zero restarts. API exception scan found no
+matching traceback in the checked hour; Caddy logged /api/workspace abort after
+15.6996s, writing: http2: stream closed. This establishes slow service and heavily
+restricted host CPU availability during observation, not a specific quota cause or
+a proven application deadlock. Authenticated endpoint timing was not measured;
+no tokens extracted and no broker/provider acceptance resumed.
+
+Frontend polling/load fixes and saved display snapshots implemented locally (see
+RESUME.md). Closure requires sustained guest/host CPU and quota diagnosis, bounded
+resource/read-only endpoint measurements, then an authorized deployment or hosting
+capacity change and measured authenticated latency/recovery. Do not merely extend
+all timeouts or treat local fixture success as host resolution. No host mutations
+or deployment performed in this investigation.
+
+## D31 - Planned native extensions beyond the local app-shell pass
+
+25 November update: owner-scoped account display snapshots now persist locally
+for up to 24h, with historical labels and sign-out cleanup. This partially expands
+local reading; service-worker account HTML/API caching and push remain unimplemented.
+
+Planned, not implemented: opt-in push alerts with account-authorized deep links and
+private offline-reading expansion. They require backend subscription/delivery,
+consent and notification payload design, device testing and retention/privacy rules;
+the current stateless chat endpoint and public-only offline cache do not provide
+these. No notification permission is requested automatically. Current manifest
+shortcuts and existing hash routes work without claiming push delivery. Closure:
+authorized implementation plus real-device delivery/read/offline-recovery evidence.
+Trading actions must remain online and server-authorized; never queue them offline.
+
+## D29 - Backend fixes: chat latency and greeting failure
+
+Partially implemented locally: exact greeting-only inputs now return a bounded,
+source-free response without planner/answer model calls or database tool reads.
+This avoids the expensive chat pipeline for greetings and does not claim account
+or market facts. It has not been executed against the hosted API. The owner reported
+that a plain "hello" took a long time and ended in the failed
+answer UI after connecting the real local frontend to Oracle (24 November 2026).
+Do not treat fixture chat success as resolution. Current frontend has an outer
+30-second API deadline, while Chat requests specify 60 seconds; that mismatch is
+one investigation target, not an established root cause. Trace authenticated chat
+queueing, database/context work, tool selection, model calls, retries and resource
+contention on the 1 GB VM. Inspect provider errors and timeouts without logging
+credentials or private prompts. General greetings should not require market data
+or broker readiness; ground market questions through appropriate tools. Define
+latency budgets, truthful progress/streaming where supported, cancellation and
+recoverable errors. Do not merely extend every timeout. Closure: measured real
+end-to-end greeting and grounded question success, p50/p95 latency and failure
+recovery evidence, with existing budget/permission gates preserved. Grounded-question
+backend work and model/live checks remain open; broker acceptance hold is unchanged.
+
+## D30 - Durable cross-device conversation sessions
+
+Open follow-up. Multiple owner-scoped conversations now exist in the local UI,
+including separate histories, drafts and concurrent in-flight responses. Persistence
+is device-local only, and sign-out clears the device cache. Server-owned session
+IDs, authorized list/detail APIs, retention/deletion policy and cross-device history
+are not implemented by the existing stateless chat endpoint. Closure: durable owner-
+authorized session storage and tested restoration/isolation across devices; never
+substitute fabricated server persistence for this local implementation.
+
+
+## D28 - Frontend workspace migration and hosted acceptance
+
+Native PWA foundation implemented locally (see RESUME checkpoint): independent chat
+scroll/pinned composer, reading-position preservation, incoming-reply restraint,
+keyboard-aware visual viewport, tab/screen/filter/chart-view memory, native Back for
+mobile overlays, install/storage controls, preference cookie with SSR, safe public
+asset cache and offline/reconnect guards. Build/typecheck, 15 existing chart tests,
+extended browser fixtures and a service-worker/offline-launch check pass. Existing
+financial freshness/permission/recovery rules were preserved. Physical Android/iOS
+installed-PWA keyboard, safe areas, rotation, pinch zoom, hardware Back and optional
+storage/installation outcomes still require actual-device acceptance. Browser
+keyboard simulation and public offline fallback are not proof of those outcomes.
+No broker/model/live-market checks, backend changes or deployment in this pass.
+
+Trade page learner-focused pass: local copy, filters, option-chain styling/loading,
+chart indicators and order-planner layout are implemented; the isolated browser suite
+verified the search-to-chart route and mobile sheet with fixtures. The signed-in
+contract catalog was marked stale, so no stale contract was opened and no live order
+or broker action was attempted. Close this slice with fresh, authorized market data
+and the existing paper-workflow checks only when the owner resumes broker/live-market
+acceptance. No trading gate was weakened.
+
+25 November visual follow-up: removed the persistent desktop watchlist sidebar; its
+content is now only shown from the Watchlist tab, and Find/Options use the main width.
+Typecheck, chart tests and the local fixture browser suite pass. This closes the local
+layout correction only. Fresh hosted quotes, broker checks and installed-device
+acceptance remain deferred under this item; resume only when the owner explicitly
+resumes market acceptance.
+
+Additional visual correction: restored desktop/mobile inset spacing for Trade content
+and removed the optional Bid/Ask/OI glossary link from Options. Automated layout and
+content assertions pass. No new acceptance work was skipped; the existing hosted/live
+and installed-device acceptance hold remains unchanged.
+
+Chart-order iteration: the candlestick view is now the main full-width surface; the
+persistent order form was replaced with one Buy trigger and a responsive native
+dialog. The dialog preserves the existing estimate, confirmation, and server-side
+permission checks. Copy now describes the short paper-order window without the term
+"practice session." Typecheck/build/chart tests and fixture browser checks pass.
+Real broker/live-market and installed-device acceptance remain deferred under D28.
+
+
+Native-style tab state iteration implemented: inactive outlines, active solid glyph,
+no selected tile background. Isolated browser/typecheck verification passes; real
+installed-PWA/device acceptance remains open.
+
+
+Four-tab mobile bar and adaptive colored icons implemented. Browser checks confirm
+Chat/Dashboard/Trade/Account labels, four icons and responsive layout; typecheck
+passed. Physical installed-PWA safe-area and keyboard acceptance remains open.
+
+
+Lucide primary navigation and shared single-line label layout verified by build,
+typecheck and browser checks across existing responsive widths. This resolves the
+reported New conversation wrap locally; physical-device/PWA acceptance remains.
+
+
+Sidebar row follow-up verified locally: flat primary/new-chat/account rows and
+noninteractive SWAN brand; browser checks assert square styling and no logo button.
+Mobile drawer regression and typecheck pass. Installed-PWA acceptance remains open.
+
+
+Mobile-first sidebar iteration: full-width quiet active rows, hover/focus desktop
+close and touch-visible mobile drawer controls implemented. Isolated desktop and
+mobile checks pass for collapse/reopen, conversation selection, Escape/backdrop and
+focus return. Physical-phone/installed-PWA safe-area, soft keyboard, rotation and
+platform back behavior remain unverified; close via actual-device walkthrough.
+
+
+Multiple local sessions correction implemented: sidebar history, independent drafts,
+new-thread preservation, existing-thread migration and mobile picker. Isolated checks
+cover three sessions, pending reply isolation, reload and sign-out cleanup; typecheck
+and build pass. Real model latency remains D29; durable cross-device sessions D30.
+
+
+24 November actual integration evidence: configured local API URL and exact hosted
+CORS origins; only hosted API recreated. Real signed-in VS Code localhost:3100
+Dashboard displayed hosted equity, zero positions and two closed-trade records.
+Health/CORS/auth-required checks passed; unrelated origin rejected. This closes the
+local-to-hosted account-read connection gap, not all journey/live acceptance. News
+panel source, hosted Vercel release and remaining journeys still need closure.
+Broker-login and live-market holds remain in force. Evidence: RESUME local frontend
+connection checkpoint; hosting/oracle/README.md local frontend instructions.
+
+
+Error-layer refinement: top overlay placement and dismissal verified with isolated
+browser fixtures and typecheck; hosted visual acceptance remains pending.
+
+Chat chrome follow-up: removed header labels and bottom explanatory controls;
+inline retry/dismiss strip implemented and verified with isolated failure fixtures.
+Build passed. Hosted acceptance and owner visual review remain outstanding.
+
+
+24 November account/Discover iteration: name/email-only identity entry opens
+Account & workspace; theme buttons moved into More settings. Removed redundant
+workspace/funds labels and reserved desktop space for Discover. Typecheck,
+production build and isolated responsive browser harness passed. News headlines
+remain unwired in this panel: closure requires a read-only source contract with
+attribution, observation/publication time, delay and failure handling. Until then,
+show explicit unavailability. This is UI implementation, not live-data acceptance.
+
+
+24 November 2026: migrated the approved playground into the actual Next.js frontend.
+Chat / Dashboard / Trade; neutral white/charcoal, royal-blue original branding;
+Inter body/support font self-hosted with license. Existing authenticated account,
+watchlist, chart, risk, preview/placement and execution contracts reused. No backend
+or trading-authority changes, production fixtures or fake model progress added.
+
+Local checks passed: frontend typecheck/build, 15 chart-data tests, isolated Chrome
+Firebase/API fixture checks for chat/error recovery, account failure independence,
+request survival across navigation, context/drafts, selected contract, sign-out cleanup,
+themes, mobile sheet/Escape and viewport overflow. Inspected desktop/mobile/dark
+screenshots. These prove bounded UI behavior, not hosted/market acceptance.
+
+Remaining: owner review, comprehensive accessibility/phone/zoom checks, publishing
+and deployment when requested, then hosted Firebase/CORS/account/chat/chart evidence.
+Broker login/live-market acceptance remains held until explicitly resumed. Close
+with reviewed UI and deployed evidence; preserve D01/D07/D26 boundaries. Private
+harness: `.local/design/check-live-workspace.mjs`; screenshots `.local/design/live-*`.
+
+## D27 - Integrated UX design and journey validation
+
+Typography iteration: increased playground body text to 16px, generally raised
+labels/supporting text by 2px (minimum 12px), and larger display headings by 4px.
+Local Chrome journey and mobile/landscape overflow regression checks passed.
+Owner readability feedback remains pending; production app unchanged.
+
+Latest visual refinement: user rejected blue-tinted surfaces. Playground now uses
+white/neutral-grey light surfaces and charcoal dark surfaces, original #2455e6
+royal-blue action buttons/logo, restrained native sans typography and tabular
+financial figures. Layout unchanged. Re-ran local Chrome journey/viewport checks
+and inspected light/dark Chat screenshots. Owner appearance acceptance remains open.
+
+Visual correction: user rejected the green/editorial theme and explicitly chose
+the main application's blue palette, original angular logo and font identity.
+Playground now uses those colours, IBM Plex Sans/Mono (local assets and licenses)
+and original SVG logo. Layout remains unchanged and unapproved. Local Chrome
+journey/mobile regression checks passed; inspected updated light Chat/Trade and
+dark Chat screenshots. This does not close layout/usability/accessibility work.
+
+Standalone layout exploration: `design-playground/` now contains plain HTML/CSS/JS
+for Chat, Dashboard and Trade, using fictional fixtures with no API/broker/model
+connections. Production application source is untouched. Includes desktop and
+mobile layouts, optional context drawer, local example chat, chart/depth/chain,
+manual paper preview and order lifecycle, session stop and failure scenarios.
+Local Chrome checks passed for the linked order lifecycle, stale preview
+invalidation, mobile sheet/Escape and no horizontal overflow at 375/390/768/1024
+widths and 844×390 landscape; no page errors. Captured and inspected desktop
+Chat/Trade/Dashboard, mobile Chat/ticket and dark Chat screenshots.
+This is bounded prototype verification, not a complete accessibility audit or
+owner usability acceptance. Remaining: owner feedback, actual chart-library
+integration, real schema integration, comprehensive accessibility/text scaling
+and deployed acceptance. Fixed schematic chart data and in-memory-only chat are
+documented in [the playground README](./design-playground/README.md).
+
+Review checkpoint: behavioral brief v1 completed using Product Design and UX.
+Resolved routine defaults DD-01–DD-08; added IC-01–IC-08 interface contracts,
+state/recovery and AI-authority models, dependency ownership, evidence boundaries
+and a handoff reading order. Reviewed normal and high-risk partial-fill, uncertain
+submission, stale-preview and session-stop paths at document level. No app code,
+broker request or trading permission changed. This completes the requested brief
+review, not the whole D27 milestone: visual specification, owner walkthrough and
+actual browser/accessibility verification remain open with owners/gates in the brief.
+
+Skill-backed handoff update: installed `product-design-and-ux` from
+`magnus919/agent-skills` at `cb581ffec17d3bb0aee2cf605716d107c6e378ad` in the user's
+Codex skills directory. Applied state/AI-boundary/handoff guidance to add staged
+implementation gates and UX-01–UX-10 observable criteria in the design brief.
+Criteria are planned, not executed application acceptance. Visual direction,
+mobile ticket choice, owner walkthroughs and browser checks remain open under D27.
+
+Latest design instruction: disregard all current UI pages as layout/style/navigation
+constraints. Preserve product requirements and backend semantics; design task-first
+from scratch. The brief now includes practical hierarchy, cognitive-load, thumb-reach,
+target-size, accessibility, feedback, recovery and data-honesty review criteria.
+Existing prototypes remain exploratory; these criteria are not yet visually or
+usability-verified. No application code deletion or rewrite is authorized by this note.
+
+Prototype update: linked interactive journey now covers Chat → Trade → paper
+preview/order/partial fill/position/exit → Dashboard review, mobile preview and
+holiday/stale/chat failure/exposure-alert scenarios. Local DOM interaction checks
+passed, including preview invalidation after a restriction and preserved input.
+See the walkthrough matrix in [the design brief](./SWAN-UX-DESIGN.md).
+Visual browser inspection and owner usability walkthrough remain unperformed;
+these are design verification boundaries, not actual-market acceptance.
+
+24 November 2026: [SWAN UX design](./SWAN-UX-DESIGN.md) now reconciles the original
+PRD, current requirements, autonomous brainstorming, strategy handoff, workspace
+plan and latest implementation checkpoint. Records Chat / Dashboard / Trade,
+backend-to-experience contracts, primary-source UX frameworks, release/vision
+boundaries and six priority journeys. Paper design only; no app code or permissions
+changed. Existing illustrative mockup is exploratory, not user-tested acceptance.
+
+Remaining by design: compare low-fidelity desktop/mobile alternatives, refine the
+linked task journeys and error/exposure states, conduct owner walkthroughs, and
+agree the implementation scope. Close this design item with reviewed prototypes
+and recorded journey outcomes; track subsequent implementation separately. Actual
+market qualification, hosted acceptance and broker checks remain under their
+existing IDs and are not resumed by this design work.
+
 ## Oracle hosting preparation: 24 November 2026
 
 The user now has Oracle access, but confirmed the VM is not created. Region shown
@@ -205,7 +535,44 @@ permission gates and preserve actual-market evidence separately from offline tes
 
 ## D26 - Oracle deployment acceptance
 
-Status: deployment package prepared; hosting experiment deferred at the user's
+Calendar-aware login now skips explicit holidays/finished sessions and missing or
+unknown coverage before reading login secrets or contacting the broker. Daily and
+boot jobs remain independent of API/worker startup and are resource bounded.
+Hosted systemd run on today's holiday returned SKIPPED_MARKET_CLOSED at 08:46:33
+UTC, exited successfully, and API health stayed connected; 13 focused tests pass.
+Existing calendar coverage ends 30 November 2026; extend verified coverage before
+then. Beyond coverage the job explicitly skips rather than inferring open days.
+Subsequent actual scheduled login/stream acceptance remains outstanding.
+
+24 November first hosted automatic login: user-configured secrets and manual
+service invocation returned NEW_SESSION_VERIFIED at 08:39:33 UTC. Private one-time
+setup and first login/profile verification are resolved. Observation heartbeat is
+current with no problem/open positions; quotes remain prior-session data on today's
+official Guru Nanak holiday. Subsequent scheduled renewal and open-session stream
+checks remain required. This supersedes the missing-credential blocker below.
+
+24 November broker automation: isolated daily-login job and host timer installed;
+six focused tests and static checks pass. Missing credentials correctly skip the
+service; server clock synchronized. Blocked on the user's private one-time PIN and
+TOTP-seed entry. Closure requires successful hosted login/profile verification,
+market-data reconnection and observed subsequent scheduled renewal. Do not equate
+unit-test success or an enabled timer with actual authenticated broker access.
+
+Status: HTTPS now passes external certificate-verified health checks at
+https://swan-api.137-23-62-124.sslip.io. CORS permits the user's deployed frontend
+https://swan-one.vercel.app and rejects an unrelated origin. Vercel's Production
+NEXT_PUBLIC_API_BASE_URL setting and redeploy require the user's Vercel access;
+no CLI/session was available locally. End-to-end browser acceptance remains open.
+Experiment resumed after the user supplied SSH access on 24 November.
+Docker and persistent swap are installed, the private flat-ledger snapshot is
+restored, and a PostgreSQL memory overlay is prepared. Image build, migrations,
+API health and observation-worker heartbeat now pass on the VM. Short idle samples
+show approximately 226 MiB combined container working set, 451 MiB host available,
+2–7 ms warmed health checks and no OOM/restarts. Sustained/live-data resource
+acceptance remains open; busy setup showed severe CPU steal, later idle samples
+did not. See latest RESUME.md for current evidence, superseding earlier missing
+hostname/frontend status.
+Earlier status: deployment package prepared; hosting experiment deferred at the user's
 request on 24 November 2026 while publishing the current project to GitHub. The user
 reports a 1 GB Oracle VM now exists; A1 creation failed for capacity and the account
 has no trial credits. SSH access and actual resource sizing remain unverified.

@@ -3,9 +3,59 @@
 Frontend: Vercel. Backend: one Ubuntu 24.04 LTS VM, amd64 or arm64, with Docker
 Engine and Compose v2. PostgreSQL 17, API, market worker and Caddy run together.
 Use at least 2 GB RAM; 4 GB is a comfortable starting allocation, not a measured
-requirement. Select an **Always Free eligible** shape and storage in the console;
+requirement. A 1 GB E2 Micro experiment is now in progress; it is not yet accepted
+for sustained operation. The optional `compose.micro.yaml` overlay reduces
+PostgreSQL memory and parallelism. Use it with
+`hosting/oracle/swan -f hosting/oracle/compose.micro.yaml ...` for every Compose
+operation in that experiment. Add host swap for transient spikes and measure
+available memory, swap activity, CPU delay and application response before deciding
+whether PostgreSQL needs a second VM. Swap does not increase CPU capacity.
+Select an **Always Free eligible** shape and storage in the console;
 trial credit is not the same as Always Free eligibility. Mumbai is the selected
 region in the supplied screenshot; a compute instance has not been verified.
+
+## Optional unattended daily broker login
+
+`broker-login` is an isolated one-shot service. Only this service mounts
+`/opt/swan/.private-broker`; the API and market worker never mount the PIN/TOTP
+seed. Its session tokens use the existing private shared session volume. Credentials
+are entered with getpass, saved mode 0600 in a directory owned by UID 10001/mode
+0700, and excluded from Git and source bundles. The TOTP setup secret is the
+base32 seed from broker enrollment, not a current six-digit authenticator code.
+PyOTP is pinned to 2.9.0 for compatibility with broker-issued legacy seeds.
+
+After building the current image, prepare and configure once on the VM:
+
+```bash
+sudo install -d -m 700 -o 10001 -g 10001 /opt/swan/.private-broker
+cd /opt/swan
+sudo hosting/oracle/swan -f hosting/oracle/compose.micro.yaml run --rm --no-deps broker-login python -m services.market.autologin configure
+```
+
+Install the supplied service and timer to `/etc/systemd/system/`, then run
+`sudo systemctl daemon-reload` and
+`sudo systemctl enable --now swan-broker-login.timer`. The timer runs on boot
+and daily at 08:55 Asia/Kolkata. Before reading credentials or contacting the
+broker, it checks for a verified NFO or BFO session remaining that day, including
+before the open. Holidays, unknown dates, invalid calendars and finished sessions
+skip login with an explicit status. Boot/catch-up runs use the same check. Maintain
+the explicit exchange-calendar coverage; unknown dates are never inferred open.
+The service also skips if credentials have not been entered.
+It reuses a verified current-day session, otherwise performs fresh login and checks
+the profile/account match. Transient failures get at most three attempts, 35 seconds
+apart; credential rejection stops immediately. No retry loop runs every second.
+It has a separate process, 0.1-CPU cap, low CPU share and 192 MiB memory limit
+(256 MiB including swap); no API or worker startup depends on it. Failed login
+does not stop the app. Broker-backed features still require a valid session.
+
+Run immediately with `sudo systemctl start swan-broker-login.service`. Inspect
+`sudo journalctl -u swan-broker-login.service -n 20 --no-pager` and
+`sudo systemctl list-timers swan-broker-login.timer`. The job writes a private
+`status.json` alongside its credentials (timestamp/outcome/safe error code).
+Same-day broker revocation or changed credentials may require a manual job run;
+the timer is not a guarantee against broker outages. Login never arms paper/live
+trading. To revoke unattended access, disable the timer and remove the credentials
+privately; invalidate broker sessions too if the server may have been compromised.
 
 ## Prepare before market hours
 
@@ -126,3 +176,19 @@ Deployment source is prepared locally. Building/running containers on the Oracle
 VM, ARM dependency installation, TLS issuance, hosted sign-in and restore/restart
 acceptance still require the actual VM. The local Docker engine was unavailable
 during packaging; do not describe this package as an accepted hosted deployment.
+
+### Local frontend against the hosted API
+
+Set `NEXT_PUBLIC_API_BASE_URL=https://swan-api.137-23-62-124.sslip.io` in
+`apps/web/.env.local`, preserving the existing Firebase client configuration.
+Use `http://localhost:3100` for the real frontend; port 4173 is the separate design
+playground and does not connect to services. Sign in with the authorized Firebase
+account. Existing candle, watchlist, portfolio and order components use the shared
+authenticated API request path.
+
+On 24 November 2026 the hosted `SWAN_WEB_ORIGINS` list was extended from the
+Vercel origin to also allow `http://localhost:3100`, `http://127.0.0.1:3100`,
+`http://localhost:3000`, and `http://127.0.0.1:3000`. Only the API container was
+recreated to apply this configuration; the worker and its permissions were unchanged.
+Keep exact origins rather than wildcard access. Changes to runtime.env require API
+recreation; this file contains secrets and must remain private.

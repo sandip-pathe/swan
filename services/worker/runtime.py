@@ -84,6 +84,9 @@ class TradingRuntime:
         self.last_problem: str | None = None
         self.last_fallback = 0.0
         self.last_publication = 0.0
+        self.published_observation_revision = 0
+        self.metrics_revision = 0
+        self.published_metrics_revision = 0
         self.published_ids: dict[str, UUID] = {}
         self.stopping = asyncio.Event()
 
@@ -208,6 +211,7 @@ class TradingRuntime:
     async def refresh_metrics(self) -> None:
         if self.current_session(datetime.now(UTC)):
             await self.analysis.refresh_greeks(self.client, list(self.instruments.values()))
+            self.metrics_revision += 1
 
     async def refresh_strategy_evidence(self) -> None:
         # Acquisition and quant assessment run in code. Only emitted setup
@@ -244,6 +248,8 @@ class TradingRuntime:
             await self.problem("EXIT_DATA_UNAVAILABLE")
 
     async def publish_latest(self) -> None:
+        observation_revision = self.cache.observation_revision
+        metrics_revision = self.metrics_revision
         now = datetime.now(UTC)
         instruments = dict(self.instruments)
         latest = [
@@ -255,6 +261,8 @@ class TradingRuntime:
         await asyncio.to_thread(self.store.publish_quotes, instruments, latest)
         await asyncio.to_thread(self.store.publish_references, list(self.cache.references.values()))
         self.published_ids.update({quote.instrument_id: quote.id for quote in latest})
+        self.published_observation_revision = observation_revision
+        self.published_metrics_revision = metrics_revision
 
     async def publish_candles(self) -> None:
         rows = self.candles.drain()
@@ -355,7 +363,11 @@ class TradingRuntime:
                 self.publication_task.result()
             except Exception as error:
                 raise RuntimeError("MARKET_PERSISTENCE_FAILED") from error
-        if clock - self.last_publication >= 1 and (
+        publication_pending = (
+            self.cache.observation_revision != self.published_observation_revision
+            or self.metrics_revision != self.published_metrics_revision
+        )
+        if publication_pending and clock - self.last_publication >= 1 and (
             self.publication_task is None or self.publication_task.done()
         ):
             self.last_publication = clock

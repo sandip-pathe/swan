@@ -27,6 +27,9 @@ def main() -> None:
         for name in (
             "Dockerfile",
             "compose.yaml",
+            "compose.micro.yaml",
+            "swan-broker-login.service",
+            "swan-broker-login.timer",
             "Caddyfile",
             "deploy.env.example",
             "runtime.env.example",

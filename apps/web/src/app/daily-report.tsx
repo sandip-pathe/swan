@@ -27,7 +27,10 @@ export default function DailyReport() {
     pageController.current?.abort(); setPageBusy(false); setPageError(false);
     setData(null); setError(false); setBusy(true);
     request(`/api/paper/daily-report?${new URLSearchParams({ day })}`, "GET", AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]))
-      .then(result => { if (current) setData(result as Report); })
+      .then(result => {
+        if (!Array.isArray((result as Partial<Report>).fills) || typeof (result as Partial<Report>).day !== "string") throw new Error("Report response is incomplete.");
+        if (current) setData(result as Report);
+      })
       .catch(() => { if (current) setError(true); })
       .finally(() => { if (current) setBusy(false); });
     return () => { current = false; generation.current++; controller.abort(); pageController.current?.abort(); };
@@ -43,19 +46,18 @@ export default function DailyReport() {
     } catch { if (current === generation.current) setPageError(true); }
     finally { if (current === generation.current) setPageBusy(false); }
   }
-  return <section className="panel daily-report" aria-label="Daily report">
-    <div className="panelhead"><div><h2>Daily report</h2><p>Recorded paper trades and account movements.</p></div><button className="secondary" disabled={busy || !day} onClick={() => setRefresh(value => value + 1)}>Refresh report</button></div>
-    <label>Report date (IST)<input type="date" value={day} max={todayIST()} onChange={event => setDay(event.target.value)} /></label>
-    {busy && <p role="status">Loading daily report...</p>}
-    {error && <p className="notice error" role="alert">The report could not be loaded. <button className="secondary" onClick={() => setRefresh(value => value + 1)}>Retry report</button></p>}
+  return <section className="panel daily-report" aria-label="Daily results">
+    <div className="panelhead"><div><p className="eyebrow">YOUR RESULTS</p><h2>How did today go?</h2><p>Closed trades and costs. Open trades are not included in this total.</p></div><button className="text-button" disabled={busy || !day} onClick={() => setRefresh(value => value + 1)}>{busy ? "Updating…" : "Update"}</button></div>
+    <label className="report-day">Choose a day<input type="date" value={day} max={todayIST()} onChange={event => setDay(event.target.value)} /></label>
+    {busy && <div role="status" aria-label="Loading daily results" className="history-skeleton"><i /><i /><i /></div>}
+    {error && <p className="report-error" role="alert">Your results aren’t available right now. <button className="text-button" onClick={() => setRefresh(value => value + 1)}>Try again</button></p>}
     {data && <>
-      <p className="muted">{data.day_ended ? "Completed calendar day" : "Today so far"} - Snapshot {time(data.as_of)} IST</p>
+      <p className="muted report-asof">{data.day_ended ? "Full day" : "So far today"} · Updated {time(data.as_of)} IST</p>
       {data.status !== "RECONCILED" && <p className="notice error" role="alert">Accounting records need attention. Financial totals are unavailable; listed fills include dated records only.</p>}
-      <dl className="execution-values"><div><dt>Net realized P&amp;L</dt><dd>{money(data.realized_pnl)}</dd></div><div><dt>Recorded fees</dt><dd>{money(data.fees)}</dd></div><div><dt>Cash movement</dt><dd>{money(data.cash_movement)}</dd></div><div><dt>Fills</dt><dd>{data.fill_count}</dd></div><div><dt>Bought / sold</dt><dd>{data.buy_units} / {data.sell_units} units</dd></div><div><dt>Open at cutoff</dt><dd>{data.open_units_at_cutoff == null ? "Unavailable" : `${data.open_units_at_cutoff} units`}</dd></div></dl>
-      <p className="muted">Realized P&amp;L includes allocated entry costs and exit fees. Cash movement also includes funding and purchases; it is not profit. Open positions are not marked to market in this report.</p>
-      <details><summary>Cash and recorded decisions</summary><dl className="execution-values"><div><dt>Opening cash</dt><dd>{money(data.cash_opening)}</dd></div><div><dt>Cash at cutoff</dt><dd>{money(data.cash_at_cutoff)}</dd></div></dl><p className="muted">Cash includes funds reserved for orders. Decision counts describe recorded stages, not unique trades or permission to trade.</p><dl className="execution-values">{Object.entries(stages).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{data.activity?.[key] ?? "Unavailable"}</dd></div>)}</dl></details>
-      <h3>Filled trades</h3>
-      {!data.fills.length ? <p className="empty-state">No dated fills recorded for this day.</p> : <ol className="agent-activity-list">{data.fills.map(fill => <li className="execution-card" key={fill.id}><h4>{fill.side === "BUY" ? "Bought" : "Sold"} {fill.quantity} units</h4><p>{fill.instrument ? `${fill.instrument.underlying} ${fill.instrument.strike} ${fill.instrument.option_type} / ${fill.instrument.expiry}` : "Contract details unavailable"}</p><p>{money(fill.price)} per unit / Fees {money(fill.fees)}</p><p className="muted">{time(fill.timestamp)} IST</p><OrderHistory orderId={fill.order_id} /></li>)}</ol>}
+      <dl className="execution-values report-metrics"><div><dt>Profit / loss from closed trades</dt><dd>{money(data.realized_pnl)}</dd></div><div><dt>Trading costs</dt><dd>{money(data.fees)}</dd></div><div><dt>Fills</dt><dd>{data.fill_count}</dd></div><div><dt>Still open at day end</dt><dd>{data.open_units_at_cutoff == null ? "Unavailable" : `${data.open_units_at_cutoff} units`}</dd></div></dl>
+      <details className="report-details"><summary>More about today</summary><p className="muted">Profit/loss includes recorded entry costs and exit fees. Cash movement also includes funding and purchases, so it is not the same as profit. Open trades are not counted.</p><dl className="execution-values"><div><dt>Cash added or used</dt><dd>{money(data.cash_movement)}</dd></div><div><dt>Bought / sold</dt><dd>{data.buy_units} / {data.sell_units} units</dd></div><div><dt>Cash at start</dt><dd>{money(data.cash_opening)}</dd></div><div><dt>Cash at end</dt><dd>{money(data.cash_at_cutoff)}</dd></div></dl><p className="muted">Saved decision counts describe recorded stages, not unique trades.</p><dl className="execution-values">{Object.entries(stages).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{data.activity?.[key] ?? "Unavailable"}</dd></div>)}</dl></details>
+      <h3>Trades today</h3>
+      {!data.fills.length ? <p className="empty-state">No trades filled on this day.</p> : <ol className="agent-activity-list">{data.fills.map(fill => <li className="execution-card" key={fill.id}><h4>{fill.side === "BUY" ? "Bought" : "Sold"} {fill.quantity} units</h4><p>{fill.instrument ? `${fill.instrument.underlying} ${fill.instrument.strike} ${fill.instrument.option_type} / ${fill.instrument.expiry}` : "Contract details unavailable"}</p><p>{money(fill.price)} each · Costs {money(fill.fees)}</p><p className="muted">{time(fill.timestamp)} IST</p><OrderHistory orderId={fill.order_id} /></li>)}</ol>}
       {pageError && <p role="alert">Older fills could not be loaded. Current fills are still shown.</p>}
       {data.next_fills_before && <button className="secondary" disabled={pageBusy} onClick={loadOlderFills}>{pageBusy ? "Loading older fills..." : pageError ? "Retry older fills" : "Load older fills"}</button>}
       {data.fills_truncated && !data.next_fills_before && <p className="notice">Additional fills are unavailable in this view.</p>}

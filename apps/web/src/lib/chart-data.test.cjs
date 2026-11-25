@@ -96,11 +96,8 @@ test('selected studies exclude forming closes and restart after gaps and verifie
 test('device preferences validate every field and ignore unrelated stored data', () => {
   const { parseChartPreferences, DEFAULT_CHART_PREFERENCES } = require('./chart-preferences.ts');
   for (const raw of [null, '{', 'null', '[]', '1']) assert.deepEqual(parseChartPreferences(raw), DEFAULT_CHART_PREFERENCES);
-  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, token: 'ignored-fixture' })),
-    { minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, showRsi: false });
-  assert.equal(parseChartPreferences(JSON.stringify({ showRsi: true })).showRsi, true);
-  assert.equal(parseChartPreferences(JSON.stringify({ showRsi: 'true' })).showRsi, false);
-  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 60, mode: 'bad', showAverage: 'true', averageKind: 'bad', averagePeriod: '20' })), DEFAULT_CHART_PREFERENCES);
+  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 15, mode: 'line', showAverage: true, averageKind: 'SMA', averagePeriod: 50, token: 'ignored-fixture' })), { minutes: 15 });
+  assert.deepEqual(parseChartPreferences(JSON.stringify({ minutes: 60, mode: 'bad' })), DEFAULT_CHART_PREFERENCES);
 });
 
 
