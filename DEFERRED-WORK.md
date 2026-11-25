@@ -2,6 +2,19 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November resumed acceptance: user explicitly authorized read-only collection
+and freshness checks; Vercel deployment is assigned to the user. Collection is now
+enabled persistently on Oracle. Legacy observation worker stopped after fresh
+all-zero inactive/flat ledger preflight; automatic login remains active. See the
+latest RESUME checkpoint and BOT-RUNBOOK for actual-host evidence. Existing session
+successfully returned validated NIFTY/SENSEX quotes after hours; these are historical,
+not live freshness acceptance. NIFTY history returned 370/375 minutes with 15:15-15:19
+IST absent; scans correctly withheld. Investigate provider omissions and recheck in
+a verified open session before accepting reliable continuous scans. Do not impute
+missing candles. Public API cutover, user Vercel deploy, authenticated latency,
+open-session freshness/recovery and model usefulness remain open. Earlier paused
+entries below are historical and superseded only for read-only collection/checks.
+
 25 November implementation: isolated branch bot/read-only in D:\s\swan-bot now has
 Chat/Insights only, separate bot API/storage/collector, NIFTY completed-bar range/SMA
 scans and optional constrained chat interpretation. See BOT-RUNBOOK.md for exact

@@ -75,12 +75,15 @@ cleanup is part of this migration.
 Before production switch, recheck flat/inactive legacy paper state, take a verified
 ledger backup, ensure the Vercel frontend is ready, then switch the existing Caddy
 upstream to `bot-api:8000`, validate/reload and verify external TLS/auth/read behavior.
-Only then stop the old API/worker to release memory/CPU. Preserve their images,
+The old observation worker was stopped after a flat/inactive preflight when read-only
+collection resumed; stop the old API after public cutover to release memory/CPU. Preserve their images,
 Compose source and Caddy config for rollback. Do not run two active collectors.
 
-Provider collection defaults off, preserving the user's acceptance hold. Only after
-the user explicitly resumes it, recreate the bot worker with
-`BOT_COLLECTION_ENABLED=true` and observe read-only freshness/recovery. The worker
+Provider collection defaults off in source. On 25 November the user explicitly
+resumed read-only checks. `/opt/swan-bot/.env` now contains the nonsecret
+`BOT_COLLECTION_ENABLED=true` setting (root-owned, mode 0600), so Compose retains
+enablement across recreation. The old observation worker is stopped to avoid
+duplicate collection. Observe read-only freshness/recovery during verified sessions. The worker
 never reads PIN/TOTP credentials; the existing isolated login service retains them.
 
 Rollback: restore Caddy's saved `api:8000` upstream, start original API/observation
@@ -94,7 +97,9 @@ Keep the existing project, Firebase public environment variables and
 directory `apps/web`. Deploy `bot/read-only` as a preview first; production must be
 paired with the bot API cutover because the insight route is new. A branch push
 alone is not evidence of a successful Vercel deployment. No Vercel CLI session or
-linked project was available at the start of this work.
+linked project was available at the start of this work. The user chose to deploy
+Vercel themselves; the pushed branch is ready. The frontend checks backend identity
+and refuses chat submissions against the old API until public cutover.
 
 ## Verification and remaining acceptance
 
@@ -109,7 +114,7 @@ linked project was available at the start of this work.
   usefulness have not been accepted by these tests.
 - Oracle bot staging is healthy on loopback port 8001. Three warm unauthenticated
   health requests took 3-60 ms. No-token Insights is 401, legacy arm route is 404,
-  collector state is paused and the original automatic-login timer is active.
+  collector is enabled and reports closed after hours; automatic-login timer is active.
   Cold startup was slow under host contention; public traffic has not switched.
 
 The bot-only Dockerfile reuses the installed `swan-backend:local` environment and
@@ -122,3 +127,17 @@ recovery, calendar renewal, source correction/supersession UX, opening/closing
 briefings, alert noise measurement, broader research and supported options scope.
 See D34 in DEFERRED-WORK.md. No news coverage, SENSEX candle scans or options scans
 are claimed in the first slice. No predictive accuracy or profitability is claimed.
+
+## Actual read-only checks: 25 November, approximately 21:04 IST
+
+Existing saved broker session created today successfully served bounded quote and
+NIFTY candle requests. NIFTY quote source time was 16:08:11 IST, SENSEX 15:32:29 IST;
+these were hours old and are historical observations, not current market evidence.
+The candle response had 370 of 375 expected cash-session minutes, missing
+15:15-15:19 IST. Analyzer returned insufficient and withheld scans. No interpolation
+or model explanation was used to bypass missing data. The closed worker sleeps
+without polling the broker; next verified open is 26 November at 09:15 IST.
+Investigate these provider omissions and verify open-session freshness/recovery
+before source acceptance. This check did not exercise a real model response.
+Legacy paper state was flat/inactive (all five preflight counts zero) before
+stopping swan-worker-1. Public API, DB, proxy and login timer remain intact.

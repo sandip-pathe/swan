@@ -1,5 +1,24 @@
 # SWAN implementation checkpoint
 
+## Read-only collection resumed: 25 November 2026
+
+User explicitly resumed read-only collection/freshness checks and will deploy
+Vercel themselves. Bot branch remains bot/read-only; public Caddy still serves the
+old API pending coordinated frontend/API cutover. No trading permission changed.
+Oracle collector is enabled persistently by root-owned /opt/swan-bot/.env (0600).
+Fresh legacy ledger preflight returned zero enabled accounts, open positions,
+active orders, validations and arms. Stopped swan-worker-1 to avoid duplicate
+collectors; original API/PostgreSQL/Caddy and automatic-login timer remain running.
+Bot worker heartbeat reports closed after cash hours, not paused. Existing broker
+session was created today; two bounded quote/history probes succeeded using it.
+NIFTY quote timestamp 16:08:11 IST and SENSEX 15:32:29 IST were hours old at the
+21:04 IST check and do not establish live freshness. NIFTY historical response
+contained 370/375 expected minutes, missing 15:15 through 15:19 IST. Analyzer
+returned insufficient and withheld scans. No bars were filled or insights invented.
+Next verified session is 26 November 09:15 IST; actual open-session freshness,
+provider gap investigation/recovery, authenticated latency and model usefulness
+remain unaccepted under D34. Existing coverage ends 30 November (D26).
+
 ## Isolated market bot implementation: 25 November 2026
 
 Active bot workspace is D:\s\swan-bot, branch bot/read-only, forked from 21c2c21.
