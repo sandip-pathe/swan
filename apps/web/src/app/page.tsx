@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
-import Dashboard from "./dashboard";
+import BotHome from "./bot-home";
 import DashboardSkeleton from "./dashboard-skeleton";
 
 function errorMessage(error: unknown, method: "google" | "password" = "google"): string {
@@ -92,14 +92,14 @@ export default function Home() {
 
   if (loading) return <DashboardSkeleton shell />;
 
-  if (user && !loading) return <Dashboard key={user.uid} user={user} onSignOut={authenticate} />;
+  if (user && !loading) return <BotHome key={user.uid} user={user} onSignOut={authenticate} />;
 
   return (
     <main>
       <section aria-labelledby="title">
-        <p className="eyebrow">SWAN TRADE</p>
+        <p className="eyebrow">SWAN MARKET BOT</p>
         <h1 id="title">Sign in to SWAN</h1>
-        <p>Follow NIFTY and SENSEX options. Practice with virtual funds.</p>
+        <p>Understand the market through timestamped observations and grounded explanations.</p>
         {loading ? <p role="status">Checking your session…</p> : user ? (
           <div>
             <p role="status">Signed in as {user.email ?? user.displayName ?? "your account"}.</p>

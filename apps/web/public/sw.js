@@ -1,5 +1,5 @@
 // Public assets only. Authenticated HTML, API responses and writes are never cached.
-const CACHE = "swan-public-v2";
+const CACHE = "swan-public-bot-v1";
 const ASSETS = ["/offline.html", "/icon-192.png", "/icon-512.png", "/fonts/inter-variable.woff2"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

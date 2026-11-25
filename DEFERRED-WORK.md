@@ -1,5 +1,30 @@
 # Project status and remaining work
 
+## D34 - Slim read-only market bot scope and acceptance
+
+25 November implementation: isolated branch bot/read-only in D:\s\swan-bot now has
+Chat/Insights only, separate bot API/storage/collector, NIFTY completed-bar range/SMA
+scans and optional constrained chat interpretation. See BOT-RUNBOOK.md for exact
+boundaries and passing isolated checks. Oracle staging is being prepared separately;
+production cutover, Vercel deployment/access, authenticated hosted latency and resumed
+provider/model acceptance remain open. The user has been asked whether to resume
+the read-only provider hold; do not infer permission. Remaining scope from the draft
+includes options scans, SENSEX history, opening/closing briefings, source correction
+supersession, research breadth and actual usefulness/noise evaluation. These were
+not included in this initial bot slice so that unsupported data is never implied.
+Closure requires implementing/accepting any retained scope or an explicit scope
+decision, plus the deployment and actual-data criteria below. Calendar renewal
+before the existing 30 November coverage boundary remains required under D26.
+
+Proposed, not implemented: [BOT-SCOPE.md](./BOT-SCOPE.md) defines one background
+process with collection/validation, deterministic scanning and bounded research/
+publication jobs, plus saved insights and chat. Existing deployment is retained.
+Universe/horizon confirmation, implementation, provider freshness and model usefulness
+acceptance remain open. No trading migration/removal or broker checks are authorized
+by the scope document. Closure: confirm the scope, implement the read-only boundary,
+then satisfy its offline, actual-host and explicitly resumed provider acceptance
+criteria. Do not close from fixtures or model-generated citations alone.
+
 25 November GitHub checkpoint: user withdrew undeployment; retain Oracle worker,
 automatic login and existing services. Read-only bot direction remains a discussion,
 not delivered scope or authorization to remove trading code. D29/D33 remain open.

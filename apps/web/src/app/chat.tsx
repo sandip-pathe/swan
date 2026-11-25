@@ -23,20 +23,20 @@ type Reply = { answer: string; as_of: string; sources: { source: string }[] };
 type Context = { id: string; label: string } | null;
 const prompts = [
   {
-    title: "What is SWAN watching?",
-    detail: "Understand the recorded decisions",
-    question: "Why are the agents waiting?",
+    title: "What changed?",
+    detail: "Understand the saved observations",
+    question: "Explain the latest market observations and their limitations.",
     icon: "activity" as const,
   },
   {
-    title: "Help me understand VWAP",
-    detail: "Learn with your market context",
-    question: "Explain VWAP and DEMA and how agents use them",
+    title: "Understand the range",
+    detail: "Put the opening range in context",
+    question: "What does the opening range tell us, and what can it not tell us?",
     icon: "book" as const,
   },
   {
-    title: "Explore a contract",
-    detail: "Take a closer look at the market",
+    title: "See the evidence",
+    detail: "Open your market insights",
     question: "",
     icon: "markets" as const,
   },
@@ -225,7 +225,7 @@ export default function Chat({
             Your questions.
           </h1>
           <p>
-            A place to understand the market, follow your trades,
+            A place to understand the market, examine the evidence,
             <br className="desktop-break" /> and get a little better every day.
           </p>
           <div className="chat-suggestions">
@@ -271,7 +271,7 @@ export default function Chat({
                   </p>
                 </details>
                 <button className="text-button" onClick={onMarket}>
-                  Explore Trade <Icon name="arrow" />
+                  View insights <Icon name="arrow" />
                 </button>
               </div>
             </article>
@@ -282,7 +282,7 @@ export default function Chat({
               <div className="chat-wait" role="status">
                 <span className="wait-dot" />
                 Waiting for SWAN’s response…
-                <span>You can continue using the other workspaces.</span>
+                <span>You can read Insights while the answer is prepared.</span>
               </div>
             </article>
           )}
@@ -350,7 +350,7 @@ export default function Chat({
             spellCheck
             maxLength={1800}
             rows={2}
-            placeholder="Ask about the market, your trades, or a new idea…"
+            placeholder="Ask about the market, an observation, or an idea…"
           />
           <div className="composer-actions">
             <span>

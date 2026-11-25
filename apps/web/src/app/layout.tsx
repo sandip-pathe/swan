@@ -4,12 +4,13 @@ import { validAppearance } from "@/lib/browser-preferences";
 import "./globals.css";
 import "./workspace.css";
 import "./native.css";
+import "./bot.css";
 import Pwa from "./pwa";
 
 export const metadata: Metadata = {
-  title: "SWAN Trade",
-  description: "Autonomous intraday options paper trading",
-  appleWebApp: { capable: true, title: "SWAN Trade", statusBarStyle: "default" },
+  title: "SWAN — Chat & insights",
+  description: "Market observations, evidence and explanations",
+  appleWebApp: { capable: true, title: "SWAN", statusBarStyle: "default" },
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
 };
 

@@ -10,7 +10,7 @@ COPY --chown=10001:10001 services ./services
 COPY --chown=10001:10001 migrations ./migrations
 COPY --chown=10001:10001 config ./config
 COPY --chown=10001:10001 alembic.ini ./
-RUN mkdir -p /app/.local && chown 10001:10001 /app/.local
+RUN mkdir -p /app/.local /app/bot-data && chown 10001:10001 /app/.local /app/bot-data
 ENV PATH="/app/.venv/bin:$PATH"
 USER 10001:10001
 CMD ["python", "-m", "uvicorn", "services.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]

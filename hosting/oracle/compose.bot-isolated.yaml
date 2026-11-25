@@ -1,0 +1,54 @@
+# Independent deployment beside /opt/swan, sharing only existing credentials/session.
+name: swan-bot
+x-bot: &bot
+  image: swan-bot:local
+  build:
+    context: ../..
+    dockerfile: hosting/oracle/Dockerfile.bot
+  env_file: /opt/swan/hosting/oracle/runtime.env
+  environment:
+    BOT_DB_PATH: /app/bot-data/bot.sqlite3
+    SWAN_LOCAL_OWNER_BOOTSTRAP: "false"
+  volumes:
+    - bot-data:/app/bot-data
+    - ../../config:/app/config:ro
+  init: true
+  restart: unless-stopped
+  logging:
+    options:
+      max-size: "5m"
+      max-file: "2"
+services:
+  bot-api:
+    <<: *bot
+    command: ["python", "-m", "uvicorn", "services.bot.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+    ports:
+      - "127.0.0.1:8001:8000"
+    networks:
+      - existing-proxy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 60s
+      timeout: 8s
+      start_period: 120s
+      retries: 3
+  bot-worker:
+    <<: *bot
+    command: ["python", "-m", "services.bot.worker"]
+    environment:
+      BOT_DB_PATH: /app/bot-data/bot.sqlite3
+      BOT_COLLECTION_ENABLED: ${BOT_COLLECTION_ENABLED:-false}
+      ANGELONE_SESSION_FILE: /app/.local/angel-session.json
+    volumes:
+      - bot-data:/app/bot-data
+      - ../../config:/app/config:ro
+      - existing-broker-session:/app/.local
+volumes:
+  bot-data:
+  existing-broker-session:
+    external: true
+    name: swan_broker-session
+networks:
+  existing-proxy:
+    external: true
+    name: swan_default

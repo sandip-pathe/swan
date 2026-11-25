@@ -1,4 +1,20 @@
-# SWAN Trade
+# SWAN market bot
+
+This branch builds a read-only market assistant with exactly **Chat** and
+**Insights**. The chat screen is reused from SWAN; the bot has its own API,
+collector and SQLite data volume. It exposes no order or trading-permission routes.
+
+Start with [BOT-RUNBOOK.md](./BOT-RUNBOOK.md) for local ports, deployment,
+configuration reuse, rollback and verified limitations. Current evidence and open
+acceptance work are in [RESUME.md](./RESUME.md) and
+[DEFERRED-WORK.md](./DEFERRED-WORK.md), especially D34.
+
+The original project is preserved at GitHub commit `21c2c21` on `main` and in
+`D:\s\swan`. This bot lives separately in `D:\s\swan-bot` on `bot/read-only`.
+The inherited trading modules and documents below are historical reference;
+use the bot entry points in the runbook to start this slice.
+
+## Historical trading project description
 
 SWAN is a single-user web app for NIFTY and SENSEX market research, charts,
 source-grounded chat, saved strategy work and paper orders. It uses real Angel One

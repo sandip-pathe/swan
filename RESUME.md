@@ -1,5 +1,39 @@
 # SWAN implementation checkpoint
 
+## Isolated market bot implementation: 25 November 2026
+
+Active bot workspace is D:\s\swan-bot, branch bot/read-only, forked from 21c2c21.
+Original project remains preserved. User confirmed exactly Chat and Insights; reused
+the existing Chat component, owner-scoped device storage and Firebase configuration.
+New services/bot exposes only bot reads/evidence/chat and uses separate SQLite WAL
+storage. One collector calculates NIFTY SMA/range conditions on completed source
+bars; no old trading runtime, database migrations or trade routes are started.
+Collection defaults paused per the existing provider acceptance hold. Existing
+Oracle automatic login is retained. Full source snapshots are separate from the
+small insight list and inspectable on demand. Optional chat explanation uses the
+existing model/config with durable conservative reservations and output validation.
+
+9 bot + 13 isolated login tests, Ruff and Linux mypy pass. Frontend build/typecheck
+and 15 inherited chart tests pass. Fixture browser check passes two-screen routing,
+reused chat, paused/empty states and mobile overflow; screenshots inspected. Local
+API health passes. Oracle isolated image/staging preparation is in progress; public
+traffic has not switched. Vercel access and resumption of read-only source checks
+were asked asynchronously; neither is inferred from elapsed time. BOT-RUNBOOK.md
+records deployment, rollback and remaining real acceptance. D34 remains open.
+
+## Slim market bot scope: 25 November 2026
+
+Created BOT-SCOPE.md after user requested slim research, market-data, validation and
+insight workers. Proposal uses three logical jobs in one process, code-based scans
+on completed bars, model explanations only for material changes/questions and a
+shared saved evidence store. Initial suggested universe is NIFTY/SENSEX plus up to
+ten explicitly selected option contracts; horizon and universe await confirmation.
+No implementation or hosted changes in this scope pass. Existing worker/auto-login
+remain retained; broker/live-market acceptance stays paused. D34 tracks the proposal,
+implementation and real usefulness/data acceptance. Research references are linked
+in BOT-SCOPE.md; trading bot execution responsibilities were reviewed and excluded
+from the proposed new slice, not removed from the existing system.
+
 ## GitHub checkpoint and product hold: 25 November 2026
 
 User requested preserving the complete current project on GitHub, then explicitly

@@ -26,8 +26,10 @@ def main() -> None:
         ROOT / "hosting/oracle" / name
         for name in (
             "Dockerfile",
+            "Dockerfile.bot",
             "compose.yaml",
             "compose.micro.yaml",
+            "compose.bot-isolated.yaml",
             "swan-broker-login.service",
             "swan-broker-login.timer",
             "Caddyfile",

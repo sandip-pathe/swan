@@ -1,0 +1,129 @@
+"""Only bot reads and chat are exposed; no legacy routers or account writes."""
+
+import asyncio
+import os
+import sqlite3
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
+
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, ConfigDict, Field
+
+from services.api.auth import settings, verified_claims
+from services.bot.session import market_context
+from services.bot.store import Store
+from services.market.calendar import SessionCalendar
+from services.market.settings import MarketSettings, ProviderError
+
+
+def owner(token: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))) -> UUID:
+    if token is None or len(token.credentials) > 10000:
+        raise HTTPException(401, "SIGN_IN_REQUIRED")
+    claims = verified_claims(token.credentials)
+    account = settings().swan_account_bindings.get(claims["sub"])
+    if account is None:
+        raise HTTPException(403, "ACCOUNT_NOT_AUTHORIZED")
+    return account
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.store = Store(os.environ.get("BOT_DB_PATH", ".local/bot/bot.sqlite3"))
+    app.state.chat_lock = asyncio.Lock()
+    yield
+
+
+app = FastAPI(title="SWAN market bot", lifespan=lifespan, docs_url=None,
+              redoc_url=None, openapi_url=None)
+app.add_middleware(CORSMiddleware, allow_origins=settings().swan_web_origins,
+                   allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
+
+
+@app.exception_handler(sqlite3.Error)
+async def storage_unavailable(request, error):
+    return JSONResponse(status_code=503, content={"detail": "SAVED_DATA_UNAVAILABLE"})
+
+
+@app.middleware("http")
+async def private_responses(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@app.get("/health")
+def health():
+    with app.state.store.connect() as db:
+        db.execute("SELECT 1")
+    return {"service": "swan-bot", "database": "connected"}
+
+
+def context(store: Store, now: datetime) -> dict:
+    try:
+        calendar = market_context(SessionCalendar(MarketSettings().calendar_file), now)
+    except ProviderError:
+        calendar = {"state": "unknown"}
+    worker = store.read("worker", {"status": "not_started"})
+    heartbeat = worker.get("heartbeat")
+    worker = {**worker, "heartbeat_current": bool(heartbeat and
+              timedelta(0) <= now - datetime.fromisoformat(heartbeat) <= timedelta(minutes=3))}
+    quotes = []
+    for underlying in ("NIFTY", "SENSEX"):
+        quote = store.read(f"quote:{underlying}")
+        age = (now - datetime.fromisoformat(quote["timestamp"])).total_seconds() if quote else None
+        quotes.append({"underlying": underlying, "quote": quote, "age_seconds": age,
+                       "status": "unavailable" if quote is None else "current" if
+                       calendar.get("state") == "open" and age is not None and 0 <= age <= 90
+                       else "historical"})
+    analysis = store.read("analysis", {"status": "insufficient", "reason": "No analysis yet."})
+    if analysis.get("status") == "current":
+        analysis_age = now - datetime.fromisoformat(analysis["as_of"])
+        if calendar.get("state") != "open" or not timedelta(0) <= analysis_age <= timedelta(minutes=3):
+            analysis = {**analysis, "status": "historical"}
+    return {"as_of": now.isoformat(), "calendar": calendar, "worker": worker,
+            "quotes": quotes, "analysis": analysis,
+            "insights": store.insights(), "capabilities": {
+                "nifty_analysis": True, "sensex_history": False, "options": False,
+                "news": False, "trading": False}}
+
+
+@app.get("/api/bot/insights")
+def insights(identifier: UUID = Depends(owner)):
+    return context(app.state.store, datetime.now(UTC))
+
+
+@app.get("/api/bot/insights/{insight_id}/evidence")
+def insight_evidence(insight_id: str, identifier: UUID = Depends(owner)):
+    value = app.state.store.evidence(insight_id)
+    if value is None:
+        raise HTTPException(404, "EVIDENCE_NOT_FOUND")
+    return value
+
+
+class Turn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(max_length=4000)
+
+
+class Question(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(min_length=1, max_length=2000)
+    history: list[Turn] = Field(default_factory=list, max_length=6)
+
+
+@app.post("/api/chat/messages")
+async def chat(body: Question, identifier: UUID = Depends(owner)):
+    from services.bot.chat import answer
+
+    if app.state.chat_lock.locked():
+        raise HTTPException(429, "RESEARCH_BUSY_TRY_AGAIN")
+    async with app.state.chat_lock:
+        evidence = await asyncio.to_thread(context, app.state.store, datetime.now(UTC))
+        return await answer(body.question, evidence, app.state.store,
+                            [turn.model_dump() for turn in body.history])

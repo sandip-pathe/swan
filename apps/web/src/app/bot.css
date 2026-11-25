@@ -1,0 +1,33 @@
+/* Two-screen bot shell; existing chat typography, transcript and composer are reused. */
+.swan-app.bot-app { display:flex; flex-direction:column; height:100dvh; min-height:0; overflow:hidden; }
+.bot-header { display:flex; align-items:center; gap:28px; padding:16px 28px; flex-shrink:0; background:var(--bg); border-bottom:1px solid var(--border); }
+.bot-header nav { display:flex; gap:8px; margin:auto; }
+.swan-app .bot-header button { background:transparent; color:inherit; border:0; box-shadow:none; min-height:44px; padding:10px 16px; font-weight:400; }
+.swan-app .bot-header button[aria-current=page] { color:#2458d3; box-shadow:inset 0 -2px #2458d3; }
+.swan-app .bot-header .bot-signout { font-size:13px; }
+.bot-chat { flex:1; min-height:0; overflow:hidden; }
+.bot-chat[hidden] { display:none; }
+.swan-app .bot-chat .live-chat { display:flex; flex-direction:column; height:100%; min-height:0; max-width:960px; margin:auto; padding:0 28px 20px; }
+.bot-chat .chat-scroll-region { flex:1; min-height:0; }
+.bot-chat .chat-welcome { margin:auto; padding:28px 0; }
+.swan-app .bot-insights { display:block; place-items:normal; min-height:0; width:100%; max-width:1060px; margin:auto; overflow-y:auto; padding:40px 32px 80px; flex:1; }
+.swan-app .bot-insights section { max-width:none; border:0; padding:0; background:transparent; border-radius:0; }
+.bot-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:28px; }
+.bot-heading h1 { font-size:36px; margin:8px 0; }
+.bot-heading p { color:var(--muted); }
+.bot-status { background:var(--soft); padding:20px; border-radius:12px; margin-bottom:24px; }
+.bot-status span { display:block; margin-top:8px; }
+.bot-status p { margin:8px 0 0; }
+.bot-quotes { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.bot-quotes article,.swan-app .bot-insights .bot-analysis,.bot-insight { padding:24px; border:1px solid var(--border); border-radius:12px; margin-bottom:20px; }
+.bot-row { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.bot-row h2 { font-size:18px; margin:0; }
+.bot-row span,.bot-analysis small { font-size:13px; color:var(--muted); font-weight:400; }
+.bot-price { font-size:30px; font-variant-numeric:tabular-nums; margin:14px 0; }
+.bot-analysis dl { display:flex; gap:40px; flex-wrap:wrap; }
+.bot-analysis dd { margin:6px 0; }
+.bot-analysis dt { color:#526176; font-size:13px; }
+.bot-insight h3 { margin:10px 0; font-size:21px; }
+.bot-insight details { overflow-wrap:anywhere; }
+.bot-app button:focus-visible,.bot-app summary:focus-visible { outline:3px solid #2458d3; outline-offset:3px; }
+@media(max-width:640px) { .bot-header { gap:8px; padding:8px 12px; } .bot-header .brand-wordmark { display:none; } .swan-app .bot-chat .live-chat { padding:0 16px 12px; } .swan-app .bot-insights { padding:24px 16px 64px; } .bot-heading { align-items:flex-start; flex-direction:column; } .bot-quotes { grid-template-columns:1fr; gap:0; } .bot-heading h1 { font-size:30px; } }

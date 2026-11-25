@@ -162,7 +162,7 @@ export default function Pwa({ children }: { children: React.ReactNode }) {
       )}
       {reconnected && !offline && (
         <div className="connection-strip" role="status">
-          Connection restored. Refreshing account data.
+          Connection restored. Saved market observations can be refreshed.
         </div>
       )}
       {help && (

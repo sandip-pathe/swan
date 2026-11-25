@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SWAN Trade",
+    name: "SWAN market bot",
     short_name: "SWAN",
-    description: "Your intraday options paper trading workspace",
+    description: "Market chat and evidence-backed insights",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -14,8 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["finance", "education"],
     shortcuts: [
       { name: "Chat with SWAN", short_name: "Chat", url: "/#chat" },
-      { name: "Your dashboard", short_name: "Dashboard", url: "/#home" },
-      { name: "Trade workspace", short_name: "Trade", url: "/#markets" },
+      { name: "Market insights", short_name: "Insights", url: "/#insights" },
     ],
     lang: "en-IN",
     icons: [
