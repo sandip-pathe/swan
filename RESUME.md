@@ -5,7 +5,8 @@
 User explicitly resumed read-only collection/freshness checks and will deploy
 Vercel themselves. Bot branch remains bot/read-only; public Caddy still serves the
 old API pending coordinated frontend/API cutover. No trading permission changed.
-Oracle collector is enabled persistently by root-owned /opt/swan-bot/.env (0600).
+Oracle collector is enabled using root-owned /opt/swan-bot/.env (0600); pass
+--env-file /opt/swan-bot/.env explicitly to Compose (see BOT-RUNBOOK).
 Fresh legacy ledger preflight returned zero enabled accounts, open positions,
 active orders, validations and arms. Stopped swan-worker-1 to avoid duplicate
 collectors; original API/PostgreSQL/Caddy and automatic-login timer remain running.

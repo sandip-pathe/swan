@@ -60,8 +60,8 @@ Independent source directory `/opt/swan-bot` and Compose project `swan-bot`:
 
 ```bash
 cd /opt/swan-bot
-sudo docker compose -f hosting/oracle/compose.bot-isolated.yaml build bot-api
-sudo docker compose -f hosting/oracle/compose.bot-isolated.yaml up -d --no-build bot-api bot-worker
+sudo docker compose --env-file /opt/swan-bot/.env -f hosting/oracle/compose.bot-isolated.yaml build bot-api
+sudo docker compose --env-file /opt/swan-bot/.env -f hosting/oracle/compose.bot-isolated.yaml up -d --no-build bot-api bot-worker
 curl --fail http://127.0.0.1:8001/health
 ```
 
@@ -81,8 +81,9 @@ Compose source and Caddy config for rollback. Do not run two active collectors.
 
 Provider collection defaults off in source. On 25 November the user explicitly
 resumed read-only checks. `/opt/swan-bot/.env` now contains the nonsecret
-`BOT_COLLECTION_ENABLED=true` setting (root-owned, mode 0600), so Compose retains
-enablement across recreation. The old observation worker is stopped to avoid
+`BOT_COLLECTION_ENABLED=true` setting (root-owned, mode 0600), and passed explicitly with `--env-file /opt/swan-bot/.env` on Compose commands.
+Omitting that flag on this host reverted collection to the source default; the
+worker was recreated with the explicit file and enablement rechecked. The old observation worker is stopped to avoid
 duplicate collection. Observe read-only freshness/recovery during verified sessions. The worker
 never reads PIN/TOTP credentials; the existing isolated login service retains them.
 
