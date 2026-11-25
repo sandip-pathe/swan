@@ -216,19 +216,7 @@ export default function Chat({
       <div ref={scrollRegion} className="chat-scroll-region" onScroll={rememberScroll}>
       {!messages.length && !pending && !failed ? (
         <div className="chat-welcome">
-          <div className="intro-logo">
-            <Brand markOnly />
-          </div>
-          <p className="eyebrow">A LITTLE CLARITY GOES A LONG WAY</p>
-          <h1>
-            Your market.
-            <br />
-            Your questions.
-          </h1>
-          <p>
-            Understand what changed, inspect the source times,
-            <br className="desktop-break" /> and separate evidence from uncertainty.
-          </p>
+          <h1>What would you like to know?</h1>
           <div className="chat-suggestions">
             {prompts.map((prompt) => (
               <button
@@ -258,10 +246,9 @@ export default function Chat({
             <article className="chat-turn" key={message.id}>
               <p className="chat-user">{message.question}</p>
               <div className="chat-answer">
-                <div className="assistant-name">
+                <span className="chat-avatar" role="img" aria-label="SWAN">
                   <Brand markOnly />
-                  SWAN
-                </div>
+                </span>
                 <p>{message.answer}</p>
                 {message.source && <details className="chat-sources">
                   <summary>Sources</summary>
@@ -348,10 +335,6 @@ export default function Chat({
             placeholder="Ask about the market, an observation, or an idea…"
           />
           <div className="composer-actions">
-            <span>
-              Ask. Explore.
-              Understand.
-            </span>
             <button
               className="chat-send"
               disabled={offline || !!pending || !question.trim()}

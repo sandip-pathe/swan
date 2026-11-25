@@ -155,3 +155,20 @@
   .bot-chat .chat-scroll-region{padding:20px;}
   .bot-chat .live-composer-wrap{padding:12px 16px calc(12px + env(safe-area-inset-bottom));}
 }
+
+/* Full-bleed chat scroll surface, with a compact avatar beside each reply. */
+.swan-app .bot-chat .live-chat{border:0;border-radius:0;background:transparent;min-height:0;max-width:none;width:100%;padding:0;}
+.bot-chat .chat-scroll-region{align-self:stretch;max-width:none;overflow-x:hidden;}
+.bot-chat .chat-answer{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:14px;align-items:start;}
+.bot-chat .chat-avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#f5f5f5;}
+.bot-chat .chat-avatar .swan-brand{display:flex;}
+.bot-chat .chat-avatar .swan-brand svg{width:23px;height:23px;color:#181818;}
+.swan-app .bot-chat .chat-answer>p{grid-column:2;margin:0;min-width:0;overflow-wrap:anywhere;line-height:1.8;}
+.bot-chat .chat-answer>.chat-sources{grid-column:2;margin:14px 0 0;}
+.bot-chat .composer-actions{justify-content:flex-end;}
+.swan-app .bot-chat .chat-welcome h1{font-size:clamp(26px,4vw,40px);line-height:1.25;}
+@media(max-width:640px){
+  .bot-chat .chat-answer{grid-template-columns:28px minmax(0,1fr);column-gap:10px;}
+  .bot-chat .chat-avatar{width:28px;height:28px;}
+  .bot-chat .chat-avatar .swan-brand svg{width:21px;height:21px;}
+}

@@ -1,5 +1,42 @@
 # Project status and remaining work
 
+## Authorized Oracle deployment and chat layout: 26 November 2026
+
+User explicitly resumed Oracle deployment for accumulated local changes. Added
+https://swan-web-phi.vercel.app to SWAN_WEB_ORIGINS in existing private runtime env,
+preserving prior origins. Backed up source and env on host, rebuilt/recreated bot-api
+and bot-worker only. Public /health reports database connected; API container healthy,
+worker running. Exact new-origin OPTIONS now returns 200 with matching allow-origin.
+The earlier CORS blocker is resolved. Existing collection/session volumes preserved.
+Orchestration, no hardcoded greetings, zero-to-five qualified daily insights with
+no timed/filler briefs, and five automatic research-call limit are now deployed.
+No broker login or order action performed; real-session quota/strategy acceptance
+remains open under D34. Deployment does not establish a profitable strategy.
+
+Chat layout now explicitly resets inherited section/card constraints: viewport-wide
+scroll surface, padded centered transcript and composer. White round lightning
+avatar sits beside answer text, no SWAN heading above. Removed composer tagline
+and welcome logo/decorative pitch. Observed signed-in desktop and 390px mobile
+preview; restored normal width. Actual new chat 'hi' against Oracle returned
+'Hi! How can I help?' through AI routing. Older saved replies remain historical
+chat records. No history was deleted. Public PWA cache bumped v5 for shell refresh.
+Frontend typecheck/build and focused Ruff passed; no test suites added/run.
+Frontend pushed on renamed bot-r branch; Vercel build/public rendered acceptance
+still needs observation. Firebase authorized-domain membership and new-domain
+actual sign-in were not independently verified. Local preview used existing auth.
+
+## New Vercel domain check: 26 November 2026
+
+User added frontend environment variables and supplied swan-web-phi.vercel.app.
+Public GET returned 200; deployed JavaScript contains the Oracle API origin,
+not localhost:8000. Bundle retains default fixed login email jit4xxxx@gmail.com.
+Oracle OPTIONS with this exact Origin returned 400 Disallowed CORS origin, with
+no Access-Control-Allow-Origin. Backend allowlist addition is required before
+browser API access works. No runtime mutation/restart/deployment performed due
+to explicit backend hold. Closure: agree to allow this exact origin in hosted
+SWAN_WEB_ORIGINS, recreate API, observe successful preflight and signed-in reads.
+Firebase authorized-domain membership and actual sign-in were not verified.
+
 ## Daily cap correction: 26 November 2026
 
 User clarified minimum ZERO, maximum FIVE. Supersedes the scheduled-window and
