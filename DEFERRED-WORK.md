@@ -2,6 +2,18 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November design review: [market-decision-assistant.md](./docs/designs/market-decision-assistant.md)
+records the proposed architecture, two-screen product contract, conditional idea
+lifecycle, dependency-local gap handling, event-driven bounded processing, compact
+AI reasoning/validation, both horizons and eight implementation tasks. This is a
+reviewed proposal, not shipped scope. Source permissions/latency, SENSEX stream/
+depth, exact versioned strategy definitions/cost assumptions, prospective sample
+sufficiency/evaluation retention, closed-app delivery and backup acceptance remain
+open. Engineering review required before implementation clearance; live source
+proof and measured outcomes required separately. Delayed news cannot be treated as
+fresh catalysts. No new provider/model acceptance or regression evidence in this
+planning pass. Original observation behavior is still deployed.
+
 25 November product correction: user wants AI-assisted actionable trading research,
 not an indicator-description bot. See the leading BOT-SCOPE.md section. Accepted
 direction includes conditional call/put ideas, triggers/invalidation/exit scenarios,

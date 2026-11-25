@@ -1,5 +1,23 @@
 # SWAN implementation checkpoint
 
+## CEO design review: 25 November 2026
+
+User requested plan-ceo-review only, after rejecting an observation-only bot and
+repeated full-session scans. Saved docs/designs/market-decision-assistant.md as a
+HOLD SCOPE design proposal based on prior user constraints; not implementation or
+market acceptance. Recommended event-driven bounded collector + compact AI research
++ deterministic contract/risk/cost/freshness verification + versioned idea lifecycle.
+Both intraday and weekly research retained. Reuse existing auth/PWA/archive, stream
+and catalog adapters after audit; do not restart old trading services. User's
+instruction against repeated questions overrides per-finding skill ceremonies;
+recommendations are not represented as explicit individual user approvals.
+Eight sequenced tasks, error/security/test/performance/rollout review and unresolved
+acceptance criteria are in the document. Existing whole-session invalidation must
+be replaced with dependency-specific validity. Existing delayed NewsData branch
+(43,200 seconds) is unsuitable for claims of immediate catalysts. No code, tests,
+provider calls or deployment changed in this review. Engineering review remains
+required before implementation clearance; D34 tracks retained scope and acceptance.
+
 ## Product alignment correction: 25 November 2026
 
 User explicitly clarified: wants AI-assisted trading decisions/best bets, including

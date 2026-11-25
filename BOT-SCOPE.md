@@ -1,3 +1,7 @@
+Current target design: [AI trading decision assistant](./docs/designs/market-decision-assistant.md),
+25 November CEO review proposal. It specifies how to deliver the direction below;
+it does not describe currently deployed capability. See RESUME.md for actual state.
+
 # Product correction: AI trading decision support
 
 25 November 2026: user clarified that the objective is making better trading bets
