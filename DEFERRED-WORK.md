@@ -21,7 +21,10 @@ swing pipeline, official announcement feeds, structured invalidation/supersessio
 noise/expectancy evaluation and durable data-health events remain unimplemented.
 See latest BOT-SCOPE.md for required fields, boundaries and proposed sequencing.
 These need source validation and selected-horizon acceptance before useful setup
-claims. User's 5% loss basis is unresolved; no capital allocation was inferred.
+claims. User clarified 5% loss per position, with no trading by the bot. This
+resolves the loss-basis question; scenario calculations remain unimplemented and
+must describe costs/gaps and cannot imply an enforced maximum. No daily account
+limit, execution permission or capital allocation was inferred. See BOT-SCOPE.md.
 No daily profit promise or automated trade authorization exists.
 
 Closed/suspended-device notifications, guaranteed delivery/acknowledgments, offline

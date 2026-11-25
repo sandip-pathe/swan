@@ -4,8 +4,13 @@ This section supersedes the earlier proposal below. Product stays read-only with
 Chat and Insights. Primary intended use is buying SENSEX options for intraday
 sessions and, separately, weekly swing research. Total capital may be INR 25,000
 or INR 100,000; INR 6,000 was an example position allocation, not confirmed capital.
-User stated up to 5% loss; the basis (capital versus position; trade versus day)
-is still unresolved, so no risk allocation or recommendation is inferred.
+User clarified that the 5% loss threshold applies to each position, not total
+account capital per day. For a long option, use the position premium paid as the
+analysis basis: an INR 6,000 position gives an INR 300 reference loss threshold.
+This is an informational scenario, not an enforced maximum or an order instruction;
+fees, spread, slippage and gaps can make realized loss larger. The bot does not
+trade, place/modify/cancel orders, manage positions or execute stop-losses. The user
+makes and executes every trading decision. No account-wide daily limit is inferred.
 
 ## What a useful insight must contain
 

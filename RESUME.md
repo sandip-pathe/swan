@@ -4,8 +4,10 @@
 
 Bot workspace D:\s\swan-bot, branch bot/read-only. User prioritized timing,
 reliability, information quality and low token usage; intended SENSEX option buying
-intraday/weekly swing research, total capital INR 25k or 1 lakh, 5% loss basis still
-unresolved. INR 500 net/day is an evaluation example, never a guaranteed quota.
+intraday/weekly swing research, total capital INR 25k or 1 lakh. User clarified
+5% loss per position and explicitly reiterated that this bot does not trade.
+For analysis, INR 6,000 premium paid gives an INR 300 reference loss threshold;
+this is not an enforced cap, execution instruction or guaranteed realized loss. INR 500 net/day is an evaluation example, never a guaranteed quota.
 BOT-SCOPE.md now separates implemented functionality from the intended catalogue.
 
 Implemented account-scoped IndexedDB archive, monotonic paged insight sync,
