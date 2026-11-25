@@ -1,5 +1,52 @@
 # SWAN implementation checkpoint
 
+## Decision assistant implementation: 25 November 2026, 23:55 IST
+
+Current worktree `D:/s/swan-bot`, branch `bot/read-only`. This checkpoint supersedes
+earlier observation-only implementation descriptions. Built and deployed the
+conditional SENSEX decision-assistant API and event worker on existing Oracle.
+The user deploys Vercel; only Chat and Insights remain product destinations.
+
+Implemented bounded streaming (two indices, at most eight selected options),
+independent opening/recent bar windows, startup history plus targeted repair/backoff,
+contract recentering, versioned range-retest-v1/failed-break-v1 intraday ideas and
+separate five-completed-session weekly structure. Contract identity, quote age,
+depth, premium noise, estimated fees/slippage, whole-lot affordability and the
+5%-of-position-premium reference gate eligibility. Unknown depth units still block
+eligibility. Premium stop/target scenarios freeze after initial eligibility.
+No order routes, tools or broker holdings access were added.
+
+Compact AI research provides thesis/counterargument/next observation for new ideas,
+relevant fresh catalysts, bounded reassessments and explicit chat follow-ups.
+Cross-process lease, bounded queue, persistent conservative daily reservations,
+cache, strict schema/evidence/numeric validation limit token use. No tick/minute
+model polling. RSS uses attributed official excerpts; unavailable/old data cannot
+be presented as an immediate catalyst or a full report.
+
+UI includes idea conditions, contracts, source times, net scenarios, budget setting,
+manual entry reporting, selected-idea chat and hypothetical outcome summary.
+Atomic revisions/feed/outbox, authenticated SSE with poll fallback, IndexedDB archive
+and optional short-TTL generic browser push are implemented. Existing credentials,
+Firebase, API address and Oracle deployment configuration are reused.
+
+Evidence: Ruff, Linux mypy, frontend typecheck and production build passed. No test
+suite added/run. Hosted health=200, unauthenticated insights=401, trading arm=404;
+closed-session worker heartbeat current and broker-login timer active. Old API,
+worker and PostgreSQL remain stopped with data preserved. Pre-migration SQLite
+snapshot integrity passed. Off-host AES-GCM encrypted backup was decrypted and
+passed SQLite integrity. Windows task `SWAN Bot Encrypted Backup` is Ready, daily
+00:20 local/StartWhenAvailable, retains seven encrypted copies. Existing SSH key
+is required to decrypt; machine availability and future task runs remain relevant.
+
+D34 stays OPEN: markets closed; actual streaming/depth, latency/resource envelope,
+reconnect/chaos, signed-in/offline/push delivery, real model usefulness and prospective
+edge are not accepted from build checks. Hosted RSS had RBI empty/BSE unavailable;
+weekly daily source coverage was incomplete. No supported eligible idea, model
+answer, win probability or INR 500/day promise was fabricated. Full reports,
+manual exit/actual-cost capture and per-reported-fill monitoring/alerts remain
+unimplemented; entry reporting is not broker monitoring or an enforced 5% stop.
+Full replacement-host restore and future scheduled backups still need acceptance.
+
 ## CEO design review: 25 November 2026
 
 User requested plan-ceo-review only, after rejecting an observation-only bot and

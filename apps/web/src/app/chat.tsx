@@ -180,7 +180,8 @@ export default function Chat({
           controller.current.signal,
           AbortSignal.timeout(60000),
         ]),
-        { question: contextual.slice(0, 2000), history },
+        { question: contextual.slice(0, 2000), history,
+          ...(context?.id.startsWith("idea:") ? { idea_id: context.id.slice(5) } : {}) },
       )) as Reply;
       if (generation.current !== ticket) return;
       setMessages((current) =>

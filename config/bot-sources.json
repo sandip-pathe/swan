@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"name": "Reserve Bank of India press releases", "url": "https://www.rbi.org.in/pressreleases_rss.xml"},
+    {"name": "BSE corporate announcements", "url": "https://www.bseindia.com/data/xml/announcements.aspx"}
+  ],
+  "notes": "Official public RSS excerpts and attribution only; no full report scraping or delayed commercial news feed. Reachability and publication age are checked at runtime; outage never implies no news."
+}

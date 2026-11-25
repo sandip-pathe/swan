@@ -1,10 +1,12 @@
 """Normalize actual provider metadata and select bounded near-money subscriptions."""
 
-import json
+import asyncio
+import tempfile
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
+import ijson
 from pydantic import ValidationError
 
 from services.core.contracts import IST, Instrument
@@ -21,16 +23,32 @@ class InstrumentCatalog:
         self.rejected = rejected
 
     @classmethod
-    async def fetch(cls):
-        async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
+    async def fetch(cls, underlyings: tuple[str, ...] = ("NIFTY", "SENSEX")):
+        with tempfile.TemporaryFile() as downloaded:
             try:
-                response = await client.get(MASTER_URL)
-                response.raise_for_status()
-                rows = json.loads(response.content, parse_float=Decimal)
-            except (httpx.HTTPError, ValueError):
+                async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
+                    total = 0
+                    async with client.stream("GET", MASTER_URL) as response:
+                        response.raise_for_status()
+                        async for chunk in response.aiter_bytes():
+                            total += len(chunk)
+                            if total > 100_000_000:
+                                raise ProviderError("INSTRUMENT_MASTER_TOO_LARGE")
+                            downloaded.write(chunk)
+                downloaded.seek(0)
+
+                def selected_rows():
+                    return [
+                        row
+                        for row in ijson.items(downloaded, "item")
+                        if isinstance(row, dict)
+                        and row.get("name") in underlyings
+                        and row.get("instrumenttype") == "OPTIDX"
+                    ]
+
+                rows = await asyncio.to_thread(selected_rows)
+            except (httpx.HTTPError, ValueError, ijson.JSONError):
                 raise ProviderError("INSTRUMENT_MASTER_UNAVAILABLE") from None
-        if not isinstance(rows, list):
-            raise ProviderError("INVALID_INSTRUMENT_MASTER")
         now = datetime.now(UTC)
         instruments = []
         rejected = 0

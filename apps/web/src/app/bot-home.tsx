@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import Chat from "./chat";
 import Brand from "./brand";
+import IdeaCard, { type AdvisoryIdea } from "./idea-card";
 import { clearArchive, readArchive, writeArchive } from "@/lib/bot-archive";
 
 type Quote = { underlying: string; status: string; age_seconds: number | null;
@@ -11,8 +12,14 @@ type Quote = { underlying: string; status: string; age_seconds: number | null;
 type Analysis = { status: string; underlying?: string; missing_minutes?: string[]; reason?: string; as_of?: string; last_close?: string;
   sma20?: string; range_high?: string; range_low?: string; range_state?: string; trend?: string };
 type Insight = { id: string; as_of: string; published_at?: string; title: string; summary: string; limitation: string;
+  kind?: string;
   facts: Analysis & { evidence: string[]; source: string; rule: string } };
 type Snapshot = { as_of: string; quotes: Quote[]; analysis: Analysis; analyses?: Record<string, Analysis>; insights: Insight[];
+  evaluation?: { sample_count: number; closed_count: number; priced_count: number; unpriced_count: number; net_estimate_total: string; limitation: string };
+  current_ideas?: AdvisoryIdea[]; preferences?: { position_budget: string };
+  news?: { sources: { source?: string; status: string }[]; items: { id: string; title: string; source: string; published_at: string; url: string }[] };
+  weekly?: { status: string; reason?: string; last_close?: string; as_of?: string };
+  reported_entries?: { idea_id: string; premium: string; quantity: number }[];
   worker: { status: string; detail?: string; heartbeat_current: boolean; problems?: string[] };
   calendar: { state: string; last_covered_day?: string } };
 type Evidence = { source: string; response_sha256: string; received_at: string;
@@ -36,6 +43,11 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
   const [archiveError, setArchiveError] = useState("");
   const [ready, setReady] = useState(false);
   const [visibleCount, setVisibleCount] = useState(100);
+  const [selectedIdea, setSelectedIdea] = useState<{ id: string; label: string } | null>(null);
+  const [budget, setBudget] = useState("");
+  const [budgetMessage, setBudgetMessage] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
+  const refreshCurrent = useRef<() => void>(() => {});
   const archive = useRef({ cursor: 0, insights: [] as Insight[], savedVersion: "" });
   const active = useRef(true);
   const ownerKey = `bot.${user.uid}`;
@@ -49,7 +61,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       .finally(() => { if (alive) setReady(true); });
     return () => { alive = false; };
   }, [ownerKey]);
-  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 15000); return () => clearInterval(timer); }, []);
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const request = useCallback(async (path: string, method = "GET", signal?: AbortSignal, body?: unknown) => {
     if (!navigator.onLine) throw new Error("Reconnect to continue.");
     if (method === "POST") {
@@ -107,18 +119,75 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       if (alive) timer = setTimeout(load, 15000);
     }
     const wake = () => { clearTimeout(timer); void load(); };
+    refreshCurrent.current = wake;
     window.addEventListener("online", wake); document.addEventListener("visibilitychange", wake);
     void load();
     return () => { alive = false; controller.abort(); clearTimeout(timer); window.removeEventListener("online", wake); document.removeEventListener("visibilitychange", wake); };
   }, [ready, request, refresh, ownerKey]);
+  useEffect(() => {
+    if (!ready) return;
+    const controller = new AbortController();
+    let retry: ReturnType<typeof setTimeout>;
+    async function listen() {
+      if (controller.signal.aborted) return;
+      try {
+        if (!navigator.onLine || document.hidden) throw new Error("paused");
+        const token = await user.getIdToken();
+        const response = await fetch(base + "/api/bot/events", { cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(65000)]) });
+        if (!response.ok || !response.body) throw new Error("stream unavailable");
+        const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+        while (!controller.signal.aborted) {
+          const chunk = await reader.read(); if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          if (buffer.length > 65536) throw new Error("stream invalid");
+          let boundary: number;
+          while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+            const event = buffer.slice(0, boundary); buffer = buffer.slice(boundary + 2);
+            if (event.startsWith("event: update")) refreshCurrent.current();
+          }
+        }
+      } catch { /* Visible 15-second delta polling remains the fallback. */ }
+      if (!controller.signal.aborted) retry = setTimeout(listen, 3000);
+    }
+    void listen();
+    return () => { controller.abort(); clearTimeout(retry); };
+  }, [ready, user]);
   async function leave() {
     active.current = false;
+    try { const registration = await navigator.serviceWorker?.getRegistration();
+      await (await registration?.pushManager.getSubscription())?.unsubscribe();
+    } catch { /* Server sends no private details to a lock screen. */ }
     // Bot conversations use their own owner namespace; legacy project caches remain separate.
     try { for (const key of Object.keys(localStorage)) if (key.includes(ownerKey)) localStorage.removeItem(key); } catch { /* Sign-out still works when storage is unavailable. */ }
     try { await clearArchive(ownerKey); } catch { /* Records stay scoped to this signed-in account. */ }
     setData(null); onSignOut();
   }
   function go(value: "chat" | "insights") { location.hash = value; setScreen(value); }
+  async function saveBudget() {
+    try { await request("/api/bot/preferences", "POST", undefined, { position_budget: budget || "0" });
+      setBudgetMessage("Position budget saved. This does not authorize any order."); refreshCurrent.current();
+    } catch { setBudgetMessage("Budget was not saved. Reconnect and enter a valid amount."); }
+  }
+  async function notifications(enable: boolean) {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) throw new Error("unsupported");
+      const registration = await navigator.serviceWorker.ready;
+      if (!enable) {
+        await request("/api/bot/push/disable", "POST", undefined, {});
+        await (await registration.pushManager.getSubscription())?.unsubscribe();
+        setPushMessage("Notifications disabled on all your devices."); return;
+      }
+      if (await Notification.requestPermission() !== "granted") { setPushMessage("Notifications were not allowed. Insights still update while the app is open."); return; }
+      const result = await request("/api/bot/push-key") as { public_key: string };
+      const raw = atob(result.public_key.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - result.public_key.length % 4) % 4));
+      const key = Uint8Array.from(raw, char => char.charCodeAt(0));
+      const subscription = await registration.pushManager.getSubscription() ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      await request("/api/bot/push", "POST", undefined, subscription.toJSON());
+      setPushMessage("Update notifications enabled. Open the app to confirm current conditions; delivery can be delayed by your device.");
+    } catch { setPushMessage("Notifications could not be updated. Use a supported installed PWA and reconnect."); }
+  }
   async function toggleStar(id: string) {
     setStarBusy(id);
     try {
@@ -142,6 +211,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
     </nav><button className="text-button bot-signout" onClick={() => void leave()}>Sign out</button></header>
     <div className="bot-chat" hidden={screen !== "chat"}>
       <Chat request={request} ownerKey={ownerKey} sessionId="main" active={screen === "chat"}
+        context={selectedIdea} onClearContext={() => setSelectedIdea(null)}
         onTitle={() => {}} onMarket={() => go("insights")} />
     </div>
     {screen === "insights" && <main className="bot-insights">
@@ -149,22 +219,42 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
         <button onClick={() => setRefresh(value => value + 1)} disabled={loading}>{loading ? "Refreshing…" : "Refresh saved insights"}</button></div>
       {error && <p role="alert" className="error">{error}{data ? " Previously received observations remain below." : ""}</p>}
       {archiveError && <p role="alert" className="error">{archiveError}</p>}
+      <div className="idea-actions"><button onClick={() => void notifications(true)}>Enable update notifications</button><button onClick={() => void notifications(false)}>Disable all notifications</button></div>
+      {pushMessage && <p role="status">{pushMessage}</p>}
       <p className="note">Received insights stay on this device until you sign out or clear site data. Star important ones for server retention (up to 200). Unstarred server records expire after seven days or 1,000 records. Catch-up beyond that window is not guaranteed.</p>
       {!data && loading && <p role="status">Loading your saved market observations…</p>}
       {data && <>
+        <form className="bot-budget" onSubmit={event => { event.preventDefault(); void saveBudget(); }}>
+          <label>Maximum premium allocation per position (INR)<input type="number" min="0" max="10000000" step="0.01" inputMode="decimal" value={budget} placeholder={data.preferences?.position_budget === "0" ? "Not set" : data.preferences?.position_budget} onChange={event => setBudget(event.target.value)} /></label>
+          <button>Save position budget</button><p className="note">Used for one-lot affordability; your loss reference remains 5% of the position premium. No account balance is assumed.</p>
+          {budgetMessage && <p role="status">{budgetMessage}</p>}</form>
         <aside className="bot-status"><strong>Collection: {words(data.worker.status)}</strong><span>{data.worker.heartbeat_current && clock - Date.parse(data.as_of) <= 180000 ? "Worker heartbeat received" : "Worker heartbeat unavailable or old"} · Last received market calendar: {data.calendar.state}</span>
           {data.worker.detail && <p>{data.worker.detail}</p>}<p>Server snapshot generated {stamp(data.as_of)}. Source times are shown separately. Refresh reads saved records.</p>
           {data.worker.problems?.length ? <p>Some source reads failed. Retained values may be historical.</p> : null}</aside>
         <section className="bot-quotes" aria-label="Index observations">{data.quotes.map(row => <article key={row.underlying}><div className="bot-row"><h2>{row.underlying}</h2><span>{words(row.status === "current" && row.quote && clock - Date.parse(row.quote.timestamp) > 90000 ? "historical" : row.status)}</span></div>
           <p className="bot-price">{row.quote ? Number(row.quote.last_price).toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "Unavailable"}</p><p>Observed {stamp(row.quote?.timestamp)}</p></article>)}</section>
+        <section aria-labelledby="active-ideas"><h2 id="active-ideas">Decision ideas</h2>
+          <p className="note">Experimental conditional research. Watch means wait; conditions met still requires your decision and fresh pricing.</p>
+          {!data.current_ideas?.length && <p>No supported trade idea yet. The system will not force a call or put when required evidence is missing.</p>}
+          {data.current_ideas?.map(idea => <IdeaCard key={idea.id} idea={idea} clock={clock} starred={starred.includes(idea.id)}
+            onStar={() => void toggleStar(idea.id)} onDiscuss={() => { setSelectedIdea({ id: `idea:${idea.id}`, label: `${idea.title} / revision ${idea.revision}` }); go("chat"); }}
+            request={request} onUpdated={() => refreshCurrent.current()} />)}</section>
+        {!!data.reported_entries?.length && <aside className="bot-status"><strong>Your reported entries</strong>{data.reported_entries.map(entry => <p key={entry.idea_id}>{entry.quantity} units at INR {entry.premium} per unit. User-reported; not broker-verified or automatically protected.</p>)}</aside>}
+        <section className="bot-analysis"><h2>Weekly research</h2><p>{words(data.weekly?.status)}</p><p>{data.weekly?.reason ?? "Waiting for verified daily history."}</p>{data.weekly?.last_close && <p>Verified daily close {data.weekly.last_close} at {stamp(data.weekly.as_of)}</p>}</section>
+        <section className="bot-analysis"><h2>Source events</h2>{data.news?.sources.map((source, index) => <p key={source.source ?? index}>{source.source ?? "Official feed"}: {source.status}</p>)}
+          {!data.news?.items.length && <p>No usable source excerpts received. This does not establish that there is no news.</p>}
+          {data.news?.items.slice(0, 5).map(item => <p key={item.id}><a href={item.url} target="_blank" rel="noreferrer">{item.title}</a><br /><small>{item.source} / published {stamp(item.published_at)}</small></p>)}</section>
         {Object.entries(data.analyses ?? { SENSEX: data.analysis }).map(([name, analysis]) => <section className="bot-analysis" key={name}><h2>{name} candle context <small>{words(analysis.status === "current" && analysis.as_of && clock - Date.parse(analysis.as_of) > 180000 ? "historical" : analysis.status)}</small></h2>
           {analysis.last_close && <p>Last received completed close: {analysis.last_close} at {stamp(analysis.as_of)}</p>}
           {analysis.reason && <p>{analysis.reason}</p>}
           {analysis.trend ? <dl><div><dt>Trend</dt><dd>{words(analysis.trend)}</dd></div><div><dt>Opening range</dt><dd>{words(analysis.range_state)}</dd></div></dl> : !analysis.reason && <p>Waiting for validated completed candles.</p>}
           {!!analysis.missing_minutes?.length && <p className="note">{analysis.missing_minutes.length} missing completed minutes. Scans withheld while coverage is incomplete.</p>}
-          <p className="note">Completed-bar context only. Option contracts, live news and weekly history are not yet validated.</p></section>)}
+          <p className="note">Completed-bar context. Independent windows can remain useful when another window has gaps.</p></section>)}
+        {data.evaluation && <section><h2>Prospective record</h2><p>{data.evaluation.sample_count} hypothetical ideas ? {data.evaluation.closed_count} closed ? {data.evaluation.unpriced_count} without a verified exit price.</p><p>Net estimate across {data.evaluation.priced_count} priced outcomes: INR {data.evaluation.net_estimate_total}. No trading edge established.</p><p className="note">{data.evaluation.limitation}</p></section>}
         <section aria-labelledby="changes"><h2 id="changes">Recorded changes</h2>{!data.insights.length && <p>No validated changes have been recorded yet. This does not establish that the market is quiet.</p>}
-          {data.insights.slice(0, visibleCount).map(insight => <article className="bot-insight" key={insight.id}><p className="eyebrow">{stamp(insight.as_of)} · SAVED OBSERVATION</p><h3>{insight.title}</h3><p>{insight.summary}</p><p className="note">{insight.limitation}</p>
+          {data.insights.filter(insight => !data.current_ideas?.some(idea => idea.id === insight.id)).slice(0, visibleCount).map(insight => insight.kind === "idea" ? <IdeaCard key={`archive-${insight.id}`} idea={insight as unknown as AdvisoryIdea} clock={clock}
+            starred={starred.includes(insight.id)} onStar={() => void toggleStar(insight.id)} request={request}
+            onDiscuss={() => { setSelectedIdea({ id: `idea:${insight.id}`, label: insight.title }); go("chat"); }} onUpdated={() => refreshCurrent.current()} /> : <article className="bot-insight" key={insight.id}><p className="eyebrow">{stamp(insight.as_of)} · SAVED OBSERVATION</p><h3>{insight.title}</h3><p>{insight.summary}</p><p className="note">{insight.limitation}</p>
             <button className="text-button" aria-pressed={starred.includes(insight.id)} disabled={!!starBusy} onClick={() => void toggleStar(insight.id)}>{starred.includes(insight.id) ? "Unstar" : "Star for retention"}</button>
             {insight.published_at && <p className="note">Published {stamp(insight.published_at)}</p>}
             <details><summary>Evidence and calculation</summary><p>Close: {insight.facts.last_close} · SMA: {insight.facts.sma20 ?? "Unavailable"}</p><p>Range: {insight.facts.range_low}–{insight.facts.range_high}</p><p>{insight.facts.source} · {insight.facts.rule}</p><p>{insight.facts.evidence.length} source candle references retained.</p>

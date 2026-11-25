@@ -5,36 +5,50 @@ Workspace: `D:\s\swan-bot`. Git branch: `bot/read-only`. Original checkpoint:
 
 ## What runs
 
-- `services.bot.app:app`: authenticated saved insights, evidence drill-down and chat.
-  Registers no legacy API routes and never opens the PostgreSQL trading ledger.
-- `services.bot.worker`: one Linux process, shared-volume singleton lock, at most
-  one collection pass per minute at second 03 with failure backoff. No execution watchdog,
-  strategy qualification, order handling or continuous model agents.
-- `apps/web`: same Firebase setup and chat component; Chat and Insights are the only
-  product destinations. Bot chat uses a separate owner namespace on the device.
-- Independent SQLite WAL database: no trading migrations or copied trading records.
-  Latest market context, up to seven days/1,000 unstarred insights and starred insights
-  (200/account) with source snapshots persist.
-  Insight lists omit the full snapshot; authenticated drill-down loads it on demand.
+- Authenticated advisory API behind existing Caddy and one singleton event worker.
+  Legacy API/worker/PostgreSQL stay stopped; no order routers or execution tools.
+- Two index references and at most eight selected SENSEX option contracts. History
+  bootstraps once/session; targeted ten-minute repair is globally limited to one
+  per minute with per-window backoff. Opening 15/recent 20 bars are independent.
+- Versioned experimental range-retest/failed-break intraday ideas and separate
+  five-completed-session weekly structure. Whole-lot quote/depth/noise/cost and
+  user-budget checks apply. Unknown depth units prevent eligibility.
+- Triggered compact AI research, shared one-call lease, persistent daily 30,000-token
+  reservation ceiling or configured lower allowance. No tick/minute model polling.
+- Official RSS excerpts every five minutes and verified daily history for weekly
+  research; missing sources remain explicitly unavailable, not invented news.
+- SQLite WAL, atomic revisions/feed/outbox, source snapshots, twenty revisions/idea,
+  seven-day/1,000 unstarred buffer, 200 stars/account, 2,000 hypothetical evaluations.
+- Chat and Insights only; SSE/poll fallback, private local archive, optional browser
+  push with 60-second TTL. Generic lock-screen updates require fresh app validation.
+- Verified calendar through 31 December 2026; renew before 2027.
 
-Current implementation is a first slice: NIFTY opening fifteen-minute range and
-twenty-close SMA conditions, plus supported NIFTY/SENSEX quote observations.
-Incomplete, stale, future or gapped bars cannot yield a current scan. Individual
-quote and candle reads fail independently and old observations retain source times.
-Index collection stops at 15:30 IST within verified exchange-calendar coverage.
-Unknown days sleep instead of assuming weekday sessions. Existing calendar coverage
-must be renewed after 30 November 2026; no new dates were guessed.
+## Backups and recovery
 
-Chat has local concept definitions, deterministic numerical facts and optional
-bounded OpenAI interpretation when current candle evidence exists. Model output is
-validated for schema and allowed evidence IDs; digit-bearing model narrative is
-rejected so displayed numerical facts come from code. This is not a semantic proof
-of all prose claims or written-out quantities.
-Qualitative correctness still needs actual output review; citations do not prove it.
-The model is taken from the existing `config/agents.json`, with a global conservative
-30,000-token daily reservation ceiling or the existing allowance, whichever is lower.
-Reservations survive restarts; failed requests are not refunded or automatically
-retried. One chat model call may run at a time. No proactive model explanation loop.
+Worker creates a consistent local SQLite backup daily. Pre-engine snapshot:
+`/app/bot-data/bot-before-decision-engine.sqlite3`. Off-host command:
+
+```powershell
+.venv/Scripts/python.exe scripts/backup_bot.py --key 'PATH/TO/EXISTING-SSH.key'
+```
+
+SSH fetches a consistent SQLite copy, encrypts with AES-GCM and an HKDF key derived
+from the existing SSH private key plus random salt, decrypts a temporary copy and
+checks SQLite integrity before retaining seven `.local/backups/*.enc` files.
+Keep that SSH key: losing it loses these backups. No plaintext copy is retained.
+Format: `SWANBACKUP1`, 32-byte salt, 12-byte nonce, AES-GCM ciphertext; HKDF-SHA256
+info `swan-bot-offhost-backup-v1`, header as AAD. Windows task `SWAN Bot Encrypted
+Backup` runs daily 00:20 local, StartWhenAvailable. This machine must be available.
+First decrypt/integrity exercise passed; future scheduled operation and a complete
+replacement-host application restore still require acceptance.
+
+## Acceptance
+
+Hosted health=200, private unauthenticated insights=401, trading arm=404, worker
+heartbeat and broker-login timer active. At rollout markets were closed, RSS had
+no usable current entries, and weekly daily history was incomplete. No eligible
+idea, useful model answer, live latency or trading edge was claimed. See D34 for
+remaining signed-in/offline/push, provider, model and prospective outcome work.
 
 ## Local use
 

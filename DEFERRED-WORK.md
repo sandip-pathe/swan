@@ -2,6 +2,37 @@
 
 ## D34 - Slim read-only market bot scope and acceptance
 
+25 November build: implemented and deployed the decision-assistant API and worker;
+see leading RESUME.md. Earlier paragraphs below are historical. D34 stays OPEN.
+Versioned ideas/revisions/outbox, bounded streaming/dependency windows, experimental
+intraday and weekly rules, option/cost/noise checks, triggered AI, RSS, two-screen
+UI, SSE/local archive, opt-in push and hypothetical outcomes now exist. Consistent
+SQLite backup and encrypted off-host decrypt/integrity exercise passed; daily
+Windows backup task Ready. Static builds are not actual-market acceptance.
+
+Remaining closure requirements:
+- Open-session stream/option identity/authoritative depth-unit evidence (D03);
+  unknown units still BLOCK eligibility. Real latency/resource/reconnect/repair,
+  correction/restart/queue and source-outage acceptance remain open.
+- Actual model usefulness/grounding/adversarial and token-cost acceptance. No real
+  model request was made in this build. No prospective edge or win probability
+  established; evaluate frozen rules using priced forward outcomes.
+- Weekly daily source coverage was incomplete; accept five verified sessions,
+  holidays, contract lifetime and point-in-time behavior on actual data.
+- RSS had RBI empty and BSE unavailable: usable current source coverage/permissions
+  and relevance/timeliness still need acceptance. Full report ingestion is not built.
+- User deploys Vercel branch; signed-in mobile/desktop, offline expiry/catch-up and
+  actual push delivery remain unverified. No closed-app timing guarantee.
+- Manual entry reporting exists. Manual exit/actual-cost capture and per-reported-
+  fill monitoring/alerts are not implemented. Generic idea invalidation push does
+  not monitor every user's entry price or enforce a 5% loss cap.
+- Observe future scheduled off-host backups and full replacement-host restore;
+  decrypt/SQLite integrity passed, not a complete disaster-recovery drill.
+
+Reason: markets closed and source evidence incomplete. Preserve no-order boundaries
+and existing deployment settings; do not close gaps with invented data or fixtures.
+
+
 25 November design review: [market-decision-assistant.md](./docs/designs/market-decision-assistant.md)
 records the proposed architecture, two-screen product contract, conditional idea
 lifecycle, dependency-local gap handling, event-driven bounded processing, compact

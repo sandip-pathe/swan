@@ -30,4 +30,18 @@
 .bot-insight h3 { margin:10px 0; font-size:21px; }
 .bot-insight details { overflow-wrap:anywhere; }
 .bot-app button:focus-visible,.bot-app summary:focus-visible { outline:3px solid #2458d3; outline-offset:3px; }
+.idea-conditions { display:grid; gap:16px; }
+.idea-conditions dd,.idea-economics dd { margin:6px 0 0; }
+.idea-conditions dt,.idea-economics dt { color:var(--muted); font-size:13px; }
+.idea-economics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; }
+.idea-economics dd { font-variant-numeric:tabular-nums; }
+.idea-state { text-transform:capitalize; font-size:13px; padding:6px 10px; background:var(--soft); border-radius:6px; }
+.idea-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+.idea-reasons { padding-left:20px; color:var(--muted); }
+.idea-card details { margin:16px 0; }
+.idea-report,.bot-budget { display:flex; flex-wrap:wrap; gap:12px; align-items:end; padding:18px; background:var(--soft); border-radius:10px; margin:20px 0; }
+.idea-report label,.bot-budget label { display:grid; gap:8px; font-size:14px; }
+.idea-report input,.bot-budget input { max-width:100%; padding:10px; min-height:44px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:inherit; }
+.bot-budget p,.idea-report p { flex-basis:100%; margin:0; }
+.idea-card small { color:var(--muted); }
 @media(max-width:640px) { .bot-header { gap:8px; padding:8px 12px; } .bot-header .brand-wordmark { display:none; } .swan-app .bot-chat .live-chat { padding:0 16px 12px; } .swan-app .bot-insights { padding:24px 16px 64px; } .bot-heading { align-items:flex-start; flex-direction:column; } .bot-quotes { grid-template-columns:1fr; gap:0; } .bot-heading h1 { font-size:30px; } }

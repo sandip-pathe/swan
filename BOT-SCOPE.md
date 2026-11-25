@@ -1,3 +1,10 @@
+## Build status: 25 November 2026
+
+Conditional decision-assistant code is on `bot/read-only` and Oracle. The leading
+RESUME.md checkpoint distinguishes implementation from observed source failures.
+User deploys Vercel. D34 remains open for actual-market, model-quality, device and
+outcome acceptance; no orders are placed by this bot.
+
 Current target design: [AI trading decision assistant](./docs/designs/market-decision-assistant.md),
 25 November CEO review proposal. It specifies how to deliver the direction below;
 it does not describe currently deployed capability. See RESUME.md for actual state.

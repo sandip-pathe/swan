@@ -185,9 +185,7 @@ def decode_quote(
 
 def decode_index_reference(
     packet: bytes,
-    indexes: dict[
-        tuple[int, str], tuple[Literal["NIFTY", "SENSEX"], Literal["NSE", "BSE"]]
-    ],
+    indexes: dict[tuple[int, str], tuple[Literal["NIFTY", "SENSEX"], Literal["NSE", "BSE"]]],
     received_at: datetime,
 ) -> IndexReference | None:
     """Decode the provider's 51-byte LTP packet for configured index tokens."""
@@ -222,10 +220,12 @@ class AngelOneStream:
         client: AngelOneClient,
         cache: QuoteCache,
         on_observation: Callable[[Quote], None] | None = None,
+        on_reference: Callable[[IndexReference], None] | None = None,
     ):
         self.client = client
         self.cache = cache
         self.on_observation = on_observation
+        self.on_reference = on_reference
 
     async def run(
         self, instruments: list[Instrument], on_problem: Callable[[str], Awaitable[None]]
@@ -279,9 +279,25 @@ class AngelOneStream:
                 ) as websocket:
                     stream_id = uuid4()
                     if tokens:
-                        await websocket.send(json.dumps({"correlationID": "swanquote1", "action": 1, "params": {"mode": 3, "tokenList": tokens}}))
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "correlationID": "swanquote1",
+                                    "action": 1,
+                                    "params": {"mode": 3, "tokenList": tokens},
+                                }
+                            )
+                        )
                     if index_tokens:
-                        await websocket.send(json.dumps({"correlationID": "swanindex1", "action": 1, "params": {"mode": 1, "tokenList": index_tokens}}))
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "correlationID": "swanindex1",
+                                    "action": 1,
+                                    "params": {"mode": 1, "tokenList": index_tokens},
+                                }
+                            )
+                        )
                     self.cache.connected = True
                     self.cache.problem = None
 
@@ -304,6 +320,11 @@ class AngelOneStream:
                             reference = decode_index_reference(packet, index_lookup, received_at)
                             if reference:
                                 self.cache.update_reference(reference)
+                                if (
+                                    self.on_reference
+                                    and self.cache.references.get(reference.underlying) == reference
+                                ):
+                                    self.on_reference(reference)
                                 failures = 0
                                 continue
                             quote = decode_quote(packet, lookup, received_at, stream_id)

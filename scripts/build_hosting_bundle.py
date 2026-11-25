@@ -19,6 +19,7 @@ def main() -> None:
             "agents.json",
             "exchange-calendar.json",
             "news-sources.json",
+            "bot-sources.json",
             "paper-execution.json",
         )
     )

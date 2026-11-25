@@ -39,3 +39,27 @@ self.addEventListener("fetch", event => {
   }
   if (ASSETS.includes(url.pathname) && !url.search) event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });
+self.addEventListener("push", event => {
+  event.waitUntil((async () => {
+    let value;
+    try { value = event.data.json(); } catch { return; }
+    const age = Date.now() - Date.parse(value.published_at);
+    if (!Number.isFinite(age) || age < -30000 || age > 60000) return;
+    await self.registration.showNotification("SWAN idea updated", {
+      body: "Open Insights for fresh conditions and source times.", icon: "/icon-192.png",
+      tag: "swan-idea-" + String(value.idea_id).slice(0, 64), data: { url: "/#insights" },
+    });
+  })());
+});
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin) {
+        await client.navigate("/#insights"); await client.focus(); return;
+      }
+    }
+    await self.clients.openWindow("/#insights");
+  })());
+});
