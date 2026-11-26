@@ -131,7 +131,7 @@ textarea {
 .swan-app
   button:not(.text-button):not(.secondary):not(.chat-suggestion):not(
     .app-profile
-  ):not(.app-brand-button):not(.saved-contract-open) {
+  ):not(.app-brand-button):not(.saved-contract-open):not(.chat-neutral-button) {
   background: var(--action);
   color: white;
 }

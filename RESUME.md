@@ -1,5 +1,13 @@
 # SWAN implementation checkpoint
 
+## Neutral bot conversation sidebar: 26 November 2026
+
+The bot chat sidebar's New conversation, active thread and close controls no longer
+inherit the global primary-blue button rule. They use transparent backgrounds and
+a subtle neutral-gray active/hover surface in both themes. The PWA shell cache is
+bumped to v7 so installed clients receive the corrected styles. Frontend typecheck
+and production build pass. Signed-in visual acceptance remains open under D30.
+
 ## Multiple chat conversations in bot UI: 26 November 2026
 
 The bot screen now uses the existing owner-scoped local conversation index,
