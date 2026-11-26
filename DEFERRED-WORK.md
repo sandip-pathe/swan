@@ -2,6 +2,19 @@
 
 ## D35 - Publish and verify bounded chat workflow
 
+26 November 2026 resolution update: Oracle bot API and worker were deployed from
+the tested allowlisted bundle after an encrypted, integrity-checked SQLite backup.
+Public API health is connected; the new trace route returns 401 without auth; API
+health is healthy and worker is running. Live model calls on the VM returned a
+direct greeting and a saved-market/session answer. The signed-in Vercel UI also
+returned `Hello! How can I help?` on retry of the preserved failed greeting and a
+full saved-market SENSEX answer to a fresh question. This resolves the release
+mismatch and the user-visible chat failure. Remaining D35 acceptance: verify an
+authenticated owner-scoped run trace, monitor for recurring provider/lease errors
+under normal use, and confirm backend deployment reproducibility. Do not conflate
+these checks with D34 real-market/strategy acceptance. No broker login or live
+market check was performed and trading permission gates were not changed.
+
 26 November 2026 follow-up: the user's latest signed-in screenshot shows
 `DAILY_BUDGET_REACHED` for chat, although current `bot-r` chat explicitly bypasses
 the Insight budget. Public hosted `/health` is healthy, but the hosted

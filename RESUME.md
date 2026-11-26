@@ -1,5 +1,24 @@
 # SWAN implementation checkpoint
 
+## Hosted chat restored: 26 November 2026
+
+The Oracle SSH key was found in the user-supplied local keys directory. An
+encrypted, integrity-checked backup of the bot SQLite volume was saved locally
+before deploying the allowlisted source bundle (SHA-256
+`877f66ddcc8982a003dddb9daf23a973b7885f9284023eb1d0028b8a15ff7542`).
+The bot API and bot worker images were rebuilt/recreated in the existing isolated
+Compose project; data volumes and the main trading service were preserved. Public
+health reports connected, the new chat-run route returns 401 when unauthenticated,
+the API container is healthy and the worker is running. Direct live-model smoke
+checks returned a no-tool `Hello! How can I help?` and a tool-routed answer using
+saved market/session context. In the signed-in Vercel app, retrying the previously
+failed `hello` returned `Hello! How can I help?`; a new SENSEX saved-observations
+question also returned a full evidence-based answer. The former answer-limit error
+disappeared on retry, confirming chat worked despite the previously exhausted
+background Insight allowance. Older failed replies remain historical local chat
+records. Broker login/live-market acceptance and trading permission gates were
+untouched. D35 records remaining trace/operational acceptance.
+
 ## Hosted chat release mismatch: 26 November 2026
 
 The user's latest signed-in screen still shows `DAILY_BUDGET_REACHED` in chat.
