@@ -522,6 +522,12 @@ older workspace's concurrent in-flight threads. Typecheck/build pass; signed-in
 visual and device-storage acceptance remain open. Server persistence and
 cross-device restoration remain open under this ID.
 
+Sidebar follow-up: aligned the bot list with the older workspace's plain-text,
+full-width rows and subdued active state; added desktop collapse/reopen and a
+touch-sized mobile drawer with keyboard focus containment. Frontend typecheck/build
+pass. Browser access was unavailable, so signed-in desktop/phone visual review
+remains open alongside cross-device persistence.
+
 
 ## D28 - Frontend workspace migration and hosted acceptance
 

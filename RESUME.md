@@ -14,6 +14,13 @@ build pass. Conversations remain device-local; D30 tracks durable cross-device
 history and this UI change does not require a backend deployment. Signed-in
 desktop/mobile visual acceptance remains open.
 
+Sidebar refinement: the older workspace already uses the same `Chat` transcript
+and composer, so the bot shell now borrows its full-width, plain-text conversation
+rows and quiet active state. Desktop can close and reopen the sidebar; the mobile
+drawer keeps touch-sized controls, Escape/backdrop dismissal and keyboard focus
+inside the open drawer. Typecheck and production build pass. The computer browser
+surface was unavailable during this pass, so signed-in visual acceptance stays open.
+
 ## Bounded chat workflow and diagnostics: 26 November 2026
 
 Supersedes the earlier global AI lease description below. Chat and Insight

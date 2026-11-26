@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUpRight, Bookmark, Clock3, LogOut, MessageSquareText, PanelLeft, Plus, RefreshCw, Settings2, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Bookmark, Clock3, LogOut, PanelLeft, Plus, RefreshCw, Settings2, X } from "lucide-react";
 import type { User } from "firebase/auth";
 import Chat from "./chat";
 import Brand from "./brand";
@@ -58,13 +58,26 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
   const ownerKey = `bot.${user.uid}`;
   const chats = useChatSessions(ownerKey);
   const [chatListOpen, setChatListOpen] = useState(false);
+  const [chatSidebarClosed, setChatSidebarClosed] = useState(false);
   const chatListTrigger = useRef<HTMLButtonElement>(null);
   const chatListClose = useRef<HTMLButtonElement>(null);
+  const chatListElement = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const narrow = window.matchMedia("(max-width:760px)");
+    const resetDrawer = () => { if (!narrow.matches) setChatListOpen(false); };
+    narrow.addEventListener("change", resetDrawer);
+    return () => narrow.removeEventListener("change", resetDrawer);
+  }, []);
   useEffect(() => {
     if (!chatListOpen) return;
     const frame = requestAnimationFrame(() => chatListClose.current?.focus());
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") { setChatListOpen(false); chatListTrigger.current?.focus(); }
+      if (event.key !== "Tab") return;
+      const buttons = [...(chatListElement.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])") ?? [])];
+      if (!buttons.length) return;
+      if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons[buttons.length - 1].focus(); }
+      else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) { event.preventDefault(); buttons[0].focus(); }
     };
     window.addEventListener("keydown", close);
     return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", close); };
@@ -258,16 +271,15 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       <button className="text-button" aria-current={screen === "chat" ? "page" : undefined} onClick={() => go("chat")}>Chat</button>
       <button className="text-button" aria-current={screen === "insights" ? "page" : undefined} onClick={() => go("insights")}>Insights</button>
     </nav><button className="text-button bot-signout" aria-label="Sign out" title="Sign out" onClick={() => void leave()}><LogOut size={19} aria-hidden="true" /></button></header>
-    <div className="bot-chat" hidden={screen !== "chat"}>
-      {chatListOpen && <button type="button" className="chat-list-backdrop" aria-label="Close conversations" onClick={() => setChatListOpen(false)} />}
-      <aside id="bot-conversations" className={`bot-conversations ${chatListOpen ? "is-open" : ""}`} aria-label="Conversations" role={chatListOpen ? "dialog" : undefined} aria-modal={chatListOpen ? true : undefined}>
-        <div className="chat-list-heading"><strong>Chats</strong><button ref={chatListClose} className="chat-list-close" type="button" aria-label="Close conversations" onClick={() => { setChatListOpen(false); chatListTrigger.current?.focus(); }}><X size={19} aria-hidden="true" /></button></div>
+    <div className={`bot-chat ${chatSidebarClosed ? "is-sidebar-closed" : ""}`} hidden={screen !== "chat"}>
+      {chatListOpen && <button type="button" className="chat-list-backdrop" aria-label="Close conversations" onClick={() => { setChatListOpen(false); requestAnimationFrame(() => chatListTrigger.current?.focus()); }} />}
+      <aside ref={chatListElement} id="bot-conversations" className={`bot-conversations ${chatListOpen ? "is-open" : ""}`} aria-label="Conversations" role={chatListOpen ? "dialog" : undefined} aria-modal={chatListOpen ? true : undefined}>
+        <div className="chat-list-top"><strong>Chats</strong><button ref={chatListClose} className="chat-list-close" type="button" aria-label="Close conversations" onClick={() => { setChatListOpen(false); if (!window.matchMedia("(max-width:760px)").matches) setChatSidebarClosed(true); requestAnimationFrame(() => chatListTrigger.current?.focus()); }}><X size={19} aria-hidden="true" /></button></div>
         <button className="chat-list-new" type="button" onClick={() => { chats.create(); setSelectedIdea(null); setChatListOpen(false); }}><Plus size={18} aria-hidden="true" />New conversation</button>
-        <nav className="chat-list-threads" aria-label="Saved conversations">{[...chats.sessions].sort((a, b) => b.updated - a.updated).map(session => <button key={session.id} type="button" title={session.title} aria-current={chats.activeId === session.id ? "page" : undefined} onClick={() => { chats.select(session.id); setSelectedIdea(null); setChatListOpen(false); }}><MessageSquareText size={16} aria-hidden="true" /><span>{session.title}</span></button>)}</nav>
-        <p className="chat-list-note">Saved on this device</p>
+        <nav className="chat-list-threads" aria-label="Saved conversations">{[...chats.sessions].sort((a, b) => b.updated - a.updated).map(session => <button key={session.id} type="button" title={session.title} aria-current={chats.activeId === session.id ? "page" : undefined} onClick={() => { chats.select(session.id); setSelectedIdea(null); setChatListOpen(false); }}><span>{session.title}</span></button>)}</nav>
       </aside>
       <div className="bot-chat-main">
-        <div className="chat-mobile-toolbar"><button ref={chatListTrigger} type="button" aria-label="Open conversations" aria-controls="bot-conversations" aria-expanded={chatListOpen} onClick={() => setChatListOpen(true)}><PanelLeft size={20} aria-hidden="true" /></button><span>{chats.sessions.find(session => session.id === chats.activeId)?.title ?? "Chat"}</span><button type="button" aria-label="New conversation" onClick={() => { chats.create(); setSelectedIdea(null); }}><Plus size={20} aria-hidden="true" /></button></div>
+        <div className="chat-side-controls"><button ref={chatListTrigger} type="button" aria-label="Open conversations" aria-controls="bot-conversations" aria-expanded={chatListOpen} onClick={() => { if (window.matchMedia("(max-width:760px)").matches) setChatListOpen(true); else { setChatListOpen(false); setChatSidebarClosed(false); } }}><PanelLeft size={20} aria-hidden="true" /></button><button type="button" aria-label="New conversation" onClick={() => { chats.create(); setSelectedIdea(null); }}><Plus size={20} aria-hidden="true" /></button></div>
         {chats.ready && chats.activeId && <Chat key={chats.activeId} request={request} ownerKey={ownerKey} sessionId={chats.activeId} active={screen === "chat"}
           context={selectedIdea} onClearContext={() => setSelectedIdea(null)}
           onTitle={text => chats.title(chats.activeId, text)} onMarket={() => go("insights")} />}

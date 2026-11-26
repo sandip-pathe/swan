@@ -173,29 +173,38 @@
   .bot-chat .chat-avatar .swan-brand svg{width:21px;height:21px;}
 }
 
-/* Separate local conversations, with the same transcript and composer. */
+/* Chat list follows the older workspace's full-width, quiet rows. */
 .bot-chat{display:flex;position:relative;}
-.bot-chat-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
+.bot-chat-main{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .bot-chat-main>.live-chat{flex:1;min-height:0;}
-.bot-conversations{width:252px;flex:none;display:flex;flex-direction:column;min-height:0;padding:20px 10px 16px 14px;background:var(--bg);border-right:1px solid var(--border);}
-.chat-list-heading{display:flex;align-items:center;justify-content:space-between;min-height:36px;padding:0 12px;margin-bottom:10px;font-size:13px;}
-.chat-list-close,.chat-mobile-toolbar{display:none;}
-.swan-app .bot-chat .chat-list-new{width:100%;display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;margin:0 0 18px;text-align:left;background:transparent;border:0;border-radius:8px;color:var(--ink);font-size:13px;font-weight:500;box-shadow:none;}
-.swan-app .bot-chat .chat-list-new:hover{background:var(--soft);}
-.chat-list-threads{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.swan-app .bot-chat .chat-list-threads button{width:100%;display:flex;align-items:center;gap:10px;min-height:40px;padding:8px 12px;background:transparent;border:0;border-radius:7px;box-shadow:none;text-align:left;color:var(--muted);font-size:13px;font-weight:400;}
-.chat-list-threads button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.swan-app .bot-chat .chat-list-threads button[aria-current=page]{background:var(--soft);color:var(--ink);}
-.swan-app .bot-chat .chat-list-threads button:hover{color:var(--ink);background:var(--soft);}
-.chat-list-note{padding:16px 12px 0;margin:auto 0 0;color:var(--muted);font-size:11px;}
-@media(min-width:761px){.chat-list-backdrop{display:none;}}
+.bot-conversations{width:260px;flex:none;display:flex;flex-direction:column;min-height:0;padding:8px 0 16px;background:var(--bg);border-right:1px solid var(--border);}
+.chat-list-top{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 8px 0 22px;}
+.chat-list-top strong{color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;}
+.swan-app .bot-chat .chat-list-close{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:var(--muted);opacity:.25;box-shadow:none;}
+.bot-conversations:hover .chat-list-close,.bot-conversations:focus-within .chat-list-close{opacity:.7;}
+.swan-app .bot-chat .chat-list-close:hover{opacity:1;}
+.swan-app .bot-chat .chat-list-new{width:100%;display:flex;align-items:center;gap:12px;min-height:48px;padding:10px 22px;margin:4px 0 24px;text-align:left;background:transparent;border:0;border-radius:0;color:var(--ink);font-size:14px;font-weight:500;box-shadow:none;}
+.swan-app .bot-chat .chat-list-new:hover{background:color-mix(in srgb,var(--ink) 4%,transparent);}
+.chat-list-threads{min-height:0;overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;}
+.swan-app .bot-chat .chat-list-threads button{width:100%;display:block;min-height:44px;padding:10px 22px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:left;color:var(--ink);font-size:14px;font-weight:400;}
+.chat-list-threads button span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.swan-app .bot-chat .chat-list-threads button[aria-current=page]{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);}
+.swan-app .bot-chat .chat-list-threads button:hover{background:color-mix(in srgb,var(--ink) 4%,transparent);}
+.chat-side-controls{position:absolute;z-index:10;inset:8px 12px auto;display:none;justify-content:space-between;pointer-events:none;}
+.swan-app .bot-chat .chat-side-controls button{display:grid;place-items:center;width:44px;height:44px;padding:0;background:transparent;border:0;border-radius:8px;color:var(--muted);box-shadow:none;pointer-events:auto;}
+.swan-app .bot-chat .chat-side-controls button:hover{background:var(--soft);color:var(--ink);}
+@media(min-width:761px){
+  .chat-list-backdrop{display:none;}
+  .bot-chat.is-sidebar-closed .bot-conversations{display:none;}
+  .bot-chat.is-sidebar-closed .chat-side-controls{display:flex;}
+  .bot-chat.is-sidebar-closed .chat-scroll-region{padding-top:64px;}
+}
 @media(max-width:760px){
-  .bot-conversations{position:absolute;inset:0 auto 0 0;z-index:32;width:min(84vw,320px);max-width:100%;padding-top:calc(18px + env(safe-area-inset-top));transform:translateX(-105%);transition:transform .2s ease;box-shadow:14px 0 35px rgba(0,0,0,.14);}
+  .bot-conversations{position:absolute;inset:0 auto 0 0;z-index:32;width:min(84vw,320px);max-width:100%;padding-top:calc(8px + env(safe-area-inset-top));transform:translateX(-105%);transition:transform .2s ease;box-shadow:14px 0 35px rgba(0,0,0,.14);}
   .bot-conversations.is-open{transform:translateX(0);}
   .chat-list-backdrop{position:absolute;inset:0;z-index:31;background:rgba(0,0,0,.35);border:0;border-radius:0;}
-  .swan-app .bot-chat .chat-list-close{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;background:transparent;color:var(--muted);box-shadow:none;}
-  .chat-mobile-toolbar{display:flex;align-items:center;gap:8px;height:48px;min-height:48px;padding:0 12px;color:var(--muted);}
-  .chat-mobile-toolbar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font-size:12px;}
-  .swan-app .bot-chat .chat-mobile-toolbar button{display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;background:transparent;border:0;color:var(--ink);box-shadow:none;}
+  .chat-side-controls{display:flex;}
+  .bot-chat .chat-scroll-region{padding-top:64px;}
+  .swan-app .bot-chat .chat-list-close{opacity:.7;}
 }
 @media(prefers-reduced-motion:reduce){.bot-conversations{transition:none;}}
