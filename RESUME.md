@@ -14,13 +14,14 @@ and no prompt/answer persistence. Failures return retryable responses with run
 IDs. The bot workflow contract is documented in `services/bot/README.md`.
 `tests/test_bot.py` and `tests/test_agentic_workflow.py`: 21 passed; Ruff and web
 typecheck passed. The test requiring a separate PostgreSQL service was not run
-because no local backend/database was to be started. Commit `6e615027` is pushed
-to `bot-r`. This is a branch push, not a verified deployment: this checkout has
-no linked Vercel project/CLI and no Oracle SSH key or private runtime config, so
-no release was initiated from this checkout. Public frontend returns HTTP 200,
-but its served commit is unverified. API `/health` GET reports database connected;
-signed-in chat acceptance remains open.
-User authorized deployment; completion is blocked by missing deployment access,
+because no local backend/database was to be started. Commit `6e615027` and the
+release checkpoint are pushed to `bot-r` (current HEAD `39802091`). GitHub reports
+both Vercel checks (`swan-web` and `swan`) successful for this commit. This confirms
+the configured deployments completed, but their exact served URLs/render and
+signed-in chat behavior were not checked. Oracle backend was not deployed: this
+checkout has no VM SSH key or private runtime config. Public API `/health` GET
+reports database connected, but that is the existing backend state. User
+authorized deployment; backend release is blocked by missing deployment access,
 not approval. See D35 in `DEFERRED-WORK.md`. Broker login, live-market acceptance
 and trading permission gates remain unchanged.
 
