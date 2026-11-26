@@ -2,6 +2,17 @@
 
 ## D35 - Publish and verify bounded chat workflow
 
+26 November 2026 follow-up: the user's latest signed-in screenshot shows
+`DAILY_BUDGET_REACHED` for chat, although current `bot-r` chat explicitly bypasses
+the Insight budget. Public hosted `/health` is healthy, but the hosted
+`/api/chat/runs/{run_id}` path returns 404 instead of the authentication challenge
+expected from the new workflow. This is concrete evidence that the frontend and
+Oracle backend releases are out of sync; frontend-only Vercel success did not
+restore chat. The UI's misleading "answer limit" copy is being corrected.
+Closure requires deployment access to Oracle, publishing the current bot API and
+worker, then a signed-in greeting, tool-routed question, exhausted-Insight-budget
+chat check and run-trace check. Until then, do not claim chat is fixed.
+
 26 November 2026: implementation and workflow tests are complete and pushed as
 `6e615027` on `bot-r`; release note is at `39802091`. User explicitly authorized
 deploy and push. GitHub reports both configured Vercel checks (`swan-web` and

@@ -1,5 +1,15 @@
 # SWAN implementation checkpoint
 
+## Hosted chat release mismatch: 26 November 2026
+
+The user's latest signed-in screen still shows `DAILY_BUDGET_REACHED` in chat.
+Current `bot-r` code reserves daily AI budget only for background Insights, so
+the hosted Oracle bot is behind the frontend release. Public `/health` reports
+database connected, while `/api/chat/runs/{run_id}` returns 404, consistent with
+the new workflow not being deployed. The frontend copy for that legacy status is
+corrected, but this does not restore chat. D35 records the required Oracle release
+and signed-in verification. Broker/live-market acceptance remains paused.
+
 ## Neutral bot conversation sidebar: 26 November 2026
 
 The bot chat sidebar's New conversation, active thread and close controls no longer

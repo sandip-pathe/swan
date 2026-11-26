@@ -202,7 +202,7 @@ export default function Chat({
           AI_NOT_CONFIGURED: "SWAN’s answer service isn’t configured right now. Your question is saved.",
           AI_PROVIDER_UNAVAILABLE: "SWAN’s answer service is temporarily unavailable. Your question is saved.",
           AI_TIMEOUT: "SWAN took too long to prepare an answer. Your question is saved; try again.",
-          DAILY_BUDGET_REACHED: "SWAN has reached today’s answer limit. Your question is saved.",
+          DAILY_BUDGET_REACHED: "Chat is connected to an older backend that still limits answers. Your question is saved; retry after the backend update.",
           TOOL_EXECUTION_FAILED: "SWAN couldn’t load the research needed for this answer. Your question is saved; retry in a moment.",
           AI_RESPONSE_FAILED: "SWAN couldn’t finish writing this answer. Your question is saved; retry in a moment.",
         };
