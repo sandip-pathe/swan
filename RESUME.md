@@ -14,9 +14,15 @@ and no prompt/answer persistence. Failures return retryable responses with run
 IDs. The bot workflow contract is documented in `services/bot/README.md`.
 `tests/test_bot.py` and `tests/test_agentic_workflow.py`: 21 passed; Ruff and web
 typecheck passed. The test requiring a separate PostgreSQL service was not run
-because no local backend/database was to be started. Changes remain local, not
-deployed; user agreement is required before Oracle deployment. Broker login,
-live-market acceptance and trading permission gates remain unchanged.
+because no local backend/database was to be started. Commit `6e615027` is pushed
+to `bot-r`. This is a branch push, not a verified deployment: this checkout has
+no linked Vercel project/CLI and no Oracle SSH key or private runtime config, so
+no release was initiated from this checkout. Public frontend returns HTTP 200,
+but its served commit is unverified. API `/health` GET reports database connected;
+signed-in chat acceptance remains open.
+User authorized deployment; completion is blocked by missing deployment access,
+not approval. See D35 in `DEFERRED-WORK.md`. Broker login, live-market acceptance
+and trading permission gates remain unchanged.
 
 ## Chat routing and Insight budget separation: 26 November 2026
 

@@ -1,5 +1,21 @@
 # Project status and remaining work
 
+## D35 - Publish and verify bounded chat workflow
+
+26 November 2026: implementation and workflow tests are complete and pushed as
+`6e615027` on `bot-r`. User explicitly authorized deploy and push. Push succeeded;
+this checkout has no linked Vercel project/CLI, and no Oracle SSH key or private
+runtime/deploy configuration. The existing public frontend returns HTTP 200, but
+its served commit is unverified; public API `/health` GET reports database
+connected. No release was initiated from this checkout or signed-in chat test
+claimed.
+Closure: obtain deployment access through the documented Vercel and Oracle paths,
+deploy this exact commit to the intended target, verify frontend build/version and
+API health, then test direct and tool-routed chat, Insight caps, concurrent lease
+behavior, owner-scoped trace access and retry recovery. Keep this operational
+release check separate from D34 real-market/usefulness acceptance. Do not perform
+broker login or live-market checks and do not change trading permission gates.
+
 ## Chat workflow hosted acceptance: pending
 
 Implemented a bounded router → selected read-only saved-context tools → answer
