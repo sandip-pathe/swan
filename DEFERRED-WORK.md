@@ -1,5 +1,19 @@
 # Project status and remaining work
 
+## D36 - Promote PWA startup fix to the opened Vercel URL
+
+26 November 2026: `999e183` on `bot-r` removes the saved-session login flash
+locally. Typecheck/build pass and local production HTML contains the static chat
+frame, not the login form. Both Vercel GitHub statuses succeeded, but a fresh
+server-side GET of `https://swan-web-phi.vercel.app/` still contains the old login
+form and no new boot frame. Thus the URL the user opens has not received this
+frontend release; successful statuses were insufficient to prove promotion.
+Closure: identify the Vercel project/deployment assigned to that alias, promote
+`999e183` or a later tested bot release to that production URL without changing
+the main trading app's branch, then verify the served HTML and signed-in PWA
+startup on desktop and mobile. This is a frontend release issue, not an Oracle
+backend or broker acceptance task.
+
 ## D35 - Publish and verify bounded chat workflow
 
 26 November 2026 resolution update: Oracle bot API and worker were deployed from

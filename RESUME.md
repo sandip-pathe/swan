@@ -9,7 +9,10 @@ form appears only after Firebase confirms there is no eligible account. A fresh
 successful sign-in sets the user immediately from its returned credential. No
 client hint is treated as authentication and no backend/trading gate changed.
 The PWA shell cache is bumped to v8. Frontend typecheck/build pass; local
-production HTML contains the boot frame and no login/password form.
+production HTML contains the boot frame and no login/password form. Both Vercel
+checks passed for `999e183`, but a fresh GET of the opened
+`swan-web-phi.vercel.app` URL still serves the old login markup. This fix is not
+accepted as live; D36 tracks production alias promotion and device acceptance.
 
 ## Hosted chat restored: 26 November 2026
 
