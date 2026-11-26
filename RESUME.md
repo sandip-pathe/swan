@@ -9,6 +9,9 @@ database connected, while `/api/chat/runs/{run_id}` returns 404, consistent with
 the new workflow not being deployed. The frontend copy for that legacy status is
 corrected, but this does not restore chat. D35 records the required Oracle release
 and signed-in verification. Broker/live-market acceptance remains paused.
+Follow-up: 21 bot/workflow tests and Ruff pass, and the allowlisted Oracle source
+bundle is prepared. Direct SSH access to the VM failed with `Permission denied
+(publickey)`; the checkout has no usable deployment key. No server change was made.
 
 ## Neutral bot conversation sidebar: 26 November 2026
 

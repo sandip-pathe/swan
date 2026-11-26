@@ -12,6 +12,14 @@ restore chat. The UI's misleading "answer limit" copy is being corrected.
 Closure requires deployment access to Oracle, publishing the current bot API and
 worker, then a signed-in greeting, tool-routed question, exhausted-Insight-budget
 chat check and run-trace check. Until then, do not claim chat is fixed.
+The current release was rechecked: 21 bot/workflow tests and Ruff pass, and an
+allowlisted 186-file source bundle was built at
+`.local/release/swan-oracle-source.tar.gz` (SHA-256
+`877f66ddcc8982a003dddb9daf23a973b7885f9284023eb1d0028b8a15ff7542`).
+An SSH attempt to `ubuntu@137.23.62.124` with available credentials returned
+`Permission denied (publickey)`; no VM files or services were changed. Closure
+requires the VM's private key to be made available locally, or equivalent deploy
+access. Do not paste the private key into chat.
 
 26 November 2026: implementation and workflow tests are complete and pushed as
 `6e615027` on `bot-r`; release note is at `39802091`. User explicitly authorized
