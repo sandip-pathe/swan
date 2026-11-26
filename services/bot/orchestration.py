@@ -1,7 +1,9 @@
 """Plan -> retrieve selected saved insights -> answer. No upstream data collection."""
 
 import asyncio
+import logging
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from fastapi import HTTPException
 
@@ -10,6 +12,21 @@ from services.bot.session import market_context
 from services.bot.store import Store
 from services.market.calendar import SessionCalendar
 from services.market.settings import MarketSettings, ProviderError
+
+logger = logging.getLogger(__name__)
+
+
+def failed_response(run_id: str, status: str) -> dict:
+    return {
+        "answer": "SWAN couldn't finish this answer. Your question is saved; you can retry.",
+        "as_of": datetime.now(UTC).isoformat(),
+        "sources": [],
+        "interpretation_status": status,
+        "routing_status": status,
+        "run_id": run_id,
+        "actions_taken": [],
+        "order_created": False,
+    }
 
 
 def retrieve(store: Store, plan: ChatPlan, now: datetime, owner: str, idea_id: str | None) -> dict:
@@ -146,8 +163,9 @@ async def respond(
     from services.bot.chat import answer
     from services.bot.research import synthesize
 
-    now = datetime.now(UTC)
+    run_id = str(uuid4())
     history = [{"role": turn["role"], "content": turn["content"][:1000]} for turn in history[-4:]]
+    store.record_chat_event(run_id, owner, "started", "RUNNING")
     plan, status = await synthesize(
         store,
         {
@@ -156,18 +174,30 @@ async def respond(
             "history": history,
             "has_selected_insight": bool(idea_id),
         },
+        insight_call_limit=None,
+        wait_for_lease=2,
+        operation_timeout_seconds=22,
     )
     if plan is None:
-        return {
-            "answer": "I couldn't prepare the context for this answer. Please try again.",
-            "as_of": now.isoformat(),
-            "sources": [],
-            "interpretation_status": status,
-            "actions_taken": [],
-            "order_created": False,
-        }
+        logger.warning("chat_plan_unavailable status=%s", status)
+        store.record_chat_event(run_id, owner, "route", status)
+        store.record_chat_event(run_id, owner, "complete", "FAILED")
+        return failed_response(run_id, status)
     plan = ChatPlan.model_validate(plan)
-    if not plan.sections and plan.direct_answer.strip():
+    route_status = (
+        "AI_EMPTY_DIRECT_ANSWER"
+        if not plan.sections and not plan.direct_answer.strip()
+        else status
+    )
+    store.record_chat_event(
+        run_id, owner, "route", route_status, {"selected_tools": plan.sections}
+    )
+    if not plan.sections:
+        if not plan.direct_answer.strip():
+            logger.warning("chat_plan_unavailable status=AI_EMPTY_DIRECT_ANSWER")
+            store.record_chat_event(run_id, owner, "complete", "FAILED")
+            return failed_response(run_id, "AI_EMPTY_DIRECT_ANSWER")
+        store.record_chat_event(run_id, owner, "complete", "SUCCEEDED")
         return {
             "answer": plan.direct_answer,
             "as_of": datetime.now(UTC).isoformat(),
@@ -175,11 +205,37 @@ async def respond(
             "interpretation_status": status,
             "context_sections": [],
             "routing_status": status,
+            "run_id": run_id,
             "actions_taken": [],
             "order_created": False,
         }
-    evidence = await asyncio.to_thread(retrieve, store, plan, datetime.now(UTC), owner, idea_id)
-    result = await answer(question, evidence, store, history)
+    store.record_chat_event(run_id, owner, "tools", "RUNNING", {"selected_tools": plan.sections})
+    try:
+        evidence = await asyncio.to_thread(retrieve, store, plan, datetime.now(UTC), owner, idea_id)
+        store.record_chat_event(
+            run_id, owner, "tools", "SUCCEEDED", {"retrieved_sections": evidence["retrieved_sections"]}
+        )
+    except Exception as error:
+        logger.warning("chat_tools_failed run_id=%s type=%s", run_id, type(error).__name__)
+        store.record_chat_event(run_id, owner, "tools", "FAILED", {"error_type": type(error).__name__})
+        store.record_chat_event(run_id, owner, "complete", "FAILED")
+        return failed_response(run_id, "TOOL_EXECUTION_FAILED")
+    try:
+        result = await answer(question, evidence, store, history)
+        answer_status = result.get("interpretation_status", "UNKNOWN")
+        store.record_chat_event(run_id, owner, "answer", answer_status)
+    except Exception as error:
+        logger.warning("chat_answer_failed run_id=%s type=%s", run_id, type(error).__name__)
+        store.record_chat_event(run_id, owner, "answer", "FAILED", {"error_type": type(error).__name__})
+        store.record_chat_event(run_id, owner, "complete", "FAILED")
+        return failed_response(run_id, "AI_RESPONSE_FAILED")
     result["context_sections"] = evidence["retrieved_sections"]
     result["routing_status"] = status
+    result["run_id"] = run_id
+    store.record_chat_event(
+        run_id,
+        owner,
+        "complete",
+        "SUCCEEDED" if answer_status in {"VALIDATED", "CACHED"} else "FAILED",
+    )
     return result

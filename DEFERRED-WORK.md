@@ -1,5 +1,45 @@
 # Project status and remaining work
 
+## Chat workflow hosted acceptance: pending
+
+Implemented a bounded router → selected read-only saved-context tools → answer
+workflow with no-tool direct answers, separate chat/Insight provider leases,
+per-stage timeouts, retryable failures, and owner-scoped seven-day run traces
+that omit prompt/answer content. Five-call and token limits remain on background
+Insights; chat has no daily cap. Local bot/agent workflow suites pass (21 tests),
+Ruff and frontend typecheck pass. No hosted deploy, real provider test, or live
+market test was run. Closure: explicit agreement to deploy, then hosted checks
+for direct answers, tool-selected answers, concurrent requests, trace access and
+failure recovery. Do not resume broker/live-market acceptance or change trading
+permission gates.
+
+## Chat and AI Insight budget separation: hosted acceptance deferred
+
+Daily token and five-call limits are now scoped to background AI-powered
+Insights. Interactive chat opts out of those daily limits; ordinary provider
+availability and concurrent request serialization still apply. Router can
+directly answer with no saved-data retrieval, or select the smallest saved
+research sections and retrieve only those before answer synthesis. Four focused
+tests, Ruff and frontend typecheck pass locally. No hosted deploy or live-market
+test occurred. Closure requires explicit agreement to deploy followed by
+signed-in verification of unlimited chat across exhausted Insight allowance,
+Insight cap enforcement, and direct vs research-routed questions. Preserve the
+broker/live-market acceptance hold and existing trading permission gates.
+
+## Chat routing error: hosted confirmation deferred
+
+The screenshot's generic answer is emitted when chat planning returns no plan;
+the exact historical status cannot be established because hosted logs and the
+authenticated request body are not available here. Local `AI_BUSY` lease
+contention is a concrete code path and now waits up to eight seconds for chat,
+returns routing status, and records future failures without question content.
+Targeted tests and local static checks pass. The full bot test file has unrelated
+existing failures (stale route set, mocks and a wording assumption). This fix is
+not deployed. Per user's deployment hold recorded in `RESUME.md`, closure needs
+explicit deployment agreement, then a fresh signed-in chat and corresponding
+status-only API log. Do not treat fixtures as hosted acceptance or change broker
+login/live-market scope.
+
 ## Authorized Oracle deployment and chat layout: 26 November 2026
 
 User explicitly resumed Oracle deployment for accumulated local changes. Added

@@ -19,7 +19,14 @@ type Message = {
   source: string;
   asOf: string;
 };
-type Reply = { answer: string; as_of: string; sources: { source: string }[] };
+type Reply = {
+  answer: string;
+  as_of: string;
+  sources: { source: string }[];
+  routing_status?: string;
+  interpretation_status?: string;
+  run_id?: string;
+};
 type Context = { id: string; label: string } | null;
 const prompts = [
   {
@@ -70,6 +77,7 @@ export default function Chat({
   const [pending, setPending] = useState("");
   const [failed, setFailed] = useState("");
   const [error, setError] = useState("");
+  const [failedRunId, setFailedRunId] = useState("");
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const asking = useRef(false);
@@ -162,6 +170,7 @@ export default function Chat({
     setPending(value);
     setFailed("");
     setError("");
+    setFailedRunId("");
     setQuestion("");
     const ticket = ++generation.current;
     controller.current = new AbortController();
@@ -184,6 +193,23 @@ export default function Chat({
           ...(context?.id.startsWith("idea:") ? { idea_id: context.id.slice(5) } : {}) },
       )) as Reply;
       if (generation.current !== ticket) return;
+      setFailedRunId(reply.run_id ?? "");
+      const status = reply.routing_status ?? reply.interpretation_status;
+      if (status && !["VALIDATED", "CACHED", "available"].includes(status)) {
+        const messages: Record<string, string> = {
+          AI_BUSY: "SWAN is finishing another request. Your question is saved; try again in a moment.",
+          AI_NOT_CONFIGURED: "SWAN’s answer service isn’t configured right now. Your question is saved.",
+          AI_PROVIDER_UNAVAILABLE: "SWAN’s answer service is temporarily unavailable. Your question is saved.",
+          AI_TIMEOUT: "SWAN took too long to prepare an answer. Your question is saved; try again.",
+          DAILY_BUDGET_REACHED: "SWAN has reached today’s answer limit. Your question is saved.",
+          TOOL_EXECUTION_FAILED: "SWAN couldn’t load the research needed for this answer. Your question is saved; retry in a moment.",
+          AI_RESPONSE_FAILED: "SWAN couldn’t finish writing this answer. Your question is saved; retry in a moment.",
+        };
+        setFailed(value);
+        setQuestion((current) => current || value);
+        setError(messages[status] ?? "SWAN couldn’t prepare an answer. Your question is saved; try again.");
+        return;
+      }
       setMessages((current) =>
         [
           ...current,
@@ -274,6 +300,7 @@ export default function Chat({
       {error && (
         <div className="chat-error" role="alert">
           <p>{error}</p>
+          {failedRunId && <small>Reference: {failedRunId}</small>}
           {failed && (
             <button
               className="text-button"

@@ -1,24 +1,6 @@
 """Bounded optional interpretation over deterministic facts, with safe fallback."""
 
-import json
-
 from services.bot.store import Store
-
-
-def reserve(store: Store, day: str, amount: int, limit: int) -> bool:
-    with store.connect() as db:
-        db.execute("BEGIN IMMEDIATE")
-        key = f"budget:{day}"
-        row = db.execute("SELECT payload FROM documents WHERE key=?", (key,)).fetchone()
-        used = json.loads(row[0]) if row else 0
-        if used + amount > limit:
-            return False
-        db.execute(
-            "INSERT INTO documents VALUES (?,?) ON CONFLICT(key) DO UPDATE "
-            "SET payload=excluded.payload",
-            (key, json.dumps(used + amount)),
-        )
-        return True
 
 
 async def answer(question: str, context: dict, store: Store, history: list[dict]) -> dict:
@@ -46,13 +28,18 @@ async def answer(question: str, context: dict, store: Store, history: list[dict]
         selected_idea=selected_packet,
         evidence_ids=evidence_ids,
     )
-    result, status = await synthesize(store, packet)
+    result, status = await synthesize(
+        store,
+        packet,
+        insight_call_limit=None,
+        wait_for_lease=2,
+        operation_timeout_seconds=22,
+    )
     if result:
         narrative = result["answer"]
     else:
         reasons = {
             "AI_NOT_CONFIGURED": "AI answers are not configured on the server.",
-            "DAILY_BUDGET_REACHED": "Today's AI budget has been reached.",
             "AI_BUSY": "AI research is busy; please try again shortly.",
         }
         narrative = reasons.get(status, "The AI answer could not complete; please try again.")

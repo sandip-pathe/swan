@@ -608,7 +608,9 @@ class Runtime:
                     continue
                 try:
                     result, status = await synthesize(
-                        self.store, packet_for(current, self.store.read("news", {}))
+                        self.store,
+                        packet_for(current, self.store.read("news", {})),
+                        insight_call_limit=5,
                     )
                     if status == "AI_BUSY":
                         self.store.finish_job(job["job_id"], "queued")

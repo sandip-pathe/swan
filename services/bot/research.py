@@ -11,41 +11,55 @@ from uuid import uuid4
 import httpx
 
 from services.agents.settings import AgentSettings
-from services.bot.chat import reserve
 from services.bot.contracts import ChatPlan, ConversationAnswer, Research
 from services.bot.store import Store
 from services.core.contracts import IST
 
 
-async def synthesize(store: Store, packet: dict) -> tuple[dict | None, str]:
+async def synthesize(
+    store: Store,
+    packet: dict,
+    *,
+    insight_call_limit: int | None,
+    wait_for_lease: float = 0,
+    operation_timeout_seconds: float = 50,
+) -> tuple[dict | None, str]:
     owner = str(uuid4())
-    now = datetime.now(UTC)
+    deadline = asyncio.get_running_loop().time() + max(0, wait_for_lease)
+    lease_key = "ai_lease:insights" if insight_call_limit is not None else "ai_lease:chat"
     from datetime import timedelta
 
-    with store.connect() as db:
-        db.execute("BEGIN IMMEDIATE")
-        row = db.execute("SELECT payload FROM documents WHERE key='ai_lease'").fetchone()
-        if row and datetime.fromisoformat(json.loads(row[0])["until"]) > now:
+    while True:
+        now = datetime.now(UTC)
+        with store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT payload FROM documents WHERE key=?", (lease_key,)).fetchone()
+            if not row or datetime.fromisoformat(json.loads(row[0])["until"]) <= now:
+                db.execute(
+                    "INSERT INTO documents VALUES (?,?) ON CONFLICT(key) DO UPDATE "
+                    "SET payload=excluded.payload",
+                    (lease_key, json.dumps({"owner": owner, "until": (now + timedelta(seconds=60)).isoformat()})),
+                )
+                break
+        if asyncio.get_running_loop().time() >= deadline:
             return None, "AI_BUSY"
-        db.execute(
-            "INSERT INTO documents VALUES ('ai_lease',?) ON CONFLICT(key) DO UPDATE "
-            "SET payload=excluded.payload",
-            (json.dumps({"owner": owner, "until": (now + timedelta(seconds=60)).isoformat()}),),
-        )
+        await asyncio.sleep(min(0.25, max(0, deadline - asyncio.get_running_loop().time())))
     try:
-        async with asyncio.timeout(50):
-            return await _synthesize(store, packet)
+        async with asyncio.timeout(operation_timeout_seconds):
+            return await _synthesize(store, packet, insight_call_limit, operation_timeout_seconds)
     except TimeoutError:
         return None, "AI_TIMEOUT"
     finally:
         with store.connect() as db:
             db.execute(
-                "DELETE FROM documents WHERE key='ai_lease' AND json_extract(payload,'$.owner')=?",
-                (owner,),
+                "DELETE FROM documents WHERE key=? AND json_extract(payload,'$.owner')=?",
+                (lease_key, owner),
             )
 
 
-async def _synthesize(store: Store, packet: dict) -> tuple[dict | None, str]:
+async def _synthesize(
+    store: Store, packet: dict, insight_call_limit: int | None, operation_timeout_seconds: float
+) -> tuple[dict | None, str]:
     policy = AgentSettings()
     if not policy.ready():
         return None, "AI_NOT_CONFIGURED"
@@ -117,11 +131,8 @@ async def _synthesize(store: Store, packet: dict) -> tuple[dict | None, str]:
     schema = result_type.model_json_schema()
     amount = len((payload + instructions + json.dumps(schema)).encode()) + 1600
     day = datetime.now(UTC).astimezone(IST).date().isoformat()
-    limit = min(policy.swan_ai_daily_token_budget, 30000)
-    if conversational or routing:
-        if not await asyncio.to_thread(reserve, store, day, amount, limit):
-            return None, "DAILY_BUDGET_REACHED"
-    else:
+    if insight_call_limit is not None:
+        limit = policy.swan_ai_daily_token_budget
         # One transaction reserves both budgets; denied requests consume neither.
         # Failed or interrupted provider attempts count and survive restarts.
         with store.connect() as db:
@@ -132,7 +143,7 @@ async def _synthesize(store: Store, packet: dict) -> tuple[dict | None, str]:
             identity = packet.get("idea_id", key)
             if identity in used:
                 return None, "IDEA_ALREADY_RESEARCHED_TODAY"
-            if len(used) >= 5:
+            if len(used) >= insight_call_limit:
                 return None, "DAILY_INSIGHT_CALL_LIMIT"
             row = db.execute("SELECT payload FROM documents WHERE key=?", (token_key,)).fetchone()
             tokens = json.loads(row[0]) if row else 0
@@ -145,7 +156,9 @@ async def _synthesize(store: Store, packet: dict) -> tuple[dict | None, str]:
                 )
     try:
         async with httpx.AsyncClient(
-            timeout=policy.swan_ai_timeout_seconds, follow_redirects=False, trust_env=False
+            timeout=min(policy.swan_ai_timeout_seconds, operation_timeout_seconds),
+            follow_redirects=False,
+            trust_env=False,
         ) as client:
             response = await client.post(
                 "https://api.openai.com/v1/responses",

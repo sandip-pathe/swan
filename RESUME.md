@@ -1,5 +1,61 @@
 # SWAN implementation checkpoint
 
+## Bounded chat workflow and diagnostics: 26 November 2026
+
+Supersedes the earlier global AI lease description below. Chat and Insight
+research now use separate leases. Chat model stages are bounded to 22 seconds
+each, within the frontend's 60-second request deadline; saved Insight research
+uses its own lease, daily five-call cap and configured token allowance. Chat
+remains uncapped per day. The router chooses zero or more validated read-only
+context tools; no-tool questions return directly, while selected tools read only
+saved context before answer synthesis. Chat trace records run/stage/status/tool
+names and sanitized exception types for seven-day retention, with owner scoping
+and no prompt/answer persistence. Failures return retryable responses with run
+IDs. The bot workflow contract is documented in `services/bot/README.md`.
+`tests/test_bot.py` and `tests/test_agentic_workflow.py`: 21 passed; Ruff and web
+typecheck passed. The test requiring a separate PostgreSQL service was not run
+because no local backend/database was to be started. Changes remain local, not
+deployed; user agreement is required before Oracle deployment. Broker login,
+live-market acceptance and trading permission gates remain unchanged.
+
+## Chat routing and Insight budget separation: 26 November 2026
+
+Correction to the earlier shared-budget note below: daily AI limits apply only
+to background AI-powered Insight research. Chat routing and answer synthesis do
+not reserve or consume the daily Insight token budget or five-call allowance.
+The background worker explicitly passes the five-call cap; interactive chat
+explicitly opts out. Chat still waits briefly for the shared provider lease to
+avoid collision, which is concurrency control rather than a per-day chat quota.
+The router answers directly with no retrieval when it selects no research
+sections; when it selects sections, the backend retrieves only those saved
+calendar, market, news, weekly or existing-idea contexts and then synthesizes an
+answer. Empty direct-answer plans fail explicitly rather than triggering a
+second tool-free model call. Regression checks cover zero-budget unlimited chat,
+the Insight call cap, direct no-tool routing and lease contention. Four focused
+tests pass; Ruff and web typecheck pass. Local only, not deployed. User agreement
+is required before Oracle deployment; hosted verification is deferred. No broker
+login or live-market checks performed and trading permissions unchanged.
+
+## Chat router failure investigation: 26 November 2026
+
+Screenshot response is the backend planner fallback, not the frontend network
+timeout. The response previously omitted `routing_status`, and the UI stored the
+fallback as a successful assistant message, preventing a useful retry. Routing and
+background research share one SQLite AI lease; chat returned immediately with
+`AI_BUSY` whenever the worker held it. Added an 8-second bounded lease wait for
+interactive chat, explicit routing status in fallback responses, and status-only
+backend warning logs. The UI now keeps failed questions retryable and explains
+known routing failures without saving them as assistant answers. Regression tests
+cover lease contention/recovery and status logging. Targeted tests: 2 passed;
+web typecheck and Ruff passed. Full `tests/test_bot.py` remains 5 failed due to
+pre-existing stale route inventory/provider mock expectations and an unrelated
+US-market wording assertion. This explains a plausible cause but cannot identify
+the exact historical request status because hosted logs/authenticated response
+details were unavailable. Local only; no hosted deployment. User agreement is
+required before any further Oracle deployment. Closure: after agreement, deploy
+and observe a new chat response/status and backend log; preserve broker/live-market
+acceptance hold and do not change trading permission gates.
+
 26 November avatar follow-up: round chat avatar uses original SWAN blue #2455e6
 with white lightning, at user request. CSS-only change; backend unchanged.
 

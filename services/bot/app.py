@@ -417,3 +417,11 @@ async def chat(body: Question, identifier: UUID = Depends(owner)):
             str(identifier),
             body.idea_id,
         )
+
+
+@app.get("/api/chat/runs/{run_id}")
+def chat_run(run_id: UUID, identifier: UUID = Depends(owner)):
+    value = app.state.store.chat_run(str(run_id), str(identifier))
+    if value is None:
+        raise HTTPException(404, "CHAT_RUN_NOT_FOUND")
+    return value

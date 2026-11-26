@@ -40,6 +40,12 @@ class Store:
                     state TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS research_pending ON research_jobs(state, created_at);
+                CREATE TABLE IF NOT EXISTS chat_run_events (
+                    run_id TEXT NOT NULL, sequence INTEGER NOT NULL, owner TEXT NOT NULL,
+                    created_at TEXT NOT NULL, stage TEXT NOT NULL, status TEXT NOT NULL,
+                    details TEXT NOT NULL, PRIMARY KEY(run_id, sequence)
+                );
+                CREATE INDEX IF NOT EXISTS chat_run_owner_time ON chat_run_events(owner, created_at);
                 CREATE TABLE IF NOT EXISTS reported_entries (
                     owner TEXT NOT NULL, idea_id TEXT NOT NULL, payload TEXT NOT NULL,
                     PRIMARY KEY(owner, idea_id)
@@ -73,6 +79,47 @@ class Store:
                 "SET payload=excluded.payload",
                 (key, json.dumps(value)),
             )
+
+    def record_chat_event(
+        self, run_id: str, owner: str, stage: str, status: str, details: dict | None = None
+    ) -> None:
+        allowed_stages = {"started", "route", "tools", "answer", "complete"}
+        if stage not in allowed_stages:
+            raise ValueError("CHAT_RUN_STAGE_INVALID")
+        safe_details = details or {}
+        if len(json.dumps(safe_details, ensure_ascii=True)) > 2000:
+            raise ValueError("CHAT_RUN_DETAILS_TOO_LARGE")
+        now = datetime.now(UTC).isoformat()
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT COALESCE(MAX(sequence),0)+1 FROM chat_run_events WHERE run_id=? AND owner=?",
+                (run_id, owner),
+            ).fetchone()
+            db.execute(
+                "INSERT INTO chat_run_events VALUES (?,?,?,?,?,?,?)",
+                (run_id, row[0], owner, now, stage, status[:80], json.dumps(safe_details)),
+            )
+            cutoff = (datetime.now(UTC) - timedelta(days=7)).isoformat()
+            db.execute("DELETE FROM chat_run_events WHERE created_at < ?", (cutoff,))
+
+    def chat_run(self, run_id: str, owner: str) -> dict | None:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT sequence,created_at,stage,status,details FROM chat_run_events "
+                "WHERE run_id=? AND owner=? ORDER BY sequence",
+                (run_id, owner),
+            ).fetchall()
+        if not rows:
+            return None
+        return {
+            "run_id": run_id,
+            "events": [
+                {"sequence": row[0], "at": row[1], "stage": row[2], "status": row[3],
+                 "details": json.loads(row[4])}
+                for row in rows
+            ],
+        }
 
     def publish(self, insight: dict) -> bool:
         value = dict(insight)
