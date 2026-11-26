@@ -41,12 +41,18 @@ export default function Home() {
     try {
       const auth = getFirebaseAuth();
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, accountEmail, code);
+      const credential = await signInWithEmailAndPassword(auth, accountEmail, code);
+      setUser(credential.user);
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setCode(""); setBusy(false); }
   }
 
   if (user) return <BotHome key={user.uid} user={user} onSignOut={() => { void signOut(getFirebaseAuth()); }} />;
+
+  if (loading) return <div className="swan-app bot-app bot-boot" aria-busy="true" aria-label="Opening SWAN">
+    <header className="bot-header"><Brand /><nav aria-label="Primary navigation"><span>Chat</span><span>Insights</span></nav></header>
+    <div className="bot-chat"><aside className="bot-conversations" aria-hidden="true"><div className="chat-list-top"><strong>Chats</strong></div><div className="bot-boot-new">New conversation</div></aside><div className="bot-chat-main"><div className="bot-boot-composer" aria-hidden="true" /></div></div>
+  </div>;
 
   return <main className="bot-login" aria-busy={loading || busy}>
     <form className="bot-login-form" onSubmit={login} aria-label="SWAN login">

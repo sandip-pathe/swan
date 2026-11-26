@@ -1,5 +1,16 @@
 # SWAN implementation checkpoint
 
+## PWA session startup: 26 November 2026
+
+The first client render previously showed the disabled login form and spinner
+while Firebase restored a persisted session. It now renders the static chat app
+frame during that short auth check, with no login form or spinner; the login
+form appears only after Firebase confirms there is no eligible account. A fresh
+successful sign-in sets the user immediately from its returned credential. No
+client hint is treated as authentication and no backend/trading gate changed.
+The PWA shell cache is bumped to v8. Frontend typecheck/build pass; local
+production HTML contains the boot frame and no login/password form.
+
 ## Hosted chat restored: 26 November 2026
 
 The Oracle SSH key was found in the user-supplied local keys directory. An
