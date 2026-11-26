@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUpRight, Bookmark, Clock3, LogOut, RefreshCw, Settings2, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Bookmark, Clock3, LogOut, MessageSquareText, PanelLeft, Plus, RefreshCw, Settings2, X } from "lucide-react";
 import type { User } from "firebase/auth";
 import Chat from "./chat";
 import Brand from "./brand";
 import IdeaCard, { type AdvisoryIdea } from "./idea-card";
 import { clearArchive, readArchive, writeArchive } from "@/lib/bot-archive";
+import { useChatSessions } from "./chat-sessions";
 
 type Quote = { underlying: string; status: string; age_seconds: number | null;
   quote: { last_price: string; timestamp: string; source: string } | null };
@@ -55,6 +56,19 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
   const archive = useRef({ cursor: 0, insights: [] as Insight[], savedVersion: "" });
   const active = useRef(true);
   const ownerKey = `bot.${user.uid}`;
+  const chats = useChatSessions(ownerKey);
+  const [chatListOpen, setChatListOpen] = useState(false);
+  const chatListTrigger = useRef<HTMLButtonElement>(null);
+  const chatListClose = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!chatListOpen) return;
+    const frame = requestAnimationFrame(() => chatListClose.current?.focus());
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setChatListOpen(false); chatListTrigger.current?.focus(); }
+    };
+    window.addEventListener("keydown", close);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", close); };
+  }, [chatListOpen]);
   useEffect(() => {
     let alive = true;
     void readArchive<Snapshot, Insight>(ownerKey).then(saved => {
@@ -185,7 +199,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
     try { await clearArchive(ownerKey); } catch { /* Records stay scoped to this signed-in account. */ }
     setData(null); onSignOut();
   }
-  function go(value: "chat" | "insights") { location.hash = value; setScreen(value); }
+  function go(value: "chat" | "insights") { setChatListOpen(false); location.hash = value; setScreen(value); }
   async function saveBudget() {
     try { await request("/api/bot/preferences", "POST", undefined, { position_budget: budget || data?.preferences?.position_budget || "0" });
       setBudgetMessage("Position budget saved. This does not authorize any order."); refreshCurrent.current();
@@ -230,7 +244,7 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
   const archived = (data?.insights ?? []).filter(item => !ideas.some(idea => idea.id === item.id) && (feed !== "saved" || starred.includes(item.id)));
   const closed = data?.calendar.state === "closed";
   const sessionLabel = closed ? "Market closed" : data?.calendar.state === "open" ? "Market open" : "Market status unavailable";
-  const discuss = (idea: { id: string; title: string }) => { setSelectedIdea({ id: `idea:${idea.id}`, label: idea.title }); go("chat"); };
+  const discuss = (idea: { id: string; title: string }) => { chats.create(); setSelectedIdea({ id: `idea:${idea.id}`, label: idea.title }); go("chat"); };
   const marketValues = ["SENSEX", "NIFTY"].flatMap(name => {
     const row = data?.quotes.find(quote => quote.underlying === name);
     const analysis = data?.analyses?.[name] ?? (name === "SENSEX" ? data?.analysis : undefined);
@@ -245,9 +259,19 @@ export default function BotHome({ user, onSignOut }: { user: User; onSignOut: ()
       <button className="text-button" aria-current={screen === "insights" ? "page" : undefined} onClick={() => go("insights")}>Insights</button>
     </nav><button className="text-button bot-signout" aria-label="Sign out" title="Sign out" onClick={() => void leave()}><LogOut size={19} aria-hidden="true" /></button></header>
     <div className="bot-chat" hidden={screen !== "chat"}>
-      <Chat request={request} ownerKey={ownerKey} sessionId="main" active={screen === "chat"}
-        context={selectedIdea} onClearContext={() => setSelectedIdea(null)}
-        onTitle={() => {}} onMarket={() => go("insights")} />
+      {chatListOpen && <button type="button" className="chat-list-backdrop" aria-label="Close conversations" onClick={() => setChatListOpen(false)} />}
+      <aside id="bot-conversations" className={`bot-conversations ${chatListOpen ? "is-open" : ""}`} aria-label="Conversations" role={chatListOpen ? "dialog" : undefined} aria-modal={chatListOpen ? true : undefined}>
+        <div className="chat-list-heading"><strong>Chats</strong><button ref={chatListClose} className="chat-list-close" type="button" aria-label="Close conversations" onClick={() => { setChatListOpen(false); chatListTrigger.current?.focus(); }}><X size={19} aria-hidden="true" /></button></div>
+        <button className="chat-list-new" type="button" onClick={() => { chats.create(); setSelectedIdea(null); setChatListOpen(false); }}><Plus size={18} aria-hidden="true" />New conversation</button>
+        <nav className="chat-list-threads" aria-label="Saved conversations">{[...chats.sessions].sort((a, b) => b.updated - a.updated).map(session => <button key={session.id} type="button" title={session.title} aria-current={chats.activeId === session.id ? "page" : undefined} onClick={() => { chats.select(session.id); setSelectedIdea(null); setChatListOpen(false); }}><MessageSquareText size={16} aria-hidden="true" /><span>{session.title}</span></button>)}</nav>
+        <p className="chat-list-note">Saved on this device</p>
+      </aside>
+      <div className="bot-chat-main">
+        <div className="chat-mobile-toolbar"><button ref={chatListTrigger} type="button" aria-label="Open conversations" aria-controls="bot-conversations" aria-expanded={chatListOpen} onClick={() => setChatListOpen(true)}><PanelLeft size={20} aria-hidden="true" /></button><span>{chats.sessions.find(session => session.id === chats.activeId)?.title ?? "Chat"}</span><button type="button" aria-label="New conversation" onClick={() => { chats.create(); setSelectedIdea(null); }}><Plus size={20} aria-hidden="true" /></button></div>
+        {chats.ready && chats.activeId && <Chat key={chats.activeId} request={request} ownerKey={ownerKey} sessionId={chats.activeId} active={screen === "chat"}
+          context={selectedIdea} onClearContext={() => setSelectedIdea(null)}
+          onTitle={text => chats.title(chats.activeId, text)} onMarket={() => go("insights")} />}
+      </div>
     </div>
     {screen === "insights" && <main className="bot-insights">
       <div className="insights-titlebar"><div><p className="insights-date">{new Date(clock).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" })}</p><h1>Insights</h1></div>

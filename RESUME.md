@@ -1,5 +1,19 @@
 # SWAN implementation checkpoint
 
+## Multiple chat conversations in bot UI: 26 November 2026
+
+The bot screen now uses the existing owner-scoped local conversation index,
+instead of hardcoding the single `main` thread. Desktop shows a quiet chat list;
+phones open the list as a drawer with New conversation. Each thread has its own
+history, draft, title and reading position. The existing `main` history/draft is
+recovered into the list on first use. Questions and completed replies are saved
+immediately so switching threads during a slow answer does not discard them;
+the in-flight request is cancelled and the draft remains available to retry.
+The PWA shell cache version is bumped for the changed UI. Typecheck and production
+build pass. Conversations remain device-local; D30 tracks durable cross-device
+history and this UI change does not require a backend deployment. Signed-in
+desktop/mobile visual acceptance remains open.
+
 ## Bounded chat workflow and diagnostics: 26 November 2026
 
 Supersedes the earlier global AI lease description below. Chat and Insight
@@ -15,7 +29,7 @@ IDs. The bot workflow contract is documented in `services/bot/README.md`.
 `tests/test_bot.py` and `tests/test_agentic_workflow.py`: 21 passed; Ruff and web
 typecheck passed. The test requiring a separate PostgreSQL service was not run
 because no local backend/database was to be started. Commit `6e615027` and the
-release checkpoint are pushed to `bot-r` (current HEAD `39802091`). GitHub reports
+release checkpoint were pushed to `bot-r` (`39802091`). GitHub reports
 both Vercel checks (`swan-web` and `swan`) successful for this commit. This confirms
 the configured deployments completed, but their exact served URLs/render and
 signed-in chat behavior were not checked. Oracle backend was not deployed: this

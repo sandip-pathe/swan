@@ -164,6 +164,7 @@ export default function Chat({
   async function ask(text: string) {
     if (asking.current || !text.trim()) return;
     const value = text.trim();
+    try { localStorage.setItem(draftKey, value); } catch { /* The in-memory question remains available. */ }
     atBottom.current = true; setUnread(false);
     onTitle(value);
     asking.current = true;
@@ -210,18 +211,15 @@ export default function Chat({
         setError(messages[status] ?? "SWAN couldn’t prepare an answer. Your question is saved; try again.");
         return;
       }
-      setMessages((current) =>
-        [
-          ...current,
-          {
-            id: Date.now(),
-            question: value,
-            answer: reply.answer,
-            source: reply.sources.map((row) => row.source).join("; "),
-            asOf: reply.as_of,
-          },
-        ].slice(-50),
-      );
+      const next = [...messages, {
+        id: Date.now(),
+        question: value,
+        answer: reply.answer,
+        source: reply.sources.map((row) => row.source).join("; "),
+        asOf: reply.as_of,
+      }].slice(-50);
+      try { localStorage.setItem(historyKey, JSON.stringify(next)); localStorage.removeItem(draftKey); } catch { /* The answer remains in memory. */ }
+      setMessages(next);
     } catch (failure) {
       if (generation.current === ticket) {
         setFailed(value);
@@ -343,7 +341,10 @@ export default function Chat({
             ref={input}
             id={`swan-question-${sessionId}`}
             value={question}
-            onChange={(event) => setQuestion(event.target.value)}
+            onChange={(event) => {
+              setQuestion(event.target.value);
+              try { localStorage.setItem(draftKey, event.target.value); } catch { /* The draft remains in memory. */ }
+            }}
             onKeyDown={(event) => {
               if (
                 event.key === "Enter" &&

@@ -1,6 +1,6 @@
 // The root is a static, public sign-in shell. Private data lives in account-scoped IndexedDB.
 // Never cache authenticated API responses, tokens or writes here.
-const CACHE = "swan-public-bot-v5";
+const CACHE = "swan-public-bot-v6";
 const ASSETS = ["/offline.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png",
   "/fonts/inter-variable.woff2", "/fonts/plex-sans-0.woff2", "/fonts/plex-sans-1.woff2",
   "/fonts/plex-sans-2.woff2", "/fonts/plex-sans-3.woff2", "/fonts/plex-mono-0.woff2"];

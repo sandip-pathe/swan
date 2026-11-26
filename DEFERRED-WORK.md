@@ -513,6 +513,15 @@ are not implemented by the existing stateless chat endpoint. Closure: durable ow
 authorized session storage and tested restoration/isolation across devices; never
 substitute fabricated server persistence for this local implementation.
 
+26 November bot UI follow-up: restored the existing local conversation list in
+the newer Chat/Insights shell and preserved its previously hardcoded `main` thread.
+Desktop list and phone drawer provide thread selection/new conversation; each has
+separate history, draft and reading position. A pending bot answer is cancelled
+on thread switch, with its question preserved for retry; this differs from the
+older workspace's concurrent in-flight threads. Typecheck/build pass; signed-in
+visual and device-storage acceptance remain open. Server persistence and
+cross-device restoration remain open under this ID.
+
 
 ## D28 - Frontend workspace migration and hosted acceptance
 

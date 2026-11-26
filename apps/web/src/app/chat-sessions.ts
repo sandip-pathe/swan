@@ -16,16 +16,20 @@ export function useChatSessions(owner: string) {
       if (Array.isArray(saved?.sessions)) rows = saved.sessions.filter((item: Session) => item && typeof item.id === "string" && /^[a-zA-Z0-9-]+$/.test(item.id) && typeof item.title === "string" && typeof item.updated === "number");
       selected = saved?.activeId;
       if (!rows.length) {
-        const id = crypto.randomUUID();
+        const existingMain = localStorage.getItem(`swan.chat.history.v2.${owner}.main`);
+        const existingMainDraft = localStorage.getItem(`swan.chat.draft.v1.${owner}.main`);
+        const id = existingMain || existingMainDraft ? "main" : crypto.randomUUID();
         const history = localStorage.getItem(`swan.chat.history.v2.${owner}`);
         const draft = localStorage.getItem(`swan.chat.draft.v1.${owner}`);
         let title = "New conversation";
-        if (history) {
-          const messages = JSON.parse(history);
-          if (Array.isArray(messages) && typeof messages[0]?.question === "string") title = messages[0].question.slice(0, 64);
-          localStorage.setItem(`swan.chat.history.v2.${owner}.${id}`, history);
+        if (existingMain || history) {
+          try {
+            const messages = JSON.parse(existingMain || history || "[]");
+            if (Array.isArray(messages) && typeof messages[0]?.question === "string") title = messages[0].question.slice(0, 64);
+          } catch { /* Keep the existing thread even if its saved preview is unreadable. */ }
+          if (!existingMain && history) localStorage.setItem(`swan.chat.history.v2.${owner}.${id}`, history);
         }
-        if (draft) localStorage.setItem(`swan.chat.draft.v1.${owner}.${id}`, draft);
+        if (!existingMain && draft) localStorage.setItem(`swan.chat.draft.v1.${owner}.${id}`, draft);
         rows = [{ id, title, updated: Date.now() }];
       }
     } catch { /* Conversations also work without device storage. */ }
